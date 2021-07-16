@@ -2,19 +2,30 @@
   "name": "whirled2",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@craco/craco": "^6.2.0",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "joi": "^17.4.1",
+    "mongoose": "^5.13.2",
+    "morgan": "^1.10.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-lifecycles-compat": "^3.0.4",
     "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.3",
+    "react-style-proptype": "^3.2.2",
     "uuid": "^8.3.2",
     "web-vitals": "^1.1.2"
   },
   "scripts": {
+    "devServer": "nodemon ./backend/server.js",
+    "server": "node ./backend/server.js",
     "start": "craco start",
     "build": "craco build",
     "test": "craco test",
@@ -40,6 +51,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^9.8.6",
+    "nodemon": "^2.0.12",
     "postcss": "^7.0.36",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.4"
   }
