@@ -9,7 +9,7 @@ function App() {
       <div className="flex flex-col h-screen">
         <Header />
         <div className="flex flex-grow" style={{position: "relative"}}>
-          <SplitView />
+			<SplitView />
         </div>
       </div>
     </Router>

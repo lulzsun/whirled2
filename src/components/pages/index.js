@@ -8,12 +8,12 @@ import Login from './Account/Login';
 import SignUp from './Account/SignUp';
 
 export {
-  Me,
-  Stuff,
-  Rooms,
-  Groups,
-  Shop,
-  Profile,
-  Login,
-  SignUp
+	Me,
+	Stuff,
+	Rooms,
+	Groups,
+	Shop,
+	Profile,
+	Login,
+	SignUp
 }

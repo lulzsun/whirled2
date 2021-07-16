@@ -7,11 +7,11 @@ import Divider from './Divider';
 import Dropdown from './Dropdown/Dropdown';
 
 export {
-  Header,
-  Navbar,
-  Game,
-  Page,
-  SplitView,
-  Divider,
-  Dropdown,
+	Header,
+	Navbar,
+	Game,
+	Page,
+	SplitView,
+	Divider,
+	Dropdown,
 }
