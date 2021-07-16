@@ -6,9 +6,9 @@ import { BrowserRouter as Router } from 'react-router-dom';
 function App() {
   return (
     <Router>
-      <div class="flex flex-col h-screen">
+      <div className="flex flex-col h-screen">
         <Header />
-        <div class="flex flex-grow" style={{position: "relative"}}>
+        <div className="flex flex-grow" style={{position: "relative"}}>
           <SplitView />
         </div>
       </div>

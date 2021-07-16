@@ -4,7 +4,7 @@ import { Route, Switch } from 'react-router-dom';
 
 export default function Page () {
   return (
-    <div id="PagePane" class="h-full">
+    <div id="PagePane" className="h-full">
       <Switch>
         <Route exact path="/me">          <Me /></Route>
         <Route exact path="/stuff">       <Stuff /></Route>

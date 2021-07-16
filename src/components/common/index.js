@@ -4,6 +4,7 @@ import Game from './Game';
 import Page from './Page';
 import SplitView from './SplitView'
 import Divider from './Divider';
+import Dropdown from './Dropdown/Dropdown';
 
 export {
   Header,
@@ -11,5 +12,6 @@ export {
   Game,
   Page,
   SplitView,
-  Divider
+  Divider,
+  Dropdown,
 }

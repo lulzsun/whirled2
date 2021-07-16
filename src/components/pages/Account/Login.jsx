@@ -14,35 +14,35 @@ export default function Login () {
   }
 
   return (
-    <div class="flex h-screen overflow-y-auto">
-      <div class="m-auto">
-        <div class="max-w-md">
+    <div className="flex h-screen overflow-y-auto">
+      <div className="m-auto">
+        <div className="max-w-md">
           <form onSubmit={handleSubmit}>
             {/* Username */}
-            <div class="mb-4">
+            <div className="mb-4">
               <label htmlFor="username">Username</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
+                className="rounded w-full py-2 px-3 text-black"
                 required type="text" placeholder="Username"
                 value={username} onChange={(e) => setUsername(e.target.value)}/>
             </div>
 
             {/* Password */}
-            <div class="mb-6">
+            <div className="mb-6">
               <label htmlFor="password">Password</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
+                className="rounded w-full py-2 px-3 text-black"
                 required type="password" placeholder="******************"
                 value={password} onChange={(e) => setPassword(e.target.value)}/>
-              {/* <p class="text-red-400 text-xs italic">Incorrect Username or Password!</p> */}
+              {/* <p className="text-red-400 text-xs italic">Incorrect Username or Password!</p> */}
             </div>
 
-            <div class="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               {/* Submit Form */}
-              <button class="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="submit">
+              <button className="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="submit">
                 Sign In
               </button>
-              <button class="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="button">
+              <button className="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="button">
                 Forgot Password?
               </button>
             </div>
@@ -50,7 +50,7 @@ export default function Login () {
           
           <Divider/>
           <Link to="/signup">
-            <button class="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
+            <button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
               Create an Account
             </button>
           </Link>

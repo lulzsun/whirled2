@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Divider } from '../../common';
+import { Divider, Dropdown } from '../../common';
 import { 
   RegisterSchema, UsernameSchema, EmailSchema, PasswordSchema,
   validateSchema 
@@ -11,6 +11,9 @@ export default function SignUp () {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthYear, setBirthYear] = useState('');
 
   const [usernameErr, setUsernameErr] = useState('');
   const [emailErr, setEmailErr] = useState('');
@@ -19,28 +22,35 @@ export default function SignUp () {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const register = { username, email, password, confirmPassword };
+    const register = { 
+      username, email, 
+      password, confirmPassword, 
+      birthDate: `${birthYear}-${birthMonth}-${birthDay}`
+    };
     console.log(register);
     if(validateSchema(RegisterSchema, register).error) {
-      setConfirmPasswordErr(validateSchema(RegisterSchema, register).error);
+      alert(validateSchema(RegisterSchema, register).error);
     }
     else {
-      setConfirmPasswordErr('');
       console.log("POST " + process.env.REACT_APP_API_URL);
     }
   }
 
+  const currentYear = (new Date()).getFullYear();
+  const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1}, (_, i) => start + (i * step));
+  const birthYearList = range(currentYear, currentYear - 100, -1);
+
   return (
-    <div class="flex h-screen overflow-y-auto">
-      <div class="m-auto">
-        <div class="max-w-md">
+    <div className="flex h-screen overflow-y-auto">
+      <div className="m-auto">
+        <div className="max-w-sm">
           <form onSubmit={handleSubmit}>
 
             {/* Username */}
-            <div class="mb-2">
+            <div className="mb-2">
               <label>Username</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
+                className="rounded w-full py-2 px-3 text-black"
                 required type="text" placeholder="Username"
                 value={username}
                 onChange={(e) => {
@@ -52,15 +62,15 @@ export default function SignUp () {
                     setError(validateSchema(schema, e.target.value).error);
                   }
                 }}/>
-                <p class="text-red-400 text-xs italic">{usernameErr}</p>
+                <p className="text-red-400 text-xs italic">{usernameErr}</p>
             </div>
 
             {/* Email */}
-            <div class="mb-2">
+            <div className="mb-2">
               <label>Email</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
-                required type="text" placeholder="you@email.com"
+                className="rounded w-full py-2 px-3 text-black"
+                required type="text" placeholder="email@address.com"
                 value={email}
                 onChange={(e) => {
                   let schema = EmailSchema;
@@ -71,14 +81,14 @@ export default function SignUp () {
                     setError(validateSchema(schema, e.target.value).error);
                   }
                 }}/>
-                <p class="text-red-400 text-xs italic">{emailErr}</p>
+                <p className="text-red-400 text-xs italic">{emailErr}</p>
             </div>
 
             {/* Password */}
-            <div class="mb-2">
+            <div className="mb-2">
               <label>Password</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
+                className="rounded w-full py-2 px-3 text-black"
                 required type="password" placeholder="******************"
                 value={password}
                 onChange={(e) => {
@@ -89,25 +99,50 @@ export default function SignUp () {
                   if(validateSchema(schema, e.target.value).error) {
                     setError(validateSchema(schema, e.target.value).error);
                   }
+                  if(e.target.value !== confirmPassword) {
+                    setConfirmPasswordErr('Passwords must match!');
+                  } else setConfirmPasswordErr('');
                 }}/>
-              <p class="text-red-400 text-xs italic">{passwordErr}</p>
+              <p className="text-red-400 text-xs italic">{passwordErr}</p>
             </div>
 
             {/* Confirm Password */}
-            <div class="mb-6">
+            <div className="mb-2">
               <label>Confirm Password</label>
               <input 
-                class="rounded w-full py-2 px-3 text-black"
+                className="rounded w-full py-2 px-3 text-black"
                 required type="password" placeholder="******************"
                 value={confirmPassword} onChange={(e) => {
+                  let setError = setConfirmPasswordErr;
                   setConfirmPassword(e.target.value);
+                  setError('');
+                  if(e.target.value !== password) {
+                    setError('Passwords must match!');
+                  }
                 }}/>
-              <p class="text-red-400 text-xs italic">{confirmPasswordErr}</p>
+              <p className="text-red-400 text-xs italic">{confirmPasswordErr}</p>
             </div>
 
-            <div class="flex items-center justify-between">
+            {/* Birthdate */} 
+            <label>Birth date</label>
+            <div className="flex flex-row space-x-4 mb-6">
+              <Dropdown placeholder="Month" required id="month" items={range(1, 12, 1)} 
+                value={birthMonth} onChange={(e) => {
+                setBirthMonth(e.target.value);
+              }}/>
+              <Dropdown placeholder="Day" required id="day" items={range(1, 31, 1)} 
+                value={birthDay} onChange={(e) => {
+                setBirthDay(e.target.value);
+              }}/>
+              <Dropdown placeholder="Year" required id="year" items={birthYearList} 
+                value={birthYear} onChange={(e) => {
+                setBirthYear(e.target.value);
+              }}/>
+            </div>
+
+            <div className="flex items-center justify-between">
               {/* Submit Form */}
-              <button class="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center" type="submit">
+              <button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center" type="submit">
                 Register
               </button>
             </div>
@@ -115,7 +150,7 @@ export default function SignUp () {
           
           <Divider/>
           <Link to="/login">
-            <button class="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
+            <button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
               Login
             </button>
           </Link>
