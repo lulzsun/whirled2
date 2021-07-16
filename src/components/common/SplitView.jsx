@@ -3,7 +3,7 @@ import SplitPane from '../splitpane'
 import { Game, Page } from '../common';
 import { useRouteMatch } from 'react-router-dom';
 
-function SplitView () {
+export default function SplitView () {
   const hidden = useRouteMatch("/").isExact;
   const style = { opacity: 0.3, width: '5px', cursor: 'col-resize' };
 
@@ -24,5 +24,3 @@ function SplitView () {
     </SplitPane>
   )
 }
-
-export default SplitView;

@@ -1,7 +1,7 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 //import { v4 as uuidv4 } from 'uuid';
 import { Header, SplitView } from './components/common';
-import { BrowserRouter as Router, useRouteMatch } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 
 function App() {
   return (

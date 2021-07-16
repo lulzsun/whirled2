@@ -1,9 +1,7 @@
 import React from 'react';
 
-function Rooms () {
+export default function Rooms () {
   return (
     <p>Hello from Rooms page!</p>
   )
 }
-
-export default Rooms;

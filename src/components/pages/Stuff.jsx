@@ -1,9 +1,7 @@
 import React from 'react';
 
-function Stuff () {
+export default function Stuff () {
   return (
     <p>Hello from Stuff page!</p>
   )
 }
-
-export default Stuff;

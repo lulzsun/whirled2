@@ -1,9 +1,7 @@
 import React from 'react';
 
-function Groups () {
+export default function Groups () {
   return (
     <p>Hello from Groups page!</p>
   )
 }
-
-export default Groups;
