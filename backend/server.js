@@ -1,6 +1,6 @@
 import express from 'express';
 import morgan from 'morgan';
-//import cors from 'cors';
+import cors from 'cors';
 import auth from './auth/index.js';
 import api from './api/index.js';
 
@@ -8,7 +8,9 @@ const app = express();
 
 app.use(express.json());
 app.use(morgan('dev'));
-//app.use(cors());
+app.use(cors({
+	origin: process.env.FRONTEND_URL
+}));
 
 app.get('/', (req, res) => {
 	res.json({
