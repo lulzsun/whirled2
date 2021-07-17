@@ -30,7 +30,7 @@ router.post('/refreshtoken', (req, res) => {
 						const accessToken = generateAccessToken({ _id: user._id, username: user.username })
 						return res.status(201).json({ accessToken });
 					}
-					return res.status(403).json({ error: 'Please relog into the account' });
+					return res.status(403).json({ message: 'Please relog into the account' });
 				}
 			);
 		}
@@ -89,7 +89,7 @@ router.delete('/logoutall', (req, res) => {
 router.post('/login', async (req, res) => {
 	const result = validateSchema(LoginSchema, req.body);
 	if(result.error)
-		res.status(401).json({error: 'Failed to login'});
+		res.status(401).json({message: 'Failed to login'});
 	else {
 		const user = await User.findOne({username: req.body.username});
 		if(user) {
@@ -101,14 +101,14 @@ router.post('/login', async (req, res) => {
 				function(err, reply) {
 					if(err) {
 						console.error(err);
-						return res.status(401).json({error: 'Unknown error occured'});  
+						return res.status(401).json({message: 'Unknown error occured'});  
 					}
 					console.log(reply);
 					return res.status(201).json({accessToken, refreshToken});
 				}
 			);
 		} else {
-			return res.status(401).json({error: 'Failed to login'});  
+			return res.status(401).json({message: 'Failed to login'});  
 		} 
 	}
 });
@@ -116,24 +116,24 @@ router.post('/login', async (req, res) => {
 router.post('/signup', async (req, res) => {
 	const result = validateSchema(RegisterSchema, req.body);
 	if(result.error)
-		res.json({error: result.error});
+		return res.status(400).json({message: result.error});
 	else {
 		const passwordHash = await bcrypt.hash(req.body.password, 12);
 		const user = new User({
 			username: req.body.username,
 			email: req.body.email,
 			emailVerified: false,
-			password: passwordHash
+			password: passwordHash,
+			birthDate: req.body.birthDate,
 		})
 
 		const usernameCheck = await User.countDocuments({username: req.body.username});
 		if(usernameCheck > 0) {
-			return res.json({error: 'This username already exists!'});
+			return res.status(400).json({message: 'This username already exists!'});
 		}
 		const emailCheck = await User.countDocuments({email: req.body.email});
 		if(emailCheck > 0) {
-			res.json({error: 'This email already exists!'});
-			return;
+			return res.status(400).json({message: 'This email already exists!'});
 		}
 
 		try {

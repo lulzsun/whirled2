@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cors({
-	origin: process.env.FRONTEND_URL
+	origin: [process.env.FRONTEND_URL, "https://whirled.lulzlabz.xyz"]
 }));
 
 app.get('/', (req, res) => {
