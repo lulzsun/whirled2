@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Divider, Dropdown } from '../../common';
+import { Divider } from '../../common';
 import { 
   RegisterSchema, UsernameSchema, EmailSchema, PasswordSchema,
   validateSchema 
 } from '../../../schemas/index.js';
+import Button from 'src/components/tail-kit/elements/buttons/Button';
+import Select from 'src/components/tail-kit/form/select/Select';
+import InputText from 'src/components/tail-kit/form/inputtext/InputText';
 
 export default function SignUp () {
   const [username, setUsername] = useState('');
@@ -20,19 +24,39 @@ export default function SignUp () {
   const [passwordErr, setPasswordErr] = useState('');
   const [confirmPasswordErr, setConfirmPasswordErr] = useState('');
 
+  const [registerDisabled, setRegisterDisabled] = useState(false);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setRegisterDisabled(true);
+
+    const birthDate = new Date(birthYear, birthMonth-1, birthDay).toISOString().slice(0, 10);
     const register = { 
       username, email, 
       password, confirmPassword, 
-      birthDate: `${birthYear}-${birthMonth}-${birthDay}`
+      birthDate
     };
-    console.log(register);
+
     if(validateSchema(RegisterSchema, register).error) {
       alert(validateSchema(RegisterSchema, register).error);
+      setRegisterDisabled(false);
     }
     else {
-      console.log("POST " + process.env.REACT_APP_API_URL);
+      axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, JSON.stringify(register), {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(response => {
+        // TODO show a cool modal instead of doing this
+        alert(response.data.message);
+        setRegisterDisabled(false);
+      }).catch(error => {
+        if( error.response ) {
+          // TODO show a cool modal instead of doing this
+          alert(error.response.data.message); 
+        }
+        setRegisterDisabled(false);
+      });
     }
   }
 
@@ -47,12 +71,12 @@ export default function SignUp () {
           <form onSubmit={handleSubmit}>
 
             {/* Username */}
-            <div className="mb-2">
+            <div className="mb-6">
               <label>Username</label>
-              <input 
+              <InputText 
                 className="rounded w-full py-2 px-3 text-black"
                 required type="text" placeholder="Username"
-                value={username}
+                value={username} error={usernameErr}
                 onChange={(e) => {
                   let schema = UsernameSchema;
                   let setError = setUsernameErr;
@@ -62,16 +86,15 @@ export default function SignUp () {
                     setError(validateSchema(schema, e.target.value).error);
                   }
                 }}/>
-                <p className="text-red-400 text-xs italic">{usernameErr}</p>
             </div>
 
             {/* Email */}
-            <div className="mb-2">
+            <div className="mb-6">
               <label>Email</label>
-              <input 
+              <InputText 
                 className="rounded w-full py-2 px-3 text-black"
                 required type="text" placeholder="email@address.com"
-                value={email}
+                value={email} error={emailErr}
                 onChange={(e) => {
                   let schema = EmailSchema;
                   let setError = setEmailErr;
@@ -81,16 +104,15 @@ export default function SignUp () {
                     setError(validateSchema(schema, e.target.value).error);
                   }
                 }}/>
-                <p className="text-red-400 text-xs italic">{emailErr}</p>
             </div>
 
             {/* Password */}
-            <div className="mb-2">
+            <div className="mb-6">
               <label>Password</label>
-              <input 
+              <InputText 
                 className="rounded w-full py-2 px-3 text-black"
                 required type="password" placeholder="******************"
-                value={password}
+                value={password} error={passwordErr}
                 onChange={(e) => {
                   let schema = PasswordSchema;
                   let setError = setPasswordErr;
@@ -103,16 +125,16 @@ export default function SignUp () {
                     setConfirmPasswordErr('Passwords must match!');
                   } else setConfirmPasswordErr('');
                 }}/>
-              <p className="text-red-400 text-xs italic">{passwordErr}</p>
             </div>
 
             {/* Confirm Password */}
-            <div className="mb-2">
+            <div className="mb-6">
               <label>Confirm Password</label>
-              <input 
+              <InputText 
                 className="rounded w-full py-2 px-3 text-black"
                 required type="password" placeholder="******************"
-                value={confirmPassword} onChange={(e) => {
+                value={confirmPassword} error={confirmPasswordErr}
+                onChange={(e) => {
                   let setError = setConfirmPasswordErr;
                   setConfirmPassword(e.target.value);
                   setError('');
@@ -120,21 +142,20 @@ export default function SignUp () {
                     setError('Passwords must match!');
                   }
                 }}/>
-              <p className="text-red-400 text-xs italic">{confirmPasswordErr}</p>
             </div>
 
             {/* Birthdate */} 
-            <label>Birth date</label>
-            <div className="flex flex-row space-x-4 mb-6">
-              <Dropdown placeholder="Month" required id="month" items={range(1, 12, 1)} 
+            <label className="text-gray-700 dark:text-gray-200">Birth date</label>
+            <div className="flex justify-between flex-row space-x-4 mb-6">
+              <Select placeholder="Month" required id="month" options={range(1, 12, 1)} 
                 value={birthMonth} onChange={(e) => {
                 setBirthMonth(e.target.value);
               }}/>
-              <Dropdown placeholder="Day" required id="day" items={range(1, 31, 1)} 
+              <Select placeholder="Day" required id="day" options={range(1, 31, 1)} 
                 value={birthDay} onChange={(e) => {
                 setBirthDay(e.target.value);
               }}/>
-              <Dropdown placeholder="Year" required id="year" items={birthYearList} 
+              <Select placeholder="Year" required id="year" options={birthYearList} 
                 value={birthYear} onChange={(e) => {
                 setBirthYear(e.target.value);
               }}/>
@@ -142,17 +163,13 @@ export default function SignUp () {
 
             <div className="flex items-center justify-between">
               {/* Submit Form */}
-              <button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center" type="submit">
-                Register
-              </button>
+              <div className="w-full"><Button color='purple' label='Register' disabled={registerDisabled} submit></Button></div>
             </div>
           </form>
           
           <Divider/>
           <Link to="/login">
-            <button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
-              Login
-            </button>
+            <div className="w-full"><Button color='purple' label='Login'></Button></div>
           </Link>
         </div>
       </div>

@@ -21,7 +21,7 @@ export default function Dropdown ({id, items=[], required, onChange, value="", p
 
 	return (
 		<div className="relative">
-			<input type="checkbox" id={id+'list'} className="w-0 opacity-0 absolute" checked={openList} onChange={handleOpenItemList} onBlur={handleOnBlur}></input>
+			<input tabIndex="-1" type="checkbox" id={id+'list'} className="w-0 opacity-0 absolute" checked={openList} onChange={handleOpenItemList} onBlur={handleOnBlur}></input>
 			<label htmlFor={id+'list'} className="flex items-center space-x-1 cursor-pointer pr-1">
 				<input className="rounded w-full py-2 px-3 text-black" required={required} placeholder={placeholder} value={value} onChange={onChange}></input>
 				<svg className="h-4 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

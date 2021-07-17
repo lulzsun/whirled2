@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
 import { Link } from 'react-router-dom';
+import Button from 'src/components/tail-kit/elements/buttons/Button';
+import InputText from 'src/components/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 
 export default function Login () {
@@ -20,39 +22,30 @@ export default function Login () {
 			<form onSubmit={handleSubmit}>
 				{/* Username */}
 				<div className="mb-4">
-				<label htmlFor="username">Username</label>
-				<input 
-					className="rounded w-full py-2 px-3 text-black"
-					required type="text" placeholder="Username"
-					value={username} onChange={(e) => setUsername(e.target.value)}/>
+					<InputText label="Username" 
+						required type="text" placeholder="Username" 
+						value={username} onChange={(e) => {setUsername(e.target.value);}}>
+					</InputText> 
 				</div>
 
 				{/* Password */}
 				<div className="mb-6">
-				<label htmlFor="password">Password</label>
-				<input 
-					className="rounded w-full py-2 px-3 text-black"
-					required type="password" placeholder="******************"
-					value={password} onChange={(e) => setPassword(e.target.value)}/>
-				{/* <p className="text-red-400 text-xs italic">Incorrect Username or Password!</p> */}
+					<InputText label="Password" 
+						required type="password" placeholder="******************" 
+						value={password} onChange={(e) => {setPassword(e.target.value);}}>
+					</InputText> 
 				</div>
 
 				<div className="flex items-center justify-between">
-				{/* Submit Form */}
-				<button className="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="submit">
-					Sign In
-				</button>
-				<button className="text-white bg-gray-600 font-bold py-2 px-4 rounded" type="button">
-					Forgot Password?
-				</button>
+					{/* Submit Form */}
+					<div><Button color='purple' label='Forgot Password?'></Button></div>
+					<div><Button color='purple' label='Sign in' submit></Button></div>
 				</div>
 			</form>
 			
 			<Divider/>
 			<Link to="/signup">
-				<button className="w-full text-white bg-gray-600 font-bold py-2 px-4 rounded text-center">
-				Create an Account
-				</button>
+				<div><Button color='purple' label='Create an Account'></Button></div>
 			</Link>
 			</div>
 		</div>
