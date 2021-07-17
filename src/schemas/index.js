@@ -18,6 +18,11 @@ export const RegisterSchema = Joi.object({
 	// ],
 });
 
+export const LoginSchema = Joi.object({
+	username: Joi.string().label('Username').required(),
+	password: Joi.string().label('Password').required()
+});
+
 export function validateSchema(schema, value) {
 	const result = schema.validate(value);
 	if(result.error)
