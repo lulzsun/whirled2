@@ -7,10 +7,19 @@ import api from './api/index.js';
 const app = express();
 
 app.use(express.json());
-app.use(morgan('dev'));
-app.use(cors({
-	origin: [process.env.FRONTEND_URL, "https://whirled.lulzlabz.xyz"]
-}));
+app.use(morgan('dev', {
+  	skip: function (req, res) { 
+			// why? because my pfsense firewall keeps flooding with option request
+			// and i dont know how to stop it, so this will filter it out
+			if(req._remoteAddress === '::ffff:192.168.1.1') 
+			return true; 
+		}
+	}
+));
+app.use(cors( {
+		origin: [process.env.FRONTEND_URL, "https://whirled.lulzlabz.xyz"]
+	}
+));
 
 app.get('/', (req, res) => {
 	res.json({
