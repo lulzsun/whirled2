@@ -1,5 +1,5 @@
 import Me from './Me';
-import Stuff from './Stuff';
+import Stuff from './Stuff/Stuff';
 import Rooms from './Rooms';
 import Groups from './Groups';
 import Shop from './Shop';

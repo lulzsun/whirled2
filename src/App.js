@@ -1,13 +1,11 @@
 import React from 'react';
 //import { v4 as uuidv4 } from 'uuid';
-import { useHistory } from "react-router-dom";
 import { Header, SplitView } from './components/common';
 import { BrowserRouter as Router } from 'react-router-dom';
 import axios from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
 
 function App() {
-  const history = useHistory();
   // https://github.com/Flyrell/axios-auth-refresh/issues/138#issuecomment-856585423
   // Function that will be called to refresh authorization
   
@@ -26,7 +24,7 @@ function App() {
       // this person does not have a valid refresh token, make them log back in
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('accessToken');
-      history.push('/login');
+      alert('Your session has expired, please log back in.');
       return Promise.reject();
     });
   };

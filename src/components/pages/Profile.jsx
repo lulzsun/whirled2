@@ -8,21 +8,21 @@ export default function Profile () {
 
 	// https://stackoverflow.com/a/57847874/8805016
 	// effectively, this only gets called once and renders once
-	useEffect(() => {
-		console.log(`Hello from Profile-${id} page!`);
+	// useEffect(() => {
+	// 	console.log(`Hello from Profile-${id} page!`);
 
-    async function getProfileData() {
-			const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/posts`, {
-				headers: {
-					'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
-				}
-			});
-			setProfileData(res.data);
-			console.log(res);
-		}
+  //   async function getProfileData() {
+	// 		const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/posts`, {
+	// 			headers: {
+	// 				'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+	// 			}
+	// 		});
+	// 		setProfileData(res.data);
+	// 		console.log(res);
+	// 	}
 
-		getProfileData();
-  }, []);
+	// 	getProfileData();
+  // }, []);
 
 	return (
 		<p>Hello from Profile-{id} page! {profileData}</p>

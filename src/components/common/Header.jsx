@@ -18,16 +18,12 @@ export default function Header () {
 				<div className="flex space-x-4 mr-3">
 					<Navbar/>
 					<Link to="/login" aria-current="page">
-					<img alt="profileIcon" src={defaultAvatar} className="rounded-full h-10 w-10"></img>
+						<div class="block relative">
+							<img alt="profileIcon" src={defaultAvatar} class="mx-auto object-cover rounded-full h-10 w-10 "/>
+							<div class="absolute w-3 t-3 border-2 left-full -bottom-1 transform -translate-x-1/2 border-white h-3 bg-green-500 rounded-full">
+							</div>
+						</div>
 					</Link>
-					{/* <div className="text-right pr-3">
-						<div>
-						<p className="text-gray-300">✉ | Username | Help | Wiki | Privacy | Logoff</p>
-						</div>
-						<div>
-						<p className="text-gray-300">🥈420 🥇69 ⭐100</p>
-						</div>
-					</div> */}
 				</div>
 			</div>
 		</div>
