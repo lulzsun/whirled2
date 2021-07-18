@@ -9,6 +9,7 @@
 		"@testing-library/react": "^11.2.7",
 		"@testing-library/user-event": "^12.8.3",
 		"axios": "^0.21.1",
+		"axios-auth-refresh": "^3.1.0",
 		"bcrypt": "^5.0.1",
 		"bcryptjs": "^2.4.3",
 		"cors": "^2.8.5",

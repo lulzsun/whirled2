@@ -42,7 +42,7 @@ export default function SignUp () {
       setRegisterDisabled(false);
     }
     else {
-      axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, JSON.stringify(register), {
+      axios.post(`${process.env.REACT_APP_AUTH_URL}/auth/signup`, JSON.stringify(register), {
         headers: {
           'Content-Type': 'application/json'
         }
