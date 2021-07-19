@@ -40,7 +40,7 @@ export default function Login ({setLoggedIn, logout}) {
 					localStorage.setItem('accessToken', response.data.accessToken);
 					localStorage.setItem('refreshToken', response.data.refreshToken);
 					setLoggedIn(true);
-					history.push("/profile/lulzsun");
+					history.push(`/${username}`);
 				} 
 				catch (error) {
 					alert('Issue logging in, try again later....');

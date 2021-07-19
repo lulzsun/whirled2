@@ -91,7 +91,7 @@ router.post('/login', async (req, res) => {
 	if(result.error)
 		res.status(401).json({message: 'Failed to login'});
 	else {
-		const user = await User.findOne({username: req.body.username});
+		const user = await User.findOne({username: req.body.username.toLowerCase()});
 		if(user) {
 			const payload = { _id: user._id, username: user.username };
 			const accessToken = generateAccessToken(payload);
@@ -120,14 +120,14 @@ router.post('/signup', async (req, res) => {
 	else {
 		const passwordHash = await bcrypt.hash(req.body.password, 12);
 		const user = new User({
-			username: req.body.username,
+			username: req.body.username.toLowerCase(),
 			email: req.body.email,
 			emailVerified: false,
 			password: passwordHash,
 			birthDate: req.body.birthDate,
 		})
 
-		const usernameCheck = await User.countDocuments({username: req.body.username});
+		const usernameCheck = await User.countDocuments({username: req.body.username.toLowerCase()});
 		if(usernameCheck > 0) {
 			return res.status(400).json({message: 'This username already exists!'});
 		}

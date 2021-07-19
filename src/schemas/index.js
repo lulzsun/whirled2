@@ -1,7 +1,9 @@
 import Joi from "joi";
 import { ageRestrict13 } from "./validation/index.js";
 
-export const UsernameSchema = Joi.string().label('Username').alphanum().min(3).max(30).required();
+export const usernameBlackList = ['me', 'stuff', 'rooms', 'groups', 'games', 'shop', 'profile', 'account', 'login', 'logout', 'signup'];
+
+export const UsernameSchema = Joi.string().label('Username').alphanum().invalid(...usernameBlackList).min(3).max(30).required();
 export const PasswordSchema = Joi.string().label('Password').min(6).required();
 export const EmailSchema = Joi.string().label('Email').email({minDomainSegments: 2, tlds: {allow: ['com', 'net']}});
 export const BirthDateSchema = Joi.date().custom(ageRestrict13).required();

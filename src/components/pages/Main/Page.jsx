@@ -12,10 +12,10 @@ export default function Page (props) {
 				<Route exact path="/rooms">       	<Rooms {...props}/></Route>
 				<Route exact path="/groups">      	<Groups {...props}/></Route>
 				<Route exact path="/shop">        	<Shop {...props}/></Route>
-				<Route exact path="/profile/:id"> 	<Profile {...props}/></Route>
 				<Route exact path="/login">					<Login {...props}/></Route>
 				<Route exact path="/signup">				<SignUp {...props}/></Route>
 				<Route exact path="/logout">				<Login logout={true} {...props}/></Route>
+				<Route exact path="/:id"> 					<Profile {...props}/></Route>
 				<Route exact path="*">404: Uhhh... you shouldn't be seeing this. 🙈🛠</Route>
 			</Switch>
 		</div>
