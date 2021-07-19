@@ -1,16 +1,24 @@
 import React from 'react';
-import { Route, Switch } from 'react-router-dom';
+import { Route, Switch, useRouteMatch } from 'react-router-dom';
 
 import Sidebar from '../../common/tail-kit/navigation/sidebar/Sidebar';
 import Avatars from './Avatars';
 
 export default function Stuff ({isLoggedIn}) {
+	const links = {
+		avatar: '/stuff/avatars',
+		furniture: '/stuff/furniture',
+		backdrops: '/stuff/backdrops',
+		pets: '/stuff/pets',
+		music: '/stuff/music',
+	}
+
 	const categories = [
-		{icon: '', selected: true, label: 'Avatars'},
-		{icon: '', selected: true, label: 'Furniture'},
-		{icon: '', selected: true, label: 'Backdrops'},
-		{icon: '', selected: true, label: 'Pets'},
-		{icon: '', selected: true, label: 'Music'}
+		{icon: '', selected: useRouteMatch(links.avatar), label: 'Avatars', link: links.avatar},
+		{icon: '', selected: useRouteMatch(links.furniture), label: 'Furniture', link: links.furniture},
+		{icon: '', selected: useRouteMatch(links.backdrops), label: 'Backdrops', link: links.backdrops},
+		{icon: '', selected: useRouteMatch(links.pets), label: 'Pets', link: links.pets},
+		{icon: '', selected: useRouteMatch(links.music), label: 'Music', link: links.music}
 	];
 
 	const StuffPane = () => {
@@ -19,11 +27,11 @@ export default function Stuff ({isLoggedIn}) {
 		} else {
 			return (
 				<Switch>
-					<Route path="/stuff/avatars"><Avatars/></Route>
-					<Route path="/stuff/furniture">FURNITURE</Route>
-					<Route path="/stuff/backdrops">BACKDROPS</Route>
-					<Route path="/stuff/pets">PETS</Route>
-					<Route path="/stuff/music">MUSIC</Route>
+					<Route path={links.avatar}><Avatars/></Route>
+					<Route path={links.furniture}>FURNITURE</Route>
+					<Route path={links.backdrops}>BACKDROPS</Route>
+					<Route path={links.pets}>PETS</Route>
+					<Route path={links.music}>MUSIC</Route>
 					<Route exact path="/stuff"><Avatars/></Route>
 					<Route exact path="*">404: Uhhh... you shouldn't be seeing this. 🙈🛠</Route>
 				</Switch>

@@ -7,9 +7,9 @@ import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu';
 
 export default function Header ({isLoggedIn}) {
 	const dropDownItems = [
-		{icon: '', label: "Profile"},
-		{icon: '', label: "Settings"},
-		{icon: '', label: "Logout"}
+		{icon: '', label: "Profile", link: '/profile/lulzsun'},
+		{icon: '', label: "Settings", link: '/settings'},
+		{icon: '', label: "Logout", link: '/logout'}
 	];
 
 	const ProfileIcon = () => {
