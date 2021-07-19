@@ -13,13 +13,26 @@ export default function Stuff ({isLoggedIn}) {
 		music: '/stuff/music',
 	}
 
+	// 🤢🤢🤢
+	let routeMatchAvatar, routeMatchStuff, avatarSelected = false;
+	routeMatchAvatar = useRouteMatch(links.avatar);
+	routeMatchStuff = useRouteMatch('/stuff').isExact;
+	if(!routeMatchAvatar && routeMatchStuff) avatarSelected = true;
+	else if(routeMatchAvatar) avatarSelected = true;
+	// 🙈🙈🙈
+
 	const categories = [
-		{icon: '', selected: useRouteMatch(links.avatar), label: 'Avatars', link: links.avatar},
+		{icon: '', selected: avatarSelected, label: 'Avatars', link: links.avatar},
 		{icon: '', selected: useRouteMatch(links.furniture), label: 'Furniture', link: links.furniture},
 		{icon: '', selected: useRouteMatch(links.backdrops), label: 'Backdrops', link: links.backdrops},
 		{icon: '', selected: useRouteMatch(links.pets), label: 'Pets', link: links.pets},
 		{icon: '', selected: useRouteMatch(links.music), label: 'Music', link: links.music}
 	];
+
+	// this causes a warning when redirecting too fast, TODO find a better way
+	// if(useRouteMatch('/stuff').isExact) {
+	// 	return (<>{history.push('/stuff/avatars')}</>);
+	// }
 
 	const StuffPane = () => {
 		if(!isLoggedIn) {
