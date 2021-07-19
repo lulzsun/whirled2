@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import redis from 'redis';
 
 import { LoginSchema, RegisterSchema, validateSchema } from '../../src/schemas/index.js';
-import { User } from '../db/models/index.js';
+import { User, Profile } from '../db/models/index.js';
 
 const redisClient = redis.createClient();
 const router = express.Router();
@@ -92,24 +92,25 @@ router.post('/login', async (req, res) => {
 		res.status(401).json({message: 'Failed to login'});
 	else {
 		const user = await User.findOne({username: req.body.username.toLowerCase()});
-		if(user) {
-			const payload = { _id: user._id, username: user.username };
-			const accessToken = generateAccessToken(payload);
-			const refreshToken = generateRefreshToken(payload);
-			const decoded = jwt.decode(refreshToken);
-			redisClient.setex(user._id+'_'+refreshToken, Math.floor(decoded.exp - Date.now() / 1000), 'true', 
-				function(err, reply) {
-					if(err) {
-						console.error(err);
-						return res.status(401).json({message: 'Unknown error occured'});  
-					}
-					console.log(reply);
-					return res.status(201).json({accessToken, refreshToken});
-				}
-			);
-		} else {
-			return res.status(401).json({message: 'Failed to login'});  
-		} 
+		if(!user) return res.status(401).json({message: 'Failed to login'}); 
+
+		const payload = { _id: user._id, username: user.username };
+		const accessToken = generateAccessToken(payload);
+		const refreshToken = generateRefreshToken(payload);
+		const decoded = jwt.decode(refreshToken);
+		const redisResult = redisClient.setex(user._id+'_'+refreshToken, Math.floor(decoded.exp - Date.now() / 1000), 'true');
+
+		if(!(redisResult === true)) return res.status(401).json({message: 'Failed to login'}); 
+
+		// TODO, move code below to email verification system
+		const profile = await Profile.exists({username: user.username});
+		if(!profile) { // if profile does not exist, lets create it
+			const result = finalizeSignup({username: user.username});
+
+			if(result.error) return res.status(401).json({message: 'Failed to create profile'}); 
+		}
+
+		return res.status(201).json({accessToken, refreshToken});
 	}
 });
 
@@ -119,6 +120,7 @@ router.post('/signup', async (req, res) => {
 		return res.status(400).json({message: result.error});
 	else {
 		const passwordHash = await bcrypt.hash(req.body.password, 12);
+		// Create new user
 		const user = new User({
 			username: req.body.username.toLowerCase(),
 			email: req.body.email,
@@ -137,14 +139,33 @@ router.post('/signup', async (req, res) => {
 		}
 
 		try {
-			const newUser = await user.save();
-			console.log(newUser);
+			await user.save();
+			console.log(`${user.username} has been added to users`);
 			return res.status(201).json({message: '👍'});
 		} catch (err) {
 			return res.status(400).json({message: err.message});
 		}
 	}
-})
+});
+
+async function finalizeSignup(user) {
+		let result = {};
+
+		// Create new profile
+		const profile = new Profile({
+			username: user.username,
+			displayName: user.username
+		})
+
+		try {
+			await profile.save();
+			console.log(`${user.username}'s profile created`);
+			return result;
+		} catch (err) {
+			result.error = err;
+			return result;
+		}
+}
 
 function generateRefreshToken(payload) {
 	//return jwt.sign({ ...payload, jti: uuidv4() }, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '6m'});
