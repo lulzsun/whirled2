@@ -1,7 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import axios from 'axios';
 import PagerButton from 'src/components/tail-kit/elements/buttons/PagerButton';
 
 export default function Avatars () {
+	// https://stackoverflow.com/a/57847874/8805016
+	// effectively, this only gets called once and then renders
+	useEffect(() => {
+    async function getInventoryData() {
+			try {
+				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/stuff`, {
+					headers: {
+						'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+					}
+				});
+				if(res.data) {
+					console.log(res);
+				}
+			} catch (error) {
+				if(error !== undefined)
+				console.error(error);
+			}
+		}
+
+		getInventoryData();
+  }, []);
+  
 	return (
     <div className="h-full flex flex-col items-center">
       <div className="pt-20 flex-initial">

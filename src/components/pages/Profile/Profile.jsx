@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 
 export default function Profile () {
-	const [profileData, setProfileData] = useState(null);
+	//const [profileData, setProfileData] = useState(null);
 	const { id } = useParams();
 
 	// https://stackoverflow.com/a/57847874/8805016
@@ -25,6 +24,6 @@ export default function Profile () {
   // }, []);
 
 	return (
-		<p>Hello from Profile-{id} page! {profileData}</p>
+		<p>Hello from Profile-{id} page!</p>
 	)
 }

@@ -1,13 +1,17 @@
-import Me from './Me';
+import Main from './Main'
+import Me from './Me/Me';
 import Stuff from './Stuff/Stuff';
-import Rooms from './Rooms';
-import Groups from './Groups';
-import Shop from './Shop';
-import Profile from './Profile';
+import Rooms from './Rooms/Rooms';
+import Groups from './Groups/Groups';
+import Shop from './Shop/Shop';
+import Profile from './Profile/Profile';
 import Login from './Account/Login';
 import SignUp from './Account/SignUp';
 
 export {
+	Main,
+	
+	//Subviews of Page.jsx
 	Me,
 	Stuff,
 	Rooms,

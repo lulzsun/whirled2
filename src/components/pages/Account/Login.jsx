@@ -7,7 +7,7 @@ import InputText from 'src/components/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
 
-export default function Login () {
+export default function Login ({setLoggedIn}) {
 	const history = useHistory();
 
   const [username, setUsername] = useState('');
@@ -29,6 +29,7 @@ export default function Login () {
 				try {
 					localStorage.setItem('accessToken', response.data.accessToken);
 					localStorage.setItem('refreshToken', response.data.refreshToken);
+					setLoggedIn(true);
 					history.push("/profile/lulzsun");
 				} 
 				catch (error) {

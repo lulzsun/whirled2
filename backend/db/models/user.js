@@ -7,10 +7,9 @@ const userSchema = new mongoose.Schema({
 	password: 			{ type: String, required: true },
 	birthDate:			{ type: Date, required: true },
 
-	profile:				{ type: mongoose.Types.ObjectId },
-	inventory:			{ type: mongoose.Types.ObjectId },
-	shop:						{ type: mongoose.Types.ObjectId },
-	rooms:					{ type: Array },
+	inventory:			{ type: mongoose.Types.ObjectId, default: null },
+	shop:						{ type: mongoose.Types.ObjectId, default: null },
+	rooms:					{ type: Array, default: [] },
 });
 
 export default userSchema;

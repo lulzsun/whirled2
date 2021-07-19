@@ -8,9 +8,8 @@ router.get('/', (req, res) => {
   });
 });
 
-// test code, remove later
-router.get('/posts', authenticateToken, (req, res) => {
-	return res.json(req.user);
+router.get('/stuff', authenticateToken, (req, res) => {
+	return res.json('hey this is your nonexistent stuff!');
 });
 
 export default router;

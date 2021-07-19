@@ -6,7 +6,7 @@ const Sidebar = (props) => {
             <div className="flex flex-col sm:flex-row sm:justify-around">
                 <div className="h-screen">
                     {withHeader && (<div className="flex items-center justify-start mx-6 mt-10">
-                            {props.headerImg && <img className="h-10" src="/icons/rocket.svg"/>}
+                            {props.headerImg && <img alt='headerImage' className="h-10" src="/icons/rocket.svg"/>}
                             {props.headerText && (<span className={`text-gray-600 dark:text-gray-300 text-2xl font-bold`}>
                                     {props.headerText}
                                 </span>)}
@@ -14,27 +14,27 @@ const Sidebar = (props) => {
 
                     <nav className={`mt-10 px-6 ${props.withDivider ? 'divide-y divide-gray-200' : ''}`}>
                         {props.links.map((link) => {
-            return (<a key={link.label} className={`hover:text-gray-800 hover:bg-gray-100 flex items-center my-6 transition-colors dark:hover:text-white dark:hover:bg-gray-600 duration-200 ${props.withBorder && link.selected
+            return (<div key={link.label} className={`cursor-pointer select-none hover:text-gray-800 hover:bg-gray-100 flex items-center my-6 transition-colors dark:hover:text-white dark:hover:bg-gray-600 duration-200 ${props.withBorder && link.selected
                     ? 'border-r-2 border-gray-600 dark:border-gray-300'
                     : ''} ${link.selected
                     ? 'text-gray-800 dark:text-gray-100'
-                    : 'text-gray-600 dark:text-gray-400'} ${props.withBorder ? '' : 'rounded-lg'} ${link.selected ? 'bg-gray-100 dark:bg-gray-600' : ''}`} href="#">
+                    : 'text-gray-600 dark:text-gray-400'} ${props.withBorder ? '' : 'rounded-lg'} ${link.selected ? 'bg-gray-100 dark:bg-gray-600' : ''}`}>
                                     {link.icon}
 
                                     <span className="mx-4 text-md font-normal">{link.label}</span>
                                     <span className="flex-grow text-right">
                                         {link.notifications && (<NotificationBadge size="small" number={link.notifications}/>)}
                                     </span>
-                                </a>);
+                                </div>);
         })}
                     </nav>
-
-                    {props.bottomLink && (<div className="absolute bottom-0 my-10">
-                            <a className={`text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors duration-200 flex items-center py-2 px-8`} href={props.bottomLink.link || '#'}>
+                    {/* href={props.bottomLink.link || '#'} */}
+                    {props.bottomLink && (<div className="absolute bottom-0 my-10"> 
+                            <div className={`select-none text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors duration-200 flex items-center py-2 px-8`}>
                                 {props.bottomLink.icon}
 
                                 <span className="mx-4 font-medium">{props.bottomLink.label}</span>
-                            </a>
+                            </div>
                         </div>)}
                 </div>
             </div>

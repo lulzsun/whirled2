@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Route, Switch, useParams } from 'react-router-dom';
-import axios from 'axios';
+import React from 'react';
+import { Route, Switch } from 'react-router-dom';
+
 import Sidebar from 'src/components/tail-kit/navigation/sidebar/Sidebar';
 import Avatars from './Avatars';
 
-export default function Stuff () {
+export default function Stuff ({isLoggedIn}) {
 	const categories = [
 		{icon: '', selected: true, label: 'Avatars'},
 		{icon: '', selected: true, label: 'Furniture'},
@@ -12,43 +12,12 @@ export default function Stuff () {
 		{icon: '', selected: true, label: 'Pets'},
 		{icon: '', selected: true, label: 'Music'}
 	];
-	const [loggedIn, setLoggedIn] = useState(true);
-	const [inventoryData, setInventoryData] = useState(null);
-	const { category, id } = useParams();
 
-	// https://stackoverflow.com/a/57847874/8805016
-	// effectively, this only gets called once and then renders
-	useEffect(() => {
-    async function getInventoryData() {
-			try {
-				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/stuff`, {
-					headers: {
-						'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
-					}
-				});
-				if(res) {
-					setInventoryData(res.data);
-					console.log(res);
-				}
-			} catch (error) {
-				if(error !== undefined)
-				console.error(error);
-			}
-		}
-
-		if(localStorage.getItem('refreshToken')) {
-			getInventoryData();
-			setLoggedIn(false);
-		}
-  }, []);
-
-	return (
-		<>
-		<div className="flex h-full">
-			<div className="w-40">
-				<Sidebar links={categories} withBorder="true"></Sidebar>
-			</div>
-			<div hidden={(inventoryData === null)} className="w-full">
+	const StuffPane = () => {
+		if(!isLoggedIn) {
+			return (<></>);
+		} else {
+			return (
 				<Switch>
 					<Route path="/stuff/avatars"><Avatars/></Route>
 					<Route path="/stuff/furniture">FURNITURE</Route>
@@ -58,8 +27,20 @@ export default function Stuff () {
 					<Route exact path="/stuff"><Avatars/></Route>
 					<Route exact path="*">404: Uhhh... you shouldn't be seeing this. 🙈🛠</Route>
 				</Switch>
+			);
+		}
+	}
+
+	return (
+		<>
+		<div className="flex h-full">
+			<div hidden={!isLoggedIn} className="w-40">
+				<Sidebar links={categories} withBorder="true"></Sidebar>
 			</div>
-			<div hidden={!loggedIn}>
+			<div hidden={!isLoggedIn} className="w-full">
+				<StuffPane/>
+			</div>
+			<div hidden={isLoggedIn}>
 				<p>Please log in to see your stuff!</p>
 			</div>
 		</div>
