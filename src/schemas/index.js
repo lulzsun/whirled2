@@ -1,7 +1,11 @@
 import Joi from "joi";
 import { ageRestrict13 } from "./validation/index.js";
 
-export const usernameBlackList = ['me', 'stuff', 'rooms', 'groups', 'games', 'shop', 'profile', 'account', 'login', 'logout', 'signup'];
+export const usernameBlackList = [
+	'me', 'stuff', 'rooms', 'groups', 'games', 'shop', 
+	'profile', 'account', 'settings', 'login', 'logout', 
+	'signup', 'help', 'about', 'privacy'
+];
 
 export const UsernameSchema = Joi.string().label('Username').alphanum().invalid(...usernameBlackList).min(3).max(30).required();
 export const PasswordSchema = Joi.string().label('Password').min(6).required();

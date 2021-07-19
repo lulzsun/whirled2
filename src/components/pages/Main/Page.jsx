@@ -15,8 +15,11 @@ export default function Page (props) {
 				<Route exact path="/login">					<Login {...props}/></Route>
 				<Route exact path="/signup">				<SignUp {...props}/></Route>
 				<Route exact path="/logout">				<Login logout={true} {...props}/></Route>
+				<Route exact path="/profile">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
+				<Route exact path="/settings">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
+				<Route exact path="/help">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
+				<Route exact path="/about">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 				<Route exact path="/:id"> 					<Profile {...props}/></Route>
-				<Route exact path="*">404: Uhhh... you shouldn't be seeing this. 🙈🛠</Route>
 			</Switch>
 		</div>
 	)

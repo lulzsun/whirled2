@@ -5,21 +5,27 @@ import { useRouteMatch } from 'react-router-dom';
 import SplitPane from '../../common/splitpane';
  
 export default function Main(props) {
-  const isPageHidden = useRouteMatch("/").isExact;
-  let resizeVisible = { opacity: 0.3, width: `5px`, cursor: 'col-resize' };
+  const hidden = useRouteMatch("/").isExact;
+	const resizerStyle = { opacity: 0.3, width: '5px', cursor: 'col-resize' };
 
-  if(isPageHidden) {
-    resizeVisible = { opacity: 0.3, width: `0px`, cursor: 'col-resize' };
-  }
+	if(hidden) {
+		resizerStyle.width = '0px';
+		return (
+      <div className="flex flex-grow" style={{position: "relative"}}>
+        <SplitPane split="vertical" resizerStyle={resizerStyle} defaultSize={0} minSize={0} primary="second">
+          <Game {...props}/>
+          <Page {...props}/>
+        </SplitPane>
+      </div>
+		)
+	}
 
-  return (
+	return (
     <div className="flex flex-grow" style={{position: "relative"}}>
-      <SplitPane split="vertical" 
-        resizerStyle={resizeVisible} 
-        defaultSize={(isPageHidden ? 0 : 750)} minSize={(isPageHidden ? 0 : 750)} primary="second">
+      <SplitPane split="vertical" resizerStyle={resizerStyle} defaultSize={750} minSize={750} primary="second">
         <Game {...props}/>
         <Page {...props}/>
       </SplitPane>
     </div>
-  );
+	)
 }
