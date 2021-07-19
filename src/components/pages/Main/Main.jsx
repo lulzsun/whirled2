@@ -2,7 +2,7 @@ import React from 'react';
 import Game from './Game';
 import Page from './Page';
 import { useRouteMatch } from 'react-router-dom';
-import SplitPane from '../../common/SplitPane';
+import SplitPane from '../../common/splitpane';
  
 export default function Main(props) {
   const isPageHidden = useRouteMatch("/").isExact;

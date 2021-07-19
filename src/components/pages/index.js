@@ -1,12 +1,12 @@
-import Main from './Main/Main'
-import Me from './Me/Me';
-import Stuff from './Stuff/Stuff';
-import Rooms from './Rooms/Rooms';
-import Groups from './Groups/Groups';
-import Shop from './Shop/Shop';
-import Profile from './Profile/Profile';
-import Login from './Account/Login';
-import SignUp from './Account/SignUp';
+import Main from './main/Main'
+import Me from './me/Me';
+import Stuff from './stuff/Stuff';
+import Rooms from './rooms/Rooms';
+import Groups from './groups/Groups';
+import Shop from './shop/Shop';
+import Profile from './profile/Profile';
+import Login from './account/Login';
+import SignUp from './account/SignUp';
 
 export {
 	Main,
