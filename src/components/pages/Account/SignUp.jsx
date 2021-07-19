@@ -65,7 +65,7 @@ export default function SignUp () {
   const birthYearList = range(currentYear, currentYear - 100, -1);
 
   return (
-    <div className="flex h-screen overflow-y-auto">
+    <div className="flex h-full overflow-y-auto">
       <div className="m-auto">
         <div className="max-w-sm">
           <form onSubmit={handleSubmit}>

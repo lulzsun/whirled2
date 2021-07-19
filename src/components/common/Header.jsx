@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navbar } from '../common';
 import { Link } from 'react-router-dom';
-import defaultAvatar from "../../media/default-avatar.jpg";
+import defaultPhoto from "../../media/profile_photo.png";
 import headerLogo from "../../media/header_logo.png";
 import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu';
 
@@ -17,7 +17,7 @@ export default function Header ({isLoggedIn}) {
 	const ProfileIcon = () => {
 		return (
 			<div className="block relative">
-				<img alt="profileIcon" src={defaultAvatar} className="mx-auto object-cover rounded-full h-10 w-10"/>
+				<img alt="profileIcon" src={defaultPhoto} className="mx-auto object-cover rounded-full h-10 w-10"/>
 				<div hidden={!isLoggedIn} 
 					className="absolute w-3 t-3 border-2 left-full -bottom-1 transform -translate-x-1/2 border-white h-3 bg-green-500 rounded-full">
 				</div>

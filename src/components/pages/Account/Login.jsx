@@ -57,7 +57,7 @@ export default function Login ({setLoggedIn, logout}) {
   }
 
 	return (
-		<div className="flex h-screen overflow-y-auto">
+		<div className="flex h-full overflow-y-auto">
 		<div className="m-auto">
 			<div className="max-w-sm">
 			<img alt="heading" src={memeFrog} className="mb-4 rounded"></img>
