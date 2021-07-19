@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import axios from 'axios';
-import PagerButton from 'src/components/tail-kit/elements/buttons/PagerButton';
+import PagerButton from '../../common/tail-kit/elements/buttons/PagerButton';
 
 export default function Avatars () {
 	// https://stackoverflow.com/a/57847874/8805016

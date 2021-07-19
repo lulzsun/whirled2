@@ -6,9 +6,9 @@ import {
   RegisterSchema, UsernameSchema, EmailSchema, PasswordSchema,
   validateSchema 
 } from '../../../schemas/index.js';
-import Button from 'src/components/tail-kit/elements/buttons/Button';
-import Select from 'src/components/tail-kit/form/select/Select';
-import InputText from 'src/components/tail-kit/form/inputtext/InputText';
+import Button from '../../common/tail-kit/elements/buttons/Button';
+import Select from '../../common/tail-kit/form/select/Select';
+import InputText from '../../common/tail-kit/form/inputtext/InputText';
 
 export default function SignUp () {
   const [username, setUsername] = useState('');

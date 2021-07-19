@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route, Switch } from 'react-router-dom';
 
-import Sidebar from 'src/components/tail-kit/navigation/sidebar/Sidebar';
+import Sidebar from '../../common/tail-kit/navigation/sidebar/Sidebar';
 import Avatars from './Avatars';
 
 export default function Stuff ({isLoggedIn}) {

@@ -3,7 +3,7 @@ import { Navbar } from '../common';
 import { Link } from 'react-router-dom';
 import defaultAvatar from "../../media/default-avatar.jpg";
 import headerLogo from "../../media/header_logo.png";
-import DropDownMenu from '../tail-kit/elements/ddm/DropDownMenu';
+import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu';
 
 export default function Header ({isLoggedIn}) {
 	const dropDownItems = [

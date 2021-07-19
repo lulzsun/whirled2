@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useHistory } from "react-router-dom";
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import Button from 'src/components/tail-kit/elements/buttons/Button';
-import InputText from 'src/components/tail-kit/form/inputtext/InputText';
+import Button from '../../common/tail-kit/elements/buttons/Button';
+import InputText from '../../common/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
 
