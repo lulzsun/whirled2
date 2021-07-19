@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from "react-router-dom";
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -7,13 +7,23 @@ import InputText from '../../common/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
 
-export default function Login ({setLoggedIn}) {
+export default function Login ({setLoggedIn, logout}) {
 	const history = useHistory();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(''); 
 
 	const [loginDisabled, setLoginDisabled] = useState(false);
+
+	// https://stackoverflow.com/a/54655508/8805016
+	// if not using this, it will cause an error if render isnt done
+	useEffect(() => {
+		if(logout) {
+			localStorage.removeItem('accessToken');
+			localStorage.removeItem('refreshToken');
+			setLoggedIn(false);
+		}
+	}, [setLoggedIn, logout]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

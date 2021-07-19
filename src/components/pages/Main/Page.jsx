@@ -3,6 +3,7 @@ import { Me, Stuff, Rooms, Groups, Shop, Profile, Login, SignUp } from '../index
 import { Route, Switch } from 'react-router-dom';
 
 export default function Page (props) {
+
 	return (
 		<div id="PagePane" className="h-full">
 			<Switch>
@@ -14,6 +15,7 @@ export default function Page (props) {
 				<Route exact path="/profile/:id"> 	<Profile {...props}/></Route>
 				<Route exact path="/login">					<Login {...props}/></Route>
 				<Route exact path="/signup">				<SignUp {...props}/></Route>
+				<Route exact path="/logout">				<Login logout={true} {...props}/></Route>
 				<Route exact path="*">404: Uhhh... you shouldn't be seeing this. 🙈🛠</Route>
 			</Switch>
 		</div>
