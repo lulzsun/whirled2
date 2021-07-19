@@ -42,7 +42,7 @@ function App() {
       <div className="flex flex-col h-screen">
         {/* https://stackoverflow.com/a/48434525/8805016 */}
         <Header key={isLoggedIn} isLoggedIn={isLoggedIn}/>
-          <Main isLoggedIn={isLoggedIn} setLoggedIn={setLoggedIn}/>
+        <Main isLoggedIn={isLoggedIn} setLoggedIn={setLoggedIn}/>
       </div>
     </Router>
   );
