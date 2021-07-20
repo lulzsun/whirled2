@@ -3,8 +3,8 @@ import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import ProfileCard from './ProfileCard';
 import FriendsCard from './FriendsCard';
-import AboutMeCard from './AboutMeCard';
-import SomethingCard from './SomethingCard';
+import InformationCard from './InformationCard';
+import CommentsCard from './CommentsCard';
 
 export default function Profile () {
 	const [profileData, setProfileData] = useState(null);
@@ -25,21 +25,14 @@ export default function Profile () {
 		getProfileData();
   }, [setProfileData, username]);
 
-	return (
-		// https://tailwindcomponents.com/component/profile-page
-		<div class="h-full overflow-y-auto container mx-auto p-5">
-        <div class="md:flex no-wrap md:-mx-2">
-            <div class="w-full md:w-3/12 md:mx-2">
-							<ProfileCard/>
-							<div class="my-4"></div>
-							<FriendsCard/>
-            </div>
-            <div class="w-full md:w-9/12 mx-2 h-64">
-							<AboutMeCard/>
-							<div class="my-4"></div>
-							{/* <SomethingCard/> */}
-            </div>
-        </div>
+	return ( 
+		<div className="h-full overflow-y-auto container mx-auto p-5">
+			<div>
+				<ProfileCard/>
+				<InformationCard/>
+				<FriendsCard/>
+				<CommentsCard/>
+			</div>
     </div>
 	)
 }

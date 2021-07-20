@@ -1,30 +1,68 @@
 import React from 'react';
 import defaultPhoto from "../../../media/profile_photo.png";
+import { ThreeDots, PencilFill, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
+import { Link } from 'react-router-dom';
 
 export default function ProfileCard () {
   return (
-    <div class="bg-white p-3 border-t-4 border-blue-400">
-      <div class="image overflow-hidden">
-        <img class="h-auto w-full mx-auto" src={defaultPhoto} alt=""/>
-      </div>
-      <h1 class="text-gray-900 font-bold text-lg leading-8">Lulzsun</h1>
-      <h3 class="text-gray-600 text-sm text-semibold leading-6">@lulzsun</h3>
-      <p class="text-sm text-gray-500 hover:text-gray-600 leading-6">Hello Whirled!</p>
-      <ul class="bg-gray-100 text-gray-600 hover:text-gray-700 hover:shadow px-3 mt-3 divide-y rounded shadow-sm">
-        <li class="flex items-center py-3">
-          <span class="text-sm">Level</span>
-          <span class="ml-auto">
-            <span class="bg-yellow-500 py-1 px-2 rounded text-white text-sm">1</span></span>
-        </li>
-        {/* <li class="flex items-center py-3">
-          <span class="text-xs">Joined</span>
-          <span class="text-xs ml-auto">04/20/2021</span>
-        </li>
-        <li class="flex items-center py-3">
-          <span class="text-xs">Last Online</span>
-          <span class="text-xs ml-auto">04/20/2021</span>
-        </li> */}
-      </ul>
-    </div>
+    <div className="max-w-5xl w-full mx-auto z-10">
+      <div className="flex flex-col">
+        <div className="bg-gray-900 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
+          <div className="flex-none sm:flex">
+            <div className=" relative h-32 w-32 sm:mb-0 mb-3">
+              <img src={defaultPhoto} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
+              <Link to="#"
+                className="absolute -right-2 bottom-2 -ml-3 text-white p-1 text-xs bg-green-500 hover:bg-green-600 font-medium tracking-wider rounded-full transition ease-in duration-300">
+                <PencilFill/>
+              </Link>
+				  	</div>
+            <div className="flex-auto sm:ml-5 justify-evenly">
+              <div className="flex flex-row">
+                <div className="flex-1 inline-flex items-center sm:mt-2">
+                  <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">lulzsun</div>
+                </div>
+                <div className="flex-1"></div>
+                <div className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
+                  <ThreeDots/>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex-auto text-gray-400 my-1">
+                  <span className="mr-3 ">@lulzsun</span>
+                  <span className="mr-3 border-r border-gray-600 max-h-0"></span>
+                  <span>Level 1</span>
+                </div>
+              </div>
+              <div className="flex flex-row mb-4 items-center">
+              Hello Whirled! Hello Whirled! Hello Whirled! Hello Whirled! Hello!
+              </div>
+              <div className="flex text-sm text-gray-400">
+                <div className="flex-auto inline-flex items-center">
+                  <PersonPlusFill className='h-5 w-5 mr-2'/>
+                  <p className="">1.2k Friends</p>
+                </div>
+                <div className="flex-auto inline-flex items-center">
+                  <Calendar3 className='h-5 w-5 mr-2'/>
+                  <p className="">Joined July 19, 2021</p>
+                </div>
+                <div className="flex-auto inline-flex items-center">
+                  <CalendarCheck className='h-5 w-5 mr-2'/>
+                  <p className="">Last Online July 19, 2021</p>
+                </div>
+                {/* <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
+                  <House className="ml-1"/><p className="ml-1 mr-1 text-xs">Visit Home</p>
+                </div>
+                <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
+                  <Binoculars className="ml-1"/><p className="ml-1 mr-1 text-xs">View Rooms</p>
+                </div>
+                <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
+                  <Bag className="ml-1"/><p className="ml-1 mr-1 text-xs">Browse Items</p>
+                </div> */}
+              </div>  
+            </div>
+					</div>
+				</div>
+			</div>
+		</div>
   );
 }
