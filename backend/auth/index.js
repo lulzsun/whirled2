@@ -97,8 +97,6 @@ router.post('/login', async (req, res) => {
 		const unHashedPass = req.body.password;
 		const hashCompare = await bcrypt.compare(unHashedPass, user.password);
 
-		console.log(hashCompare);
-
 		if(!hashCompare) return res.status(400).json({message: 'Failed to login'});
 
 		const payload = { _id: user._id, username: user.username };
