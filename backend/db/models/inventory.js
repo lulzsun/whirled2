@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from '../connection.js';
 
 const inventorySchema = new mongoose.Schema({
 	avatars:			{ type: Array },

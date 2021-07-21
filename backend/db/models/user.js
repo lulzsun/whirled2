@@ -7,8 +7,8 @@ const userSchema = new mongoose.Schema({
 	password: 			{ type: String, required: true },
 	birthDate:			{ type: Date, required: true },
 
-	inventory:			{ type: mongoose.Types.ObjectId, default: null },
-	shop:						{ type: mongoose.Types.ObjectId, default: null },
+	inventory:			{ type: mongoose.Schema.Types.ObjectId, default: null },
+	shop:						{ type: mongoose.Schema.Types.ObjectId, default: null },
 	rooms:					{ type: Array, default: [] },
 });
 

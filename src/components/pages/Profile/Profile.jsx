@@ -16,23 +16,29 @@ export default function Profile () {
 		console.log(`Hello from Profile-${username} page!`);
 
     async function getProfileData() {
-			const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${username}`);
-			setProfileData(res.data);
-
-			console.log(res.data);
+			try {
+				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${username}`);
+				setProfileData(res.data);
+				console.log(res.data);
+			} catch (error) {
+				alert('404');
+			}
 		}
 
 		getProfileData();
   }, [setProfileData, username]);
 
-	return ( 
-		<div className="h-full overflow-y-auto container mx-auto p-5">
-			<div>
-				<ProfileCard/>
-				<InformationCard/>
-				<FriendsCard/>
-				<CommentsCard/>
+	if(profileData) {
+		return ( 
+			<div className="h-full overflow-y-auto container mx-auto p-5">
+				<div>
+					<ProfileCard profileData={profileData}/>
+					<InformationCard profileData={profileData}/>
+					<FriendsCard profileData={profileData}/>
+					<CommentsCard profileData={profileData}/>
+				</div>
 			</div>
-    </div>
-	)
+		)
+	}
+	return (<></>);
 }

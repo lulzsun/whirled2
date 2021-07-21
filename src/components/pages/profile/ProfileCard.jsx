@@ -3,7 +3,9 @@ import defaultPhoto from "../../../media/profile_photo.png";
 import { ThreeDots, PencilFill, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 
-export default function ProfileCard () {
+export default function ProfileCard (props) {
+  const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
       <div className="flex flex-col">
@@ -19,7 +21,7 @@ export default function ProfileCard () {
             <div className="flex-auto sm:ml-5 justify-evenly">
               <div className="flex flex-row">
                 <div className="flex-1 inline-flex items-center sm:mt-2">
-                  <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">lulzsun</div>
+                  <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">{props.profileData.displayName}</div>
                 </div>
                 <div className="flex-1"></div>
                 <div className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
@@ -28,26 +30,26 @@ export default function ProfileCard () {
               </div>
               <div className="flex flex-col">
                 <div className="flex-auto text-gray-400 my-1">
-                  <span className="mr-3 ">@lulzsun</span>
+                  <span className="mr-3 ">@{props.profileData.username}</span>
                   <span className="mr-3 border-r border-gray-600 max-h-0"></span>
-                  <span>Level 1</span>
+                  <span>Level {props.profileData.level}</span>
                 </div>
               </div>
               <div className="flex flex-row mb-4 items-center">
-              Hello Whirled! Hello Whirled! Hello Whirled! Hello Whirled! Hello!
+              {props.profileData.status}
               </div>
               <div className="flex text-sm text-gray-400">
                 <div className="flex-auto inline-flex items-center">
                   <PersonPlusFill className='h-5 w-5 mr-2'/>
-                  <p className="">1.2k Friends</p>
+                  <p className="">{props.profileData.friends.length} Friends</p>
                 </div>
                 <div className="flex-auto inline-flex items-center">
                   <Calendar3 className='h-5 w-5 mr-2'/>
-                  <p className="">Joined July 19, 2021</p>
+                  <p className="">Joined {(new Date(props.profileData.created)).toLocaleDateString(undefined, dateOptions)}</p>
                 </div>
                 <div className="flex-auto inline-flex items-center">
                   <CalendarCheck className='h-5 w-5 mr-2'/>
-                  <p className="">Last Online July 19, 2021</p>
+                  <p className="">Last Online {(new Date(props.profileData.lastOnline)).toLocaleDateString(undefined, dateOptions)}</p>
                 </div>
                 {/* <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
                   <House className="ml-1"/><p className="ml-1 mr-1 text-xs">Visit Home</p>

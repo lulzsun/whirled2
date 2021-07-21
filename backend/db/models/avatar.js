@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const userSchema = new mongoose.Schema({
+const avatarSchema = new mongoose.Schema({
 	creator: 			  { type: mongoose.Types.ObjectId, required: true },
 	name: 					{ type: String, required: true },
   lastUpdate: 	  { type: Date, required: true },
@@ -10,4 +10,4 @@ const userSchema = new mongoose.Schema({
   comments:				{ type: Array, default: [] },
 });
 
-export default userSchema;
+export default avatarSchema;

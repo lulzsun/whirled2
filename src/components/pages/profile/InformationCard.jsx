@@ -2,7 +2,7 @@ import React from 'react';
 import { PencilFill } from 'react-bootstrap-icons';
 // import { Link } from 'react-router-dom';
 
-export default function InformationCard () {
+export default function InformationCard (props) {
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
       <div className="flex flex-col">
@@ -26,15 +26,15 @@ export default function InformationCard () {
               <div className="text-xs">
                 <div className="pt-3 flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Activities</div>
-                  <div className="px-4 py-1">Eating Cheese.</div>
+                  <div className="px-4 py-1">{props.profileData.information.activities}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Interests</div>
-                  <div className="px-4 py-1">American Cheese, Mozzarella, Blue Cheese, Cheddar.</div>
+                  <div className="px-4 py-1">{props.profileData.information.interests}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">About Me</div>
-                  <div className="px-4 py-1">I am always thinking about cheese. Life wouldn't be possible without cheese.</div>
+                  <div className="px-4 py-1">{props.profileData.information.aboutMe}</div>
                 </div>
               </div>
             </div>
