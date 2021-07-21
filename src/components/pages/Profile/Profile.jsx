@@ -10,6 +10,16 @@ export default function Profile () {
 	const [profileData, setProfileData] = useState(null);
 	const { username } = useParams();
 
+	// ProfileCard
+
+	// InfoCard state variables
+	const [info, setInfo] = useState(null);
+	const [showMore, setShowMore] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+	// CommentCard state variables
+	const [localComments, setLocalComments] = useState([]);
+
 	// https://stackoverflow.com/a/57847874/8805016
 	// effectively, this only gets called once and renders once
 	useEffect(() => {
@@ -19,6 +29,14 @@ export default function Profile () {
 			try {
 				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${username}`);
 				setProfileData(res.data);
+
+				// reset InfoCard state variables
+				setInfo(res.data.information);
+				setShowMore(false);
+				setEditMode(false);
+
+				// reset CommentCard state variables
+				setLocalComments([]);
 				console.log(res.data);
 			} catch (error) {
 				alert('404');
@@ -33,9 +51,9 @@ export default function Profile () {
 			<div className="h-full overflow-y-auto container mx-auto p-5">
 				<div>
 					<ProfileCard profileData={profileData}/>
-					<InformationCard profileData={profileData}/>
+					<InformationCard info={info} setInfo={setInfo} showMore={showMore} setShowMore={setShowMore} editMode={editMode} setEditMode={setEditMode}/>
 					<FriendsCard profileData={profileData}/>
-					<CommentsCard profileData={profileData}/>
+					<CommentsCard parentId={profileData._id} comments={profileData.comments} localComments={localComments} setLocalComments={setLocalComments}/>
 				</div>
 			</div>
 		)

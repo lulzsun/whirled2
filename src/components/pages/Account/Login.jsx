@@ -19,8 +19,7 @@ export default function Login ({setLoggedIn, logout}) {
 	// if not using this, it will cause an error if render isnt done
 	useEffect(() => {
 		if(logout) {
-			localStorage.removeItem('accessToken');
-			localStorage.removeItem('refreshToken');
+			localStorage.clear();
 			setLoggedIn(false);
 		}
 	}, [setLoggedIn, logout]);
@@ -37,6 +36,7 @@ export default function Login ({setLoggedIn, logout}) {
 		}).then(response => {
 			if(response.data.accessToken) {
 				try {
+					localStorage.setItem('username', username);
 					localStorage.setItem('accessToken', response.data.accessToken);
 					localStorage.setItem('refreshToken', response.data.refreshToken);
 					setLoggedIn(true);

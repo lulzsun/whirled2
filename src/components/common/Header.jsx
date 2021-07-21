@@ -6,10 +6,8 @@ import headerLogo from "../../media/header_logo.png";
 import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu';
 
 export default function Header ({isLoggedIn}) {
-	let username = 'lulzsun';
-
 	const dropDownItems = [
-		{icon: '', label: "Profile", link: `/${username}`},
+		{icon: '', label: "Profile", link: `/${localStorage.getItem('username')}`},
 		{icon: '', label: "Settings", link: '/settings'},
 		{icon: '', label: "Logout", link: '/logout'}
 	];

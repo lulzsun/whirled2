@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import CommentEditor from 'src/components/common/CommentEditor';
 import CommentSection from 'src/components/common/CommentSection';
 
-export default function CommentsCard (props) {
-  const [localComments, setLocalComments] = useState([]);
-
+export default function CommentsCard ({parentId, comments, localComments, setLocalComments}) {
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
       <div className="flex flex-col">
@@ -22,10 +20,10 @@ export default function CommentsCard (props) {
             <div className="w-full mb-2">
               {/* Leave a comment section */}
               <CommentEditor hidden={!localStorage.getItem('refreshToken')} 
-                parentId={props.profileData._id} parentType={'Profile'}
+                parentId={parentId} parentType={'Profile'}
                 localComments={localComments} setLocalComments={setLocalComments}/>
               {/* Other's comments */}
-              <CommentSection commentArray={props.profileData.comments} 
+              <CommentSection commentArray={comments} 
                 localComments={localComments}/>
             </div>
             {/*  Footer */}

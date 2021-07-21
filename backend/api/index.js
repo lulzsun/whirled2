@@ -37,8 +37,10 @@ router.get('/profile/:id', async (req, res) => {
 router.post('/edit/profile', authenticateToken, async (req, res) => {
   try {
     let profile = await Profile.findOne({username: req.user.username});
-    profile.information = req.body;
-    console.log(profile);
+    if(req.body.information) profile.information = req.body.information;
+    if(req.body.displayName) profile.displayName = req.body.displayName;
+    if(req.body.profilePicture) profile.profilePicture = req.body.profilePicture;
+    if(req.body.banner) profile.banner = req.body.banner;
     await profile.save();
     return res.json('ok');
   } catch (err) {

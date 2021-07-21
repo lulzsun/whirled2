@@ -3,11 +3,7 @@ import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
 // import { Link } from 'react-router-dom';
 
-export default function InformationCard (props) {
-  const [showMore, setShowMore] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [info, setInfo] = useState(props.profileData.information);
-
+export default function InformationCard ({info, showMore, editMode, setEditMode, setInfo, setShowMore}) {
   const infoRef = {
     aboutMe: useRef(),
     activities: useRef(),
@@ -38,14 +34,16 @@ export default function InformationCard (props) {
   async function handleSaveButton() {
     try {
       const infoJson = {
-        aboutMe: infoRef.aboutMe.current.innerText,
-        activities: infoRef.activities.current.innerText,
-        interests: infoRef.interests.current.innerText,
-        favoriteBooks: infoRef.favoriteBooks.current.innerText,
-        favoriteGames: infoRef.favoriteGames.current.innerText,
-        favoriteMovies: infoRef.favoriteMovies.current.innerText,
-        favoriteMusic: infoRef.favoriteMusic.current.innerText,
-        favoriteShows: infoRef.favoriteShows.current.innerText,
+        information: {
+          aboutMe: infoRef.aboutMe.current.innerText,
+          activities: infoRef.activities.current.innerText,
+          interests: infoRef.interests.current.innerText,
+          favoriteBooks: infoRef.favoriteBooks.current.innerText,
+          favoriteGames: infoRef.favoriteGames.current.innerText,
+          favoriteMovies: infoRef.favoriteMovies.current.innerText,
+          favoriteMusic: infoRef.favoriteMusic.current.innerText,
+          favoriteShows: infoRef.favoriteShows.current.innerText,
+        }
       }
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(infoJson), {
         headers: {
@@ -56,7 +54,7 @@ export default function InformationCard (props) {
       if(res.data) {
         console.log(res);
       }
-      setInfo(infoJson);
+      setInfo(infoJson.information);
       setEditMode(false);
     } catch (error) {
       if(error !== undefined)
@@ -64,6 +62,7 @@ export default function InformationCard (props) {
     }
   }
 
+  if(info === null) return (<></>);
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
       <div className="flex flex-col">
