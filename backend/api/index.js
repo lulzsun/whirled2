@@ -16,8 +16,17 @@ router.get('/stuff', authenticateToken, (req, res) => {
 });
 
 router.get('/profile/:id', async (req, res) => {
-  try {                                                                    //{path:'comments', limit: ?}
-    let profile = await Profile.findOne({username: req.params.id}).populate({path:'comments'}).exec();
+  try {
+    let profile = await Profile.
+      findOne({username: req.params.id}).
+      populate({
+        path: 'comments',
+        populate: {
+          path: 'user',
+          select: 'username displayName' // do not leak password 🙈 
+        }
+      }).
+      exec();
     let created = profile._id.getTimestamp().toISOString();
     profile = {...profile._doc, created};
     return res.json(profile);
@@ -30,7 +39,7 @@ router.get('/profile/:id', async (req, res) => {
 router.post('/comment', authenticateToken, async (req, res) => {
   // Create new comment
   const comment = new Comment({
-    userId: req.user._id,
+    user: req.user._id,
     parentId: req.body.parentId,
     parentType: req.body.parentType,
     content: req.body.content,
@@ -43,7 +52,7 @@ router.post('/comment', authenticateToken, async (req, res) => {
     await parent.save();
   } catch (err) {
     console.error(err);
-    return res.sendStatus(402);
+    return res.sendStatus(500);
   }
   return res.status(201).json('ok');
 });
