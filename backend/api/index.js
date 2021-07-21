@@ -34,6 +34,19 @@ router.get('/profile/:id', async (req, res) => {
   }
 });
 
+router.post('/edit/profile', authenticateToken, async (req, res) => {
+  try {
+    let profile = await Profile.findOne({username: req.user.username});
+    profile.information = req.body;
+    console.log(profile);
+    await profile.save();
+    return res.json('ok');
+  } catch (err) {
+    console.error(err);
+    return res.sendStatus(500);
+  }
+});
+
 router.post('/comment', authenticateToken, async (req, res) => {
   try {
     let profile = await Profile.findOne({username: req.user.username});
