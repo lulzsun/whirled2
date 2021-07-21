@@ -23,7 +23,7 @@ router.get('/profile/:id', async (req, res) => {
         path: 'comments',
         populate: {
           path: 'user',
-          select: 'username displayName' // do not leak password 🙈 
+          select: 'username displayName profilePicture'
         }
       }).
       exec();
@@ -50,7 +50,16 @@ router.post('/comment', authenticateToken, async (req, res) => {
 
     await comment.save();
     await parent.save();
-    return res.status(201).json('ok');
+    return res.status(201).json(
+      {
+        comment, 
+        user: { // why? only for local user reference
+          username: profile.username, 
+          displayName: profile.displayName,
+          profilePicture: profile.profilePicture
+        }
+      }
+    );
   } catch (err) {
     console.error(err);
     return res.sendStatus(500);

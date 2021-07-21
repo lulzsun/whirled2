@@ -12,7 +12,7 @@ export default function ProfileCard (props) {
         <div className="bg-gray-900 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
           <div className="flex-none sm:flex">
             <div className=" relative h-32 w-32 sm:mb-0 mb-3">
-              <img src={defaultPhoto} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
+              <img src={(props.profileData.profilePicture === '' ? defaultPhoto : props.profileData.profilePicture)} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
               <Link to="#"
                 className="absolute -right-2 bottom-2 -ml-3 text-white p-1 text-xs bg-green-500 hover:bg-green-600 font-medium tracking-wider rounded-full transition ease-in duration-300">
                 <PencilFill/>
@@ -45,7 +45,7 @@ export default function ProfileCard (props) {
                 </div>
                 <div className="flex-auto inline-flex items-center">
                   <Calendar3 className='h-5 w-5 mr-2'/>
-                  <p className="">Joined {(new Date(props.profileData.created)).toLocaleDateString(undefined, dateOptions)}</p>
+                  <p className="">Joined {(new Date(props.profileData.createdAt)).toLocaleDateString(undefined, dateOptions)}</p>
                 </div>
                 <div className="flex-auto inline-flex items-center">
                   <CalendarCheck className='h-5 w-5 mr-2'/>
