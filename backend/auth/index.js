@@ -89,10 +89,17 @@ router.delete('/logoutall', (req, res) => {
 router.post('/login', async (req, res) => {
 	const result = validateSchema(LoginSchema, req.body);
 	if(result.error)
-		res.status(401).json({message: 'Failed to login'});
+		res.status(400).json({message: 'Failed to login'});
 	else {
 		const user = await User.findOne({username: req.body.username.toLowerCase()});
-		if(!user) return res.status(401).json({message: 'Failed to login'}); 
+		if(!user) return res.status(400).json({message: 'Failed to login'}); 
+
+		const unHashedPass = req.body.password;
+		const hashCompare = await bcrypt.compare(unHashedPass, user.password);
+
+		console.log(hashCompare);
+
+		if(!hashCompare) return res.status(400).json({message: 'Failed to login'});
 
 		const payload = { _id: user._id, username: user.username };
 		const accessToken = generateAccessToken(payload);
@@ -100,14 +107,14 @@ router.post('/login', async (req, res) => {
 		const decoded = jwt.decode(refreshToken);
 		const redisResult = redisClient.setex(user._id+'_'+refreshToken, Math.floor(decoded.exp - Date.now() / 1000), 'true');
 
-		if(!(redisResult === true)) return res.status(401).json({message: 'Failed to login'}); 
+		if(!(redisResult === true)) return res.status(500).json({message: 'Failed to login'}); 
 
 		// TODO, move code below to email verification system
 		const profile = await Profile.exists({username: user.username});
 		if(!profile) { // if profile does not exist, lets create it
 			const result = finalizeSignup({username: user.username});
 
-			if(result.error) return res.status(401).json({message: 'Failed to create profile'}); 
+			if(result.error) return res.status(500).json({message: 'Failed to create profile'}); 
 		}
 
 		return res.status(201).json({accessToken, refreshToken});
@@ -123,6 +130,7 @@ router.post('/signup', async (req, res) => {
 		// Create new user
 		const user = new User({
 			username: req.body.username.toLowerCase(),
+			displayName: req.body.username.toLowerCase(),
 			email: req.body.email,
 			emailVerified: false,
 			password: passwordHash,
