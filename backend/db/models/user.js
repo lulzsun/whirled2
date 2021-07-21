@@ -11,6 +11,6 @@ const userSchema = new mongoose.Schema({
 	inventory:			{ type: mongoose.Schema.Types.ObjectId, default: null },
 	shop:						{ type: mongoose.Schema.Types.ObjectId, default: null },
 	rooms:					{ type: Array, default: [] },
-});
+}, { timestamps: true });
 
 export default userSchema;

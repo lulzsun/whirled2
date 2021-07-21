@@ -3,7 +3,7 @@ import mongoose from '../connection.js';
 export const PARENT_TYPES = ['Comment', 'Thread', 'Profile', 'Avatar', 'Furniture', 'Backdrop', 'Pet', 'Music'];
 
 const commentSchema = new mongoose.Schema({
-	user: 			    { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+	user: 			    { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Profile' },
   parentId:       { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Profile' },
   // https://mongoosejs.com/docs/populate.html#dynamic-ref
   // is this a comment to an avatar in the shop? to user's profile? to a comment chain?
@@ -15,6 +15,6 @@ const commentSchema = new mongoose.Schema({
 
   hasReplies:     { type: Boolean, default: false },
   replies:        [{type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
-});
+}, { timestamps: true });
 
 export default commentSchema;

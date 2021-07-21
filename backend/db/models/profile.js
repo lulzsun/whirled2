@@ -22,8 +22,8 @@ const profileSchema = new mongoose.Schema({
 		} 
 	},
 
-	friends:				[{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
+	friends:				[{type: mongoose.Schema.Types.ObjectId, ref: 'Profile'}],
 	comments:				[{type: mongoose.Schema.Types.ObjectId, ref: 'Comment'}],
-});
+}, { timestamps: true });
 
 export default profileSchema;

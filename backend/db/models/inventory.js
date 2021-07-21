@@ -6,6 +6,6 @@ const inventorySchema = new mongoose.Schema({
 	backdrops:		{ type: Array },
 	pets:					{ type: Array },
 	music:				{ type: Array },
-});
+}, { timestamps: true });
 
 export default inventorySchema;
