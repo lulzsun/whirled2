@@ -11,7 +11,7 @@ export default function FriendsCard () {
             {/* Heading */}
             <div className="absolute flex flex-row w-full transform -translate-y-full">
               <div className="flex-1 inline-flex items-center">
-                <div className="p-2 pl-4 pr-4 text-text-white-200 leading-none bg-green-500 rounded-full">
+                <div className="p-2.5 pl-4 pr-4 text-text-white-200 leading-none bg-green-500 rounded-full">
                   Friends
                 </div>
               </div>

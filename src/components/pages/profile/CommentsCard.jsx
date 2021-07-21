@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import CommentEditor from 'src/components/common/CommentEditor';
 import CommentSection from 'src/components/common/CommentSection';
 
-export default function CommentsCard ({parentId, comments, localComments, setLocalComments}) {
+export default function CommentsCard ({owner, parentId, comments, localComments, setLocalComments}) {
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
       <div className="flex flex-col">
@@ -11,7 +11,7 @@ export default function CommentsCard ({parentId, comments, localComments, setLoc
             {/* Heading */}
             <div className="absolute flex flex-row w-full transform -translate-y-full">
               <div className="flex-1 inline-flex items-center">
-                <div className="p-2 pl-4 pr-4 text-white leading-none bg-green-500 rounded-full">
+                <div className="p-2.5 pl-4 pr-4 text-white leading-none bg-green-500 rounded-full">
                   Comments
                 </div>
               </div>

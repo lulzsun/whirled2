@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
 // import { Link } from 'react-router-dom';
 
-export default function InformationCard ({info, showMore, editInfo, setEditInfo, setInfo, setShowMore}) {
+export default function InformationCard ({owner, info, showMore, editInfo, setEditInfo, setInfo, setShowMore}) {
   const infoRef = {
     aboutMe: useRef(),
     activities: useRef(),
@@ -71,13 +71,13 @@ export default function InformationCard ({info, showMore, editInfo, setEditInfo,
             {/* Heading */}
             <div className="absolute flex flex-row w-full transform -translate-y-full">
               <div className="flex-1 inline-flex items-center">
-                <div className="p-2 pl-4 pr-4 text-white leading-none bg-green-500 rounded-full">
+                <div className="p-2.5 pl-4 pr-4 text-white leading-none bg-green-500 rounded-full">
                 Information
                 </div>
               </div>
               <div className="flex-1 inline-flex justify-end">
                 {(editInfo 
-                ? <div className="p-1 pl-2 pr-2 m-2 text-xs text-white leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"
+                ? <div className="pl-2 pr-2 p-1 m-2 text-xs text-white leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"
                     onClick={() => handleSaveButton()}>
                     <Save/>
                   </div>
@@ -86,9 +86,10 @@ export default function InformationCard ({info, showMore, editInfo, setEditInfo,
                 <div 
                   className=
                   {
-                    "p-1 pl-2 pr-2 m-2 text-xs text-white leading-none cursor-pointer rounded-full " +
+                    "pl-2 pr-2 p-1 m-2 text-xs text-white leading-none cursor-pointer rounded-full " +
                     (editInfo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600')
                   }
+                  hidden={(owner === localStorage.getItem('username') ? false : true)}
                   onClick={() => handleEditButton()}>
                   {(editInfo ? <XLg/> : <Pencil/>)}
                 </div>

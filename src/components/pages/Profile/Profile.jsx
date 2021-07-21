@@ -9,10 +9,9 @@ import CommentsCard from './CommentsCard';
 export default function Profile () {
 	// universal state variables (?)
 	const [profileData, setProfileData] = useState(null);
-	const { username } = useParams();
+	const { owner } = useParams();
 
 	// ProfileCard state variables
-  const [owner, setOwner] = useState(false);
 	const [editProfile, setEditProfile] = useState(false);
 
 	// InfoCard state variables
@@ -26,15 +25,14 @@ export default function Profile () {
 	// https://stackoverflow.com/a/57847874/8805016
 	// effectively, this only gets called once and renders once
 	useEffect(() => {
-		console.log(`Hello from Profile-${username} page!`);
+		console.log(`Hello from Profile-${owner} page!`);
 
     async function getProfileData() {
 			try {
-				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${username}`);
+				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${owner}`);
 				setProfileData(res.data);
 
 				// reset ProfileCard state variables
-				(username === localStorage.getItem('username') ? setOwner(true) : setOwner(false));
 				setEditProfile(false);
 
 				// reset InfoCard state variables
@@ -51,26 +49,25 @@ export default function Profile () {
 		}
 
 		getProfileData();
-  }, [setProfileData, username]);
+  }, [setProfileData, owner]);
 
 	if(profileData) {
 		return ( 
 			<div className="h-full overflow-y-auto container mx-auto p-5">
 				<div>
 					<ProfileCard 
-						profileData={profileData} 
-						owner={owner} setOwner={setOwner} 
+						owner={owner} profileData={profileData}
 						editProfile={editProfile} setEditProfile={setEditProfile}/>
 
 					<InformationCard 
-						info={info} setInfo={setInfo} 
+						owner={owner} info={info} setInfo={setInfo} 
 						showMore={showMore} setShowMore={setShowMore} 
 						editInfo={editInfo} setEditInfo={setEditInfo}/>
 
 					<FriendsCard profileData={profileData}/>
 
 					<CommentsCard 
-						parentId={profileData._id} comments={profileData.comments} 
+						owner={owner} parentId={profileData._id} comments={profileData.comments} 
 						localComments={localComments} setLocalComments={setLocalComments}/>
 				</div>
 			</div>

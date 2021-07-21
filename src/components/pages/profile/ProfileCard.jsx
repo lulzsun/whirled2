@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import defaultPhoto from "../../../media/profile_photo.png";
 import { ThreeDots, PencilFill, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
@@ -43,7 +43,7 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
                   <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">{profileData.displayName}</div>
                 </div>
                 <div className="flex-1"></div>
-                  <DropDownMenu className="text-xs" noFocus={true} items={(owner ? ownerDdmItems : guestDdmItems)} icon={
+                  <DropDownMenu className="text-xs" noFocus={true} items={(owner === localStorage.getItem('username') ? ownerDdmItems : guestDdmItems)} icon={
                     <div className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
                       <ThreeDots/>
                     </div>

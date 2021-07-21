@@ -19,7 +19,7 @@ export default function Page (props) {
 				<Route exact path="/settings">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 				<Route exact path="/help">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 				<Route exact path="/about">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
-				<Route exact path="/:username"> 		<Profile {...props}/></Route>
+				<Route exact path="/:owner">				<Profile {...props}/></Route>
 			</Switch>
 		</div>
 	)
