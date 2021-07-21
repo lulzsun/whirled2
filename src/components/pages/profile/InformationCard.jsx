@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
 // import { Link } from 'react-router-dom';
 
-export default function InformationCard ({info, showMore, editMode, setEditMode, setInfo, setShowMore}) {
+export default function InformationCard ({info, showMore, editInfo, setEditInfo, setInfo, setShowMore}) {
   const infoRef = {
     aboutMe: useRef(),
     activities: useRef(),
@@ -16,7 +16,7 @@ export default function InformationCard ({info, showMore, editMode, setEditMode,
   }
 
   function handleEditButton() {
-    setEditMode(!editMode);
+    setEditInfo(!editInfo);
     updateInfo();
   }
 
@@ -55,7 +55,7 @@ export default function InformationCard ({info, showMore, editMode, setEditMode,
         console.log(res);
       }
       setInfo(infoJson.information);
-      setEditMode(false);
+      setEditInfo(false);
     } catch (error) {
       if(error !== undefined)
       console.error(error);
@@ -76,7 +76,7 @@ export default function InformationCard ({info, showMore, editMode, setEditMode,
                 </div>
               </div>
               <div className="flex-1 inline-flex justify-end">
-                {(editMode 
+                {(editInfo 
                 ? <div className="p-1 pl-2 pr-2 m-2 text-xs text-white leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"
                     onClick={() => handleSaveButton()}>
                     <Save/>
@@ -87,70 +87,70 @@ export default function InformationCard ({info, showMore, editMode, setEditMode,
                   className=
                   {
                     "p-1 pl-2 pr-2 m-2 text-xs text-white leading-none cursor-pointer rounded-full " +
-                    (editMode ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600')
+                    (editInfo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600')
                   }
                   onClick={() => handleEditButton()}>
-                  {(editMode ? <XLg/> : <Pencil/>)}
+                  {(editInfo ? <XLg/> : <Pencil/>)}
                 </div>
               </div>
             </div>
             {/* Content (could be modular, but i dont care*/}
-            <div className={'text-gray-100 mb-2 overflow-hidden w-full ' + (showMore | editMode ? 'h-full' : 'h-20')}>
+            <div className={'text-gray-100 mb-2 overflow-hidden w-full ' + (showMore | editInfo ? 'h-full' : 'h-20')}>
               <div className="text-xs">
                 <div className="pt-3 flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">About Me</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.aboutMe}>{info.aboutMe}</div>
+                   contentEditable={editInfo} ref={infoRef.aboutMe}>{info.aboutMe}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Activities</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.activities}>{info.activities}</div>
+                   contentEditable={editInfo} ref={infoRef.activities}>{info.activities}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Interests</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.interests}>{info.interests}</div>
+                   contentEditable={editInfo} ref={infoRef.interests}>{info.interests}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Games</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.favoriteGames}>{info.favoriteGames}</div>
+                   contentEditable={editInfo} ref={infoRef.favoriteGames}>{info.favoriteGames}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Music</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.favoriteMusic}>{info.favoriteMusic}</div>
+                   contentEditable={editInfo} ref={infoRef.favoriteMusic}>{info.favoriteMusic}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Movies</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.favoriteMovies}>{info.favoriteMovies}</div>
+                   contentEditable={editInfo} ref={infoRef.favoriteMovies}>{info.favoriteMovies}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Shows</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.favoriteShows}>{info.favoriteShows}</div>
+                   contentEditable={editInfo} ref={infoRef.favoriteShows}>{info.favoriteShows}</div>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Books</div>
-                  <div className={"px-4 py-1 w-full " + (editMode ? 'border border-white bg-gray-700' : '')}
+                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
                    suppressContentEditableWarning={true}
-                   contentEditable={editMode} ref={infoRef.favoriteBooks}>{info.favoriteBooks}</div>
+                   contentEditable={editInfo} ref={infoRef.favoriteBooks}>{info.favoriteBooks}</div>
                 </div>
               </div>
             </div>
             {/*  Footer */}
             <div className="absolute flex flex-row w-full top-full">
               <div className="flex-1 inline-flex justify-center">
-                <div hidden={editMode} className="p-1 pl-2 pr-2 m-1.5 text-xs text-text-white-200 leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"
+                <div hidden={editInfo} className="p-1 pl-2 pr-2 m-1.5 text-xs text-text-white-200 leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"
                   onClick={() => setShowMore(!showMore)}>
                   Show {(showMore ? 'less' : 'more')} information
                 </div>

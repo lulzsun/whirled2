@@ -7,15 +7,18 @@ import InformationCard from './InformationCard';
 import CommentsCard from './CommentsCard';
 
 export default function Profile () {
+	// universal state variables (?)
 	const [profileData, setProfileData] = useState(null);
 	const { username } = useParams();
 
-	// ProfileCard
+	// ProfileCard state variables
+  const [owner, setOwner] = useState(false);
+	const [editProfile, setEditProfile] = useState(false);
 
 	// InfoCard state variables
 	const [info, setInfo] = useState(null);
 	const [showMore, setShowMore] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [editInfo, setEditInfo] = useState(false);
 
 	// CommentCard state variables
 	const [localComments, setLocalComments] = useState([]);
@@ -30,10 +33,14 @@ export default function Profile () {
 				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${username}`);
 				setProfileData(res.data);
 
+				// reset ProfileCard state variables
+				(username === localStorage.getItem('username') ? setOwner(true) : setOwner(false));
+				setEditProfile(false);
+
 				// reset InfoCard state variables
 				setInfo(res.data.information);
 				setShowMore(false);
-				setEditMode(false);
+				setEditInfo(false);
 
 				// reset CommentCard state variables
 				setLocalComments([]);
@@ -50,10 +57,21 @@ export default function Profile () {
 		return ( 
 			<div className="h-full overflow-y-auto container mx-auto p-5">
 				<div>
-					<ProfileCard profileData={profileData}/>
-					<InformationCard info={info} setInfo={setInfo} showMore={showMore} setShowMore={setShowMore} editMode={editMode} setEditMode={setEditMode}/>
+					<ProfileCard 
+						profileData={profileData} 
+						owner={owner} setOwner={setOwner} 
+						editProfile={editProfile} setEditProfile={setEditProfile}/>
+
+					<InformationCard 
+						info={info} setInfo={setInfo} 
+						showMore={showMore} setShowMore={setShowMore} 
+						editInfo={editInfo} setEditInfo={setEditInfo}/>
+
 					<FriendsCard profileData={profileData}/>
-					<CommentsCard parentId={profileData._id} comments={profileData.comments} localComments={localComments} setLocalComments={setLocalComments}/>
+
+					<CommentsCard 
+						parentId={profileData._id} comments={profileData.comments} 
+						localComments={localComments} setLocalComments={setLocalComments}/>
 				</div>
 			</div>
 		)

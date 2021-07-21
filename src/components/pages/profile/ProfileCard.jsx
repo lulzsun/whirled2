@@ -4,8 +4,9 @@ import { ThreeDots, PencilFill, PersonPlusFill, Calendar3, CalendarCheck } from 
 import { Link } from 'react-router-dom';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
 
-export default function ProfileCard ({profileData}) {
+export default function ProfileCard ({profileData, editProfile, setEditProfile, owner}) {
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+
   const ownerDdmItems = [
 		{icon: '', label: "Edit Profile Card", onClick: handleEditCard },
 	];
@@ -18,11 +19,9 @@ export default function ProfileCard ({profileData}) {
     {icon: '', label: "Block" },
     {icon: '', label: "Report" },
 	];
-  const [editMode, setEditMode] = useState(false);
-  const [ddmItems, setDdmItems] = useState(guestDdmItems);
 
   function handleEditCard() {
-    setEditMode(!editMode);
+    setEditProfile(!editProfile);
     console.log('lol');
   }
 
@@ -44,7 +43,7 @@ export default function ProfileCard ({profileData}) {
                   <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">{profileData.displayName}</div>
                 </div>
                 <div className="flex-1"></div>
-                  <DropDownMenu className="text-xs" noFocus={true} items={ddmItems} icon={
+                  <DropDownMenu className="text-xs" noFocus={true} items={(owner ? ownerDdmItems : guestDdmItems)} icon={
                     <div className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
                       <ThreeDots/>
                     </div>
