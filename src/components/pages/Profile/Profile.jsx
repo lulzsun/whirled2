@@ -15,7 +15,6 @@ export default function Profile () {
 	const [editProfile, setEditProfile] = useState(false);
 
 	// InfoCard state variables
-	const [info, setInfo] = useState(null);
 	const [showMore, setShowMore] = useState(false);
   const [editInfo, setEditInfo] = useState(false);
 
@@ -36,7 +35,6 @@ export default function Profile () {
 				setEditProfile(false);
 
 				// reset InfoCard state variables
-				setInfo(res.data.information);
 				setShowMore(false);
 				setEditInfo(false);
 
@@ -51,7 +49,7 @@ export default function Profile () {
 		getProfileData();
   }, [setProfileData, owner]);
 
-	if(profileData && info) {
+	if(profileData) {
 		return ( 
 			<div className="h-full overflow-y-auto container mx-auto p-5">
 				<div>
@@ -60,7 +58,7 @@ export default function Profile () {
 						editProfile={editProfile} setEditProfile={setEditProfile}/>
 
 					<InformationCard
-						owner={owner} info={info} setInfo={setInfo} 
+						owner={owner} profileData={profileData}
 						showMore={showMore} setShowMore={setShowMore} 
 						editInfo={editInfo} setEditInfo={setEditInfo}/>
 

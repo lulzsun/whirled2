@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import axios from 'axios';
 import defaultPhoto from "../../../media/profile_photo.png";
 import { ThreeDots, Pencil, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
-import TextArea from '../../common/TextArea';
+import { handleContentEditableMax } from '../../common/TextArea';
 
-export default function ProfileCard ({profileData, editProfile, setEditProfile, owner}) {
+export default function ProfileCard ({owner, profileData, editProfile, setEditProfile}) {
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+  const profileRef = {
+    displayName: useRef(),
+    status: useRef(),
+  }
 
-  const [displayName, setDisplayName] = useState(profileData.displayName);
-  const [status, setStatus] = useState(profileData.status);
+  function updateProfile() {
+    profileRef.displayName.current.innerText = profileData.displayName;
+    profileRef.status.current.innerText = profileData.status;
+  }
 
   const ownerDdmItems = [
 		{icon: '', label: "Edit Profile Details", onClick: handleEditButton },
@@ -26,13 +32,14 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
 
   function handleEditButton() {
     setEditProfile(!editProfile);
+    updateProfile();
   }
 
   async function handleSaveButton() {
     try {
-      setEditProfile(null); // SETTING TO NULL === SAVING STATE
       const updateProfileJson = {
-        displayName, status
+        displayName: profileRef.displayName.current.innerText,
+        status: profileRef.status.current.innerText,
       }
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateProfileJson), {
         headers: {
@@ -43,6 +50,9 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
       if(res.data) {
         console.log(res);
       }
+      profileData.displayName = profileRef.displayName.current.innerText;
+      profileData.status = profileRef.status.current.innerText;
+      setEditProfile(false);
     } catch (error) {
       if(error !== undefined)
       console.error(error);
@@ -64,8 +74,9 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
             <div className="flex-auto sm:ml-5 justify-evenly">
               <div className="flex flex-row">
                 <div className={"flex-1 inline-flex items-center sm:mt-2 border " + (editProfile ? 'border-white bg-gray-700' : 'border-transparent bg-transparent')} >
-                  <TextArea className={"w-full flex-none text-lg text-gray-200 font-bold leading-none"} max={20}
-                    editState={editProfile} setValue={setDisplayName} value={displayName}></TextArea>
+                  <div className={"w-full flex-none text-lg text-gray-200 font-bold leading-none"}
+                    suppressContentEditableWarning={true} data-max={20} onKeyDown={(e) => handleContentEditableMax(e)}
+                    contentEditable={editProfile} ref={profileRef.displayName}>{profileData.displayName}</div>
                 </div>
                   <div hidden={!editProfile} onClick={() => handleSaveButton()}
                     className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
@@ -96,8 +107,9 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
                 </div>
               </div>
               <div className={"flex flex-row mb-4 items-center border " + (editProfile ? 'border-white bg-gray-700' : 'border-transparent bg-transparent')}>
-              <TextArea className="w-full" max={30}
-                editState={editProfile} setValue={setStatus} value={status}></TextArea>
+              <div className="w-full" 
+                suppressContentEditableWarning={true} data-max={30} onKeyDown={(e) => handleContentEditableMax(e)}
+                contentEditable={editProfile} ref={profileRef.status}>{profileData.status}</div>
               </div>
               <div className="flex text-sm text-gray-400">
                 <div className="flex-auto inline-flex items-center">
