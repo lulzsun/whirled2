@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
 import defaultPhoto from "../../../media/profile_photo.png";
-import { ThreeDots, PencilFill, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
-import { Link } from 'react-router-dom';
+import { ThreeDots, Pencil, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
+import TextArea from '../../common/TextArea';
 
 export default function ProfileCard ({profileData, editProfile, setEditProfile, owner}) {
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
 
+  const [displayName, setDisplayName] = useState(profileData.displayName);
+  const [status, setStatus] = useState(profileData.status);
+
   const ownerDdmItems = [
-		{icon: '', label: "Edit Profile Card", onClick: handleEditCard },
+		{icon: '', label: "Edit Profile Details", onClick: handleEditButton },
 	];
   const guestDdmItems = [
 		{icon: '', label: "Add as Friend" },
@@ -20,9 +24,29 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
     {icon: '', label: "Report" },
 	];
 
-  function handleEditCard() {
+  function handleEditButton() {
     setEditProfile(!editProfile);
-    console.log('lol');
+  }
+
+  async function handleSaveButton() {
+    try {
+      setEditProfile(null); // SETTING TO NULL === SAVING STATE
+      const updateProfileJson = {
+        displayName, status
+      }
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateProfileJson), {
+        headers: {
+          'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
+          'Content-Type': 'application/json'
+        }
+      });
+      if(res.data) {
+        console.log(res);
+      }
+    } catch (error) {
+      if(error !== undefined)
+      console.error(error);
+    }
   }
 
   return (
@@ -32,23 +56,37 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
           <div className="flex-none sm:flex">
             <div className=" relative h-32 w-32 sm:mb-0 mb-3">
               <img src={(profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture)} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
-              <Link to="#"
-                className="absolute -right-2 bottom-2 -ml-3 text-white p-1 text-xs bg-green-500 hover:bg-green-600 font-medium tracking-wider rounded-full transition ease-in duration-300">
-                <PencilFill/>
-              </Link>
+              <div hidden={!editProfile}
+                className="p-1 absolute -right-2 bottom-2 -ml-3 text-white cursor-pointer text-xs bg-green-500 hover:bg-green-600 font-medium rounded-full">
+                <Pencil/>
+              </div>
 				  	</div>
             <div className="flex-auto sm:ml-5 justify-evenly">
               <div className="flex flex-row">
-                <div className="flex-1 inline-flex items-center sm:mt-2">
-                  <div className="w-full flex-none text-lg text-gray-200 font-bold leading-none">{profileData.displayName}</div>
+                <div className={"flex-1 inline-flex items-center sm:mt-2 border " + (editProfile ? 'border-white bg-gray-700' : 'border-transparent bg-transparent')} >
+                  <TextArea className={"w-full flex-none text-lg text-gray-200 font-bold leading-none"} max={20}
+                    editState={editProfile} setValue={setDisplayName} value={displayName}></TextArea>
                 </div>
-                <div className="flex-1"></div>
-                  <DropDownMenu className="text-xs" noFocus={true} items={(owner === localStorage.getItem('username') ? ownerDdmItems : guestDdmItems)} icon={
-                    <div className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
-                      <ThreeDots/>
+                  <div hidden={!editProfile} onClick={() => handleSaveButton()}
+                    className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full">
+                    <Save/>
+                  </div>
+                  <div>
+                  <div onClick={(editProfile ? () => handleEditButton() : null)}>
+                    <div hidden={!editProfile}
+                      className="p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-red-500 hover:bg-red-600 cursor-pointer rounded-full">
+                      <XLg/>
                     </div>
-                    }>
-                  </DropDownMenu>
+                    <DropDownMenu hidden={editProfile} className="text-xs" noFocus={true}
+                      items={(owner === localStorage.getItem('username') ? ownerDdmItems : guestDdmItems)} icon={
+                      <div
+                        className={"p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"}>
+                        <ThreeDots/>
+                      </div>
+                      }>
+                    </DropDownMenu>
+                  </div>
+                </div>
               </div>
               <div className="flex flex-col">
                 <div className="flex-auto text-gray-400 my-1">
@@ -57,8 +95,9 @@ export default function ProfileCard ({profileData, editProfile, setEditProfile, 
                   <span>Level {profileData.level}</span>
                 </div>
               </div>
-              <div className="flex flex-row mb-4 items-center">
-              {profileData.status}
+              <div className={"flex flex-row mb-4 items-center border " + (editProfile ? 'border-white bg-gray-700' : 'border-transparent bg-transparent')}>
+              <TextArea className="w-full" max={30}
+                editState={editProfile} setValue={setStatus} value={status}></TextArea>
               </div>
               <div className="flex text-sm text-gray-400">
                 <div className="flex-auto inline-flex items-center">

@@ -51,22 +51,22 @@ export default function Profile () {
 		getProfileData();
   }, [setProfileData, owner]);
 
-	if(profileData) {
+	if(profileData && info) {
 		return ( 
 			<div className="h-full overflow-y-auto container mx-auto p-5">
 				<div>
-					<ProfileCard 
+					<ProfileCard
 						owner={owner} profileData={profileData}
 						editProfile={editProfile} setEditProfile={setEditProfile}/>
 
-					<InformationCard 
+					<InformationCard
 						owner={owner} info={info} setInfo={setInfo} 
 						showMore={showMore} setShowMore={setShowMore} 
 						editInfo={editInfo} setEditInfo={setEditInfo}/>
 
 					<FriendsCard profileData={profileData}/>
 
-					<CommentsCard 
+					<CommentsCard
 						owner={owner} parentId={profileData._id} comments={profileData.comments} 
 						localComments={localComments} setLocalComments={setLocalComments}/>
 				</div>

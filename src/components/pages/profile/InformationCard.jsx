@@ -1,48 +1,35 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
-// import { Link } from 'react-router-dom';
+import TextArea from '../../common/TextArea';
 
 export default function InformationCard ({owner, info, showMore, editInfo, setEditInfo, setInfo, setShowMore}) {
-  const infoRef = {
-    aboutMe: useRef(),
-    activities: useRef(),
-    interests: useRef(),
-    favoriteBooks: useRef(),
-    favoriteGames: useRef(),
-    favoriteMovies: useRef(),
-    favoriteMusic: useRef(),
-    favoriteShows: useRef()
-  }
+  const [aboutMe, setAboutMe] = useState(info.aboutMe);
+  const [activities, setActivities] = useState(info.activities);
+  const [interests, setInterests] = useState(info.interests);
+  const [favoriteBooks, setFavoriteBooks] = useState(info.favoriteBooks);
+  const [favoriteGames, setFavoriteGames] = useState(info.favoriteGames);
+  const [favoriteMovies, setFavoriteMovies] = useState(info.favoriteMovies);
+  const [favoriteMusic, setFavoriteMusic] = useState(info.favoriteMusic);
+  const [favoriteShows, setFavoriteShows] = useState(info.favoriteShows);
 
   function handleEditButton() {
     setEditInfo(!editInfo);
-    updateInfo();
-  }
-
-  function updateInfo() {
-    infoRef.aboutMe.current.innerText = info.aboutMe;
-    infoRef.activities.current.innerText = info.activities;
-    infoRef.interests.current.innerText = info.interests;
-    infoRef.favoriteBooks.current.innerText = info.favoriteBooks;
-    infoRef.favoriteGames.current.innerText = info.favoriteGames;
-    infoRef.favoriteMovies.current.innerText = info.favoriteMovies;
-    infoRef.favoriteMusic.current.innerText = info.favoriteMusic;
-    infoRef.favoriteShows.current.innerText = info.favoriteShows;
   }
 
   async function handleSaveButton() {
+    setEditInfo(null);
     try {
       const infoJson = {
         information: {
-          aboutMe: infoRef.aboutMe.current.innerText,
-          activities: infoRef.activities.current.innerText,
-          interests: infoRef.interests.current.innerText,
-          favoriteBooks: infoRef.favoriteBooks.current.innerText,
-          favoriteGames: infoRef.favoriteGames.current.innerText,
-          favoriteMovies: infoRef.favoriteMovies.current.innerText,
-          favoriteMusic: infoRef.favoriteMusic.current.innerText,
-          favoriteShows: infoRef.favoriteShows.current.innerText,
+          aboutMe,
+          activities,
+          interests,
+          favoriteBooks,
+          favoriteGames,
+          favoriteMovies,
+          favoriteMusic,
+          favoriteShows,
         }
       }
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(infoJson), {
@@ -54,8 +41,6 @@ export default function InformationCard ({owner, info, showMore, editInfo, setEd
       if(res.data) {
         console.log(res);
       }
-      setInfo(infoJson.information);
-      setEditInfo(false);
     } catch (error) {
       if(error !== undefined)
       console.error(error);
@@ -100,51 +85,43 @@ export default function InformationCard ({owner, info, showMore, editInfo, setEd
               <div className="text-xs">
                 <div className="pt-3 flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">About Me</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.aboutMe}>{info.aboutMe}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setAboutMe} value={aboutMe}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Activities</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.activities}>{info.activities}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setActivities} value={activities}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Interests</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.interests}>{info.interests}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setInterests} value={interests}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Games</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.favoriteGames}>{info.favoriteGames}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setFavoriteGames} value={favoriteGames}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Music</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.favoriteMusic}>{info.favoriteMusic}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setFavoriteMusic} value={favoriteMusic}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Movies</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.favoriteMovies}>{info.favoriteMovies}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setFavoriteMovies} value={favoriteMovies}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Shows</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.favoriteShows}>{info.favoriteShows}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setFavoriteShows} value={favoriteShows}></TextArea>
                 </div>
                 <div className="flex">
                   <div className="flex-shrink-0 w-32 px-4 py-1 font-bold">Favorite Books</div>
-                  <div className={"px-4 py-1 w-full " + (editInfo ? 'border border-white bg-gray-700' : '')}
-                   suppressContentEditableWarning={true}
-                   contentEditable={editInfo} ref={infoRef.favoriteBooks}>{info.favoriteBooks}</div>
+                  <TextArea className={"px-4 py-1 w-full break-all " + (editInfo ? 'border border-white bg-gray-700' : '')}
+                    max={200} editState={editInfo} setValue={setFavoriteBooks} value={favoriteBooks}>{info.favoriteBooks}</TextArea>
                 </div>
               </div>
             </div>

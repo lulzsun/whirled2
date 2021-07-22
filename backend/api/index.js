@@ -39,6 +39,7 @@ router.post('/edit/profile', authenticateToken, async (req, res) => {
     let profile = await Profile.findOne({username: req.user.username});
     if(req.body.information) profile.information = req.body.information;
     if(req.body.displayName) profile.displayName = req.body.displayName;
+    if(req.body.status) profile.status = req.body.status;
     if(req.body.profilePicture) profile.profilePicture = req.body.profilePicture;
     if(req.body.banner) profile.banner = req.body.banner;
     await profile.save();
