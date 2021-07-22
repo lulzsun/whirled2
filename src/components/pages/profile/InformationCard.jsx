@@ -33,7 +33,7 @@ export default function InformationCard ({owner, profileData, showMore, setShowM
 
   async function handleSaveButton() {
     try {
-      const infoJson = {
+      const updateJson = {
         information: {
           aboutMe: infoRef.aboutMe.current.innerText,
           activities: infoRef.activities.current.innerText,
@@ -45,7 +45,7 @@ export default function InformationCard ({owner, profileData, showMore, setShowM
           favoriteShows: infoRef.favoriteShows.current.innerText,
         }
       }
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(infoJson), {
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateJson), {
         headers: {
           'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
           'Content-Type': 'application/json'
@@ -54,7 +54,7 @@ export default function InformationCard ({owner, profileData, showMore, setShowM
       if(res.data) {
         console.log(res);
       }
-      profileData.information = infoJson.information;
+      profileData.information = updateJson.information;
       setEditInfo(false);
     } catch (error) {
       if(error !== undefined)

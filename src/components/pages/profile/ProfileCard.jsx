@@ -37,11 +37,11 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
 
   async function handleSaveButton() {
     try {
-      const updateProfileJson = {
+      const updateJson = {
         displayName: profileRef.displayName.current.innerText,
         status: profileRef.status.current.innerText,
       }
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateProfileJson), {
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateJson), {
         headers: {
           'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
           'Content-Type': 'application/json'
@@ -50,8 +50,8 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
       if(res.data) {
         console.log(res);
       }
-      profileData.displayName = profileRef.displayName.current.innerText;
-      profileData.status = profileRef.status.current.innerText;
+      profileData.displayName = updateJson.displayName;
+      profileData.status = updateJson.status;
       setEditProfile(false);
     } catch (error) {
       if(error !== undefined)
