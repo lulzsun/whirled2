@@ -1,22 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import defaultPhoto from "../../../media/profile_photo.png";
 import { ThreeDots, Pencil, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
 import { handleContentEditableMax } from '../../common/TextArea';
+import PictureEditor from './PictureEditor';
+import AvatarEditor from 'react-avatar-editor';
+//import InformationModale from 'src/components/common/tail-kit/elements/alert/InformationModale';
 
 export default function ProfileCard ({owner, profileData, editProfile, setEditProfile}) {
+  const [editorPicture, setEditorPicture] = useState((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-  const profileRef = {
-    displayName: useRef(),
-    status: useRef(),
-  }
-
-  function updateProfile() {
-    profileRef.displayName.current.innerText = profileData.displayName;
-    profileRef.status.current.innerText = profileData.status;
-  }
-
   const ownerDdmItems = [
 		{icon: '', label: "Edit Profile Details", onClick: handleEditButton },
 	];
@@ -30,7 +24,29 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
     {icon: '', label: "Report" },
 	];
 
+  const profileRef = {
+    displayName: useRef(),
+    status: useRef(),
+    profilePicture: useRef(),
+    avatarEditor: useRef(),
+    uploadButton: useRef(),
+  }
+
+  function updateProfile() {
+    profileRef.displayName.current.innerText = profileData.displayName;
+    profileRef.status.current.innerText = profileData.status;
+    profileRef.profilePicture.current.src = (profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture);
+  }
+
+  //https://medium.com/@650egor/react-30-day-challenge-day-2-image-upload-preview-2d534f8eaaa
+  function handleUploadPhoto(e) {
+    profileRef.profilePicture.current.src = URL.createObjectURL(e.target.files[0]);
+    setEditorPicture(profileRef.profilePicture.current.src);
+  }
+
   function handleEditButton() {
+    profileRef.profilePicture.current.src = (profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture);
+    setEditorPicture((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
     setEditProfile(!editProfile);
     updateProfile();
   }
@@ -50,6 +66,7 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
       if(res.data) {
         console.log(res);
       }
+      profileData.profilePicture = profileRef.avatarEditor.current.getImageScaledToCanvas().toDataURL();
       profileData.displayName = updateJson.displayName;
       profileData.status = updateJson.status;
       setEditProfile(false);
@@ -59,16 +76,39 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
     }
   }
 
+  function handleEditorClose() {
+    console.log('ok');
+  }
+
   return (
     <div className="max-w-5xl w-full mx-auto z-10">
+      {/* <InformationModale withCloseBtn={true} onClose={handleEditorClose}>
+        <div className="text-black">test</div>
+        </div>
+      </InformationModale> */}
       <div className="flex flex-col">
         <div className="bg-gray-900 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
           <div className="flex-none sm:flex">
             <div className=" relative h-32 w-32 sm:mb-0 mb-3">
-              <img src={(profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture)} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
-              <div hidden={!editProfile}
+              <div hidden={editProfile}>
+                <img ref={profileRef.profilePicture} src={(profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture)} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
+              </div>
+              <div hidden={!editProfile}>
+                <PictureEditor ref={profileRef.avatarEditor}
+                  image={editorPicture}
+                  width={128}
+                  height={128}
+                  border={0}
+                  borderRadius={16}
+                  color={[17, 24, 39, 1]} // RGBA
+                  scale={1}
+                />
+              </div>
+              <div hidden={!editProfile} onClick={() => profileRef.uploadButton.current.click()}
                 className="p-1 absolute -right-2 bottom-2 -ml-3 text-white cursor-pointer text-xs bg-green-500 hover:bg-green-600 font-medium rounded-full">
                 <Pencil/>
+                <input ref={profileRef.uploadButton} className='opacity-0 z-0 absolute' 
+                  type="file" onChange={(e) => handleUploadPhoto(e)}></input>
               </div>
 				  	</div>
             <div className="flex-auto sm:ml-5 justify-evenly">
