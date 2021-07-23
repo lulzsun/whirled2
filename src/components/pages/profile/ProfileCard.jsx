@@ -1,15 +1,15 @@
 import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import defaultPhoto from "../../../media/profile_photo.png";
-import { ThreeDots, Pencil, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
+import { ThreeDots, Pencil, ZoomIn, ZoomOut, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
 import { handleContentEditableMax } from '../../common/TextArea';
 import PictureEditor from './PictureEditor';
-import AvatarEditor from 'react-avatar-editor';
 //import InformationModale from 'src/components/common/tail-kit/elements/alert/InformationModale';
 
 export default function ProfileCard ({owner, profileData, editProfile, setEditProfile}) {
   const [editorPicture, setEditorPicture] = useState((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
+  const [editorZoom, setEditorZoom] = useState(1);
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
   const ownerDdmItems = [
 		{icon: '', label: "Edit Profile Details", onClick: handleEditButton },
@@ -28,7 +28,7 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
     displayName: useRef(),
     status: useRef(),
     profilePicture: useRef(),
-    avatarEditor: useRef(),
+    pictureEditor: useRef(),
     uploadButton: useRef(),
   }
 
@@ -45,10 +45,10 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
   }
 
   function handleEditButton() {
-    profileRef.profilePicture.current.src = (profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture);
+    updateProfile();
     setEditorPicture((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
     setEditProfile(!editProfile);
-    updateProfile();
+    setEditorZoom(1);
   }
 
   async function handleSaveButton() {
@@ -66,18 +66,16 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
       if(res.data) {
         console.log(res);
       }
-      profileData.profilePicture = profileRef.avatarEditor.current.getImageScaledToCanvas().toDataURL();
+      profileData.profilePicture = profileRef.pictureEditor.current.getImageScaledToCanvas().toDataURL();
       profileData.displayName = updateJson.displayName;
       profileData.status = updateJson.status;
+      updateProfile();
+      setEditorPicture((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
       setEditProfile(false);
     } catch (error) {
       if(error !== undefined)
       console.error(error);
     }
-  }
-
-  function handleEditorClose() {
-    console.log('ok');
   }
 
   return (
@@ -94,14 +92,14 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
                 <img ref={profileRef.profilePicture} src={(profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture)} alt="ProfilePicture" className="w-32 h-32 object-cover rounded-2xl"/>
               </div>
               <div hidden={!editProfile}>
-                <PictureEditor ref={profileRef.avatarEditor}
+                <PictureEditor ref={profileRef.pictureEditor}
                   image={editorPicture}
                   width={128}
                   height={128}
                   border={0}
                   borderRadius={16}
                   color={[17, 24, 39, 1]} // RGBA
-                  scale={1}
+                  scale={editorZoom}
                 />
               </div>
               <div hidden={!editProfile} onClick={() => profileRef.uploadButton.current.click()}
@@ -109,6 +107,14 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
                 <Pencil/>
                 <input ref={profileRef.uploadButton} className='opacity-0 z-0 absolute' 
                   type="file" onChange={(e) => handleUploadPhoto(e)}></input>
+              </div>
+              <div hidden={!editProfile} onClick={() => {if(editorZoom < 5) setEditorZoom(editorZoom+0.5)}}
+                className="p-1 absolute -right-2 top-2 -ml-3 text-white cursor-pointer text-xs bg-green-500 hover:bg-green-600 font-medium rounded-full">
+                <ZoomIn/>
+              </div>
+              <div hidden={!editProfile} onClick={() => {if(editorZoom > 1) setEditorZoom(editorZoom-0.5)}}
+                className="p-1 absolute -right-2 top-8 -ml-3 text-white cursor-pointer text-xs bg-green-500 hover:bg-green-600 font-medium rounded-full">
+                <ZoomOut/>
               </div>
 				  	</div>
             <div className="flex-auto sm:ml-5 justify-evenly">
