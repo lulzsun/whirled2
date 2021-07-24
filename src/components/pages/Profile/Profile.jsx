@@ -29,6 +29,9 @@ export default function Profile () {
     async function getProfileData() {
 			try {
 				const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/profile/${owner}`);
+				if(res.data.profilePicture !== '') 
+					res.data.profilePicture = `${process.env.REACT_APP_S3_URL}${res.data.profilePicture}`;
+
 				setProfileData(res.data);
 
 				// reset ProfileCard state variables

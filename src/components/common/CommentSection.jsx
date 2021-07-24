@@ -11,7 +11,7 @@ export default function CommentSection ({commentArray, localComments}) {
         if(comment === null) return <></>
         return (
           <div key={comment._id} className="flex mt-2 group">
-            <img alt="profileIcon" src={(comment.user.profilePicture !== '' ? comment.user.profilePicture : defaultPhoto)} 
+            <img alt="profileIcon" src={(comment.user.profilePicture !== '' ? `${process.env.REACT_APP_S3_URL}${comment.user.profilePicture}` : defaultPhoto)} 
               className="group-hover:opacity-50 inline mt-1.5 object-cover rounded-full h-10 w-10"/>
             <div className="pl-4 inline w-full flex flex-col">
               <div className="flex flex-row text-gray-400">

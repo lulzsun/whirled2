@@ -53,25 +53,34 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
 
   async function handleSaveButton() {
     try {
+      const newProfilePicture = profileRef.pictureEditor.current.getImageScaledToCanvas();
+      let formData = new FormData();
       const updateJson = {
         displayName: profileRef.displayName.current.innerText,
         status: profileRef.status.current.innerText,
       }
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, JSON.stringify(updateJson), {
+      if(profileRef.uploadButton.current.files.length === 1) {
+        const blob = await new Promise(resolve => newProfilePicture.toBlob(resolve));
+        formData.append('profilePicture', blob);
+      }
+      formData.append('displayName', updateJson.displayName);
+      formData.append('status', updateJson.status);
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/edit/profile`, formData, {
         headers: {
           'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
-          'Content-Type': 'application/json'
+          'Content-Type': 'multipart/form-data',
         }
       });
       if(res.data) {
         console.log(res);
       }
-      profileData.profilePicture = profileRef.pictureEditor.current.getImageScaledToCanvas().toDataURL();
+      if(profileRef.uploadButton.current.files.length === 1) {
+        profileData.profilePicture = newProfilePicture.toDataURL();
+        profileRef.uploadButton.current.value = null;
+      }
       profileData.displayName = updateJson.displayName;
       profileData.status = updateJson.status;
-      updateProfile();
-      setEditorPicture((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
-      setEditProfile(false);
+      handleEditButton(); // close editor
     } catch (error) {
       if(error !== undefined)
       console.error(error);

@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken } from '../auth/index.js';
 
 import { Profile, Comment, getModelByString } from '../db/models/index.js';
+import { uploadFile } from '../s3/connection.js';
 
 const router = express.Router();
 
@@ -34,14 +35,16 @@ router.get('/profile/:id', async (req, res) => {
   }
 });
 
-router.post('/edit/profile', authenticateToken, async (req, res) => {
+router.post('/edit/profile', [authenticateToken, uploadFile('profile/picture', 'profilePicture')], async (req, res) => {
   try {
+    const profilePicture = req.file;
     let profile = await Profile.findOne({username: req.user.username});
     if(req.body.information) profile.information = req.body.information;
     if(req.body.displayName) profile.displayName = req.body.displayName;
     if(req.body.status) profile.status = req.body.status;
-    if(req.body.profilePicture) profile.profilePicture = req.body.profilePicture;
     if(req.body.banner) profile.banner = req.body.banner;
+    if(profilePicture) profile.profilePicture = profilePicture.location;
+
     await profile.save();
     return res.json('ok');
   } catch (err) {

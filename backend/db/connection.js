@@ -1,6 +1,4 @@
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-dotenv.config();
 
 //Start connection to db
 mongoose.connect(process.env.DATABASE_URL, { useNewUrlParser: true, useUnifiedTopology: true });
