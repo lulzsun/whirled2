@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useContext, useState, useRef } from 'react';
 import { ArrowReturnLeft } from 'react-bootstrap-icons';
 import defaultPhoto from "../../media/profile_photo.png";
 import axios from 'axios';
+import { UserContext } from '../../Contexts';
 
 export default function CommentEditor ({hidden, parentId, parentType, localComments, setLocalComments}) {
+  const {user} = useContext(UserContext);
   const [commentText, setCommentText] = useState('');
   const textDiv = useRef();
 
@@ -45,7 +47,12 @@ export default function CommentEditor ({hidden, parentId, parentType, localComme
   return (
     <div hidden={hidden}>
       <div className="flex mt-4 mb-4">
-        <img alt="profileIcon" src={defaultPhoto} className="mt-1 mx-auto object-cover rounded-full h-10 w-10"/>
+        <img alt="profileIcon" src={
+          (
+						(user.profilePicture === '' || user.profilePicture === undefined) ?
+						(defaultPhoto) : (`${process.env.REACT_APP_S3_URL}${user.profilePicture}`)
+					)
+        } className="mt-1 mx-auto object-cover rounded-full h-10 w-10"/>
         <div className='text-gray-400 ml-2 w-full bg-gray-700 h-auto rounded-xl'>
           <div hidden={commentText!==''} className="pointer-events-none absolute p-3">Leave a comment!</div>
           <div className='focus:text-white w-full p-3 break-all focus:outline-none' 

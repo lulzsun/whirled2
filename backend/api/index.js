@@ -15,6 +15,7 @@ router.get('/', (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     let profile = await Profile.findOne({username: req.user.username});
+    console.log(req.user.username);
     profile.lastOnline = Date.now();
     await profile.save();
     const me = {
@@ -41,7 +42,7 @@ router.get('/stuff', authenticateToken, (req, res) => {
 router.get('/profile/:id', async (req, res) => {
   try {
     let profile = await Profile.
-      findOne({username: req.params.id}).
+      findOne({username: req.params.id.toLowerCase()}).
       populate({
         path: 'comments',
         populate: {

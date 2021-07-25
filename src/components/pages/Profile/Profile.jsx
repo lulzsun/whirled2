@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import ProfileCard from './ProfileCard';
@@ -10,6 +10,7 @@ export default function Profile () {
 	// universal state variables (?)
 	const [profileData, setProfileData] = useState(null);
 	const { owner } = useParams();
+	const profileDiv = useRef();
 
 	// ProfileCard state variables
 	const [editProfile, setEditProfile] = useState(false);
@@ -44,17 +45,18 @@ export default function Profile () {
 				// reset CommentCard state variables
 				setLocalComments([]);
 				console.log(res.data);
+				profileDiv.current.scrollTop = 0;
 			} catch (error) {
 				alert('404');
 			}
 		}
 
 		getProfileData();
-  }, [setProfileData, owner]);
+  }, [setProfileData, owner, profileDiv]);
 
 	if(profileData) {
 		return ( 
-			<div className="h-full overflow-y-auto p-5">
+			<div ref={profileDiv} className="h-full overflow-y-auto p-5">
 				<div>
 					<ProfileCard
 						owner={owner} profileData={profileData}

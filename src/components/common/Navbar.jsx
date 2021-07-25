@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Bell, Envelope } from 'react-bootstrap-icons';
 
 export default function Navbar () {
 
@@ -39,6 +40,20 @@ export default function Navbar () {
 				rounded-md text-sm font-medium">
 				Shop
 			</Link>
+			
+			<div className="cursor-pointer
+				text-gray-300 hover:bg-gray-700
+				hover:text-white px-3 py-3 
+				rounded-md text-2xl font-medium">
+				<Bell></Bell>
+			</div>
+
+			<div className="cursor-pointer
+				text-gray-300 hover:bg-gray-700
+				hover:text-white px-3 py-3 
+				rounded-md text-2xl font-medium">
+				<Envelope></Envelope>
+			</div>
 		</>
 	)
 }

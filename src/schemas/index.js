@@ -7,7 +7,7 @@ export const usernameBlackList = [
 	'signup', 'help', 'about', 'privacy'
 ];
 
-export const UsernameSchema = Joi.string().label('Username').alphanum().invalid(...usernameBlackList).min(3).max(30).required();
+export const UsernameSchema = Joi.string().label('Username').alphanum().lowercase({force: true}).invalid(...usernameBlackList).min(3).max(30).required();
 export const PasswordSchema = Joi.string().label('Password').min(6).required();
 export const EmailSchema = Joi.string().label('Email').email({minDomainSegments: 2, tlds: {allow: ['com', 'net']}});
 export const BirthDateSchema = Joi.date().custom(ageRestrict13).required();
