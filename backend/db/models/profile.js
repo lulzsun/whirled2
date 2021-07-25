@@ -2,13 +2,16 @@ import mongoose from 'mongoose';
 
 const profileSchema = new mongoose.Schema({
 	username: 			{ type: String, required: true },
+	level:					{ type: Number, default: 1 },
+	coins:					{ type: Number, default: 1000 },
+	bars:						{ type: Number, default: 0 },
+	bling:					{ type: Number, default: 0 },
+
 	displayName: 		{ type: String, required: true },
+	status:					{ type: String, default: 'Hello Whirled!' },
 	lastOnline:			{ type: Date, default: Date.now() },
 	profilePicture:	{ type: String, default: '' },
 	banner:					{ type: String, default: '' },
-	level:					{ type: Number, default: 1 },
-
-	status:					{ type: String, default: 'Hello Whirled!' },
 	information:		{ type: Object, 
 		default: {
 			activities: '',

@@ -12,13 +12,35 @@ router.get('/', (req, res) => {
   });
 });
 
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    let profile = await Profile.findOne({username: req.user.username});
+    profile.lastOnline = Date.now();
+    await profile.save();
+    const me = {
+      username: profile.username,
+      displayName: profile.displayName,
+      profilePicture: profile.profilePicture,
+      status: profile.status,
+      level: profile.level,
+      coins: profile.coins,
+      bars: profile.bars,
+      bling: profile.bling
+    }
+    return res.json(me);
+  } catch (err) {
+    console.error(err);
+    return res.sendStatus(500);
+  }
+});
+
 router.get('/stuff', authenticateToken, (req, res) => {
 	return res.json('hey this is your nonexistent stuff!');
 });
 
 router.get('/profile/:id', async (req, res) => {
   try {
-    const profile = await Profile.
+    let profile = await Profile.
       findOne({username: req.params.id}).
       populate({
         path: 'comments',
@@ -28,6 +50,12 @@ router.get('/profile/:id', async (req, res) => {
         }
       }).
       exec();
+
+    // we don't want/need to show this to a public get request
+    profile = profile.toObject();
+    delete profile.coins;
+    delete profile.bars;
+    delete profile.bling;
     return res.json(profile);
   } catch (err) {
     console.error(err);
@@ -46,7 +74,11 @@ router.post('/edit/profile', [authenticateToken, uploadFile('profile/picture', '
     if(profilePicture) profile.profilePicture = profilePicture.location;
 
     await profile.save();
-    return res.json('ok');
+    return res.json({
+      status: profile.status,
+      displayName: profile.displayName, 
+      profilePicture: profile.profilePicture
+    });
   } catch (err) {
     console.error(err);
     return res.sendStatus(500);

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
+import { UserContext } from '../../../Contexts';
 
 import Sidebar from '../../common/tail-kit/navigation/sidebar/Sidebar';
 import Avatars from './Avatars';
 
-export default function Stuff ({isLoggedIn}) {
+export default function Stuff () {
+	const {user} = useContext(UserContext);
+
 	const links = {
 		avatar: '/stuff/avatars',
 		furniture: '/stuff/furniture',
@@ -35,7 +38,7 @@ export default function Stuff ({isLoggedIn}) {
 	// }
 
 	const StuffPane = () => {
-		if(!isLoggedIn) {
+		if(!user.loggedIn) {
 			return (<></>);
 		} else {
 			return (
@@ -55,13 +58,13 @@ export default function Stuff ({isLoggedIn}) {
 	return (
 		<>
 		<div className="flex h-full">
-			<div hidden={!isLoggedIn} className="w-40">
+			<div hidden={!user.loggedIn} className="w-40">
 				<Sidebar links={categories} withBorder="true"></Sidebar>
 			</div>
-			<div hidden={!isLoggedIn} className="w-full">
+			<div hidden={!user.loggedIn} className="w-full">
 				<StuffPane/>
 			</div>
-			<div hidden={isLoggedIn}>
+			<div hidden={user.loggedIn}>
 				<p>Please log in to see your stuff!</p>
 			</div>
 		</div>

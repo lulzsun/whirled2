@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useHistory } from "react-router-dom";
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -6,8 +6,10 @@ import Button from '../../common/tail-kit/elements/buttons/Button';
 import InputText from '../../common/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
+import { UserContext } from '../../../Contexts';
 
-export default function Login ({setLoggedIn, logout}) {
+export default function Login ({logout}) {
+	const {setUser} = useContext(UserContext);
 	const history = useHistory();
 
   const [username, setUsername] = useState('');
@@ -20,9 +22,9 @@ export default function Login ({setLoggedIn, logout}) {
 	useEffect(() => {
 		if(logout) {
 			localStorage.clear();
-			setLoggedIn(false);
+			setUser(prevState => ({...prevState, loggedIn: false}));
 		}
-	}, [setLoggedIn, logout]);
+	}, [setUser, logout]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -36,10 +38,11 @@ export default function Login ({setLoggedIn, logout}) {
 		}).then(response => {
 			if(response.data.accessToken) {
 				try {
+					setUser(prevState => ({...prevState, username}));
 					localStorage.setItem('username', username);
 					localStorage.setItem('accessToken', response.data.accessToken);
 					localStorage.setItem('refreshToken', response.data.refreshToken);
-					setLoggedIn(true);
+					setUser(prevState => ({...prevState, loggedIn: true}));
 					history.push(`/${username}`);
 				} 
 				catch (error) {

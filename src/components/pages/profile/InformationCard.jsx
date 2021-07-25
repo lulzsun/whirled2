@@ -1,9 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useContext } from 'react';
 import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
-// import { Link } from 'react-router-dom';
+import { UserContext } from '../../../Contexts';
 
 export default function InformationCard ({owner, profileData, showMore, setShowMore, editInfo, setEditInfo}) {
+  const {user} = useContext(UserContext);
+
   const infoRef = {
     aboutMe: useRef(),
     activities: useRef(),
@@ -88,7 +90,7 @@ export default function InformationCard ({owner, profileData, showMore, setShowM
                     "pl-2 pr-2 p-1 m-2 text-xs text-white leading-none cursor-pointer rounded-full " +
                     (editInfo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600')
                   }
-                  hidden={(owner === localStorage.getItem('username') ? false : true)}
+                  hidden={(owner === user.username ? false : true)}
                   onClick={() => handleEditButton()}>
                   {(editInfo ? <XLg/> : <Pencil/>)}
                 </div>

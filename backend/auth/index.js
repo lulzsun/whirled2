@@ -128,7 +128,6 @@ router.post('/signup', async (req, res) => {
 		// Create new user
 		const user = new User({
 			username: req.body.username.toLowerCase(),
-			displayName: req.body.username.toLowerCase(),
 			email: req.body.email,
 			emailVerified: false,
 			password: passwordHash,

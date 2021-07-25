@@ -1,13 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useContext } from 'react';
 import axios from 'axios';
 import defaultPhoto from "../../../media/profile_photo.png";
 import { ThreeDots, Pencil, ZoomIn, ZoomOut, Save, XLg, PersonPlusFill, Calendar3, CalendarCheck } from 'react-bootstrap-icons';
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
 import { handleContentEditableMax } from '../../common/TextArea';
 import PictureEditor from './PictureEditor';
+import { UserContext } from '../../../Contexts';
 //import InformationModale from 'src/components/common/tail-kit/elements/alert/InformationModale';
 
 export default function ProfileCard ({owner, profileData, editProfile, setEditProfile}) {
+  const {user, setUser} = useContext(UserContext);
+
   const [editorPicture, setEditorPicture] = useState((profileData.profilePicture === '' ? defaultPhoto : profileData.profilePicture));
   const [editorZoom, setEditorZoom] = useState(1);
   const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -72,7 +75,8 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
         }
       });
       if(res.data) {
-        console.log(res);
+        // this will cause rerenders for anything that needs these changes
+        setUser(prevState => ({...prevState, ...res.data}));
       }
       if(profileRef.uploadButton.current.files.length === 1) {
         profileData.profilePicture = newProfilePicture.toDataURL();
@@ -144,7 +148,7 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
                       <XLg/>
                     </div>
                     <DropDownMenu hidden={editProfile} className="text-xs" noFocus={true}
-                      items={(owner === localStorage.getItem('username') ? ownerDdmItems : guestDdmItems)} icon={
+                      items={(owner === user.username ? ownerDdmItems : guestDdmItems)} icon={
                       <div
                         className={"p-2 ml-4 text-lg text-gray-200 font-bold leading-none bg-green-500 hover:bg-green-600 cursor-pointer rounded-full"}>
                         <ThreeDots/>
@@ -179,17 +183,6 @@ export default function ProfileCard ({owner, profileData, editProfile, setEditPr
                   <CalendarCheck className='h-5 w-5 mr-2'/>
                   <p className="">Last Online {(new Date(profileData.lastOnline)).toLocaleDateString(undefined, dateOptions)}</p>
                 </div>
-                <>
-                {/* <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
-                  <House className="ml-1"/><p className="ml-1 mr-1 text-xs">Visit Home</p>
-                </div>
-                <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
-                  <Binoculars className="ml-1"/><p className="ml-1 mr-1 text-xs">View Rooms</p>
-                </div>
-                <div className="p-2 ml-4 inline-flex items-center text-lg text-white leading-none bg-green-400 hover:bg-green-500 cursor-pointer rounded-full">
-                  <Bag className="ml-1"/><p className="ml-1 mr-1 text-xs">Browse Items</p>
-                </div> */}
-                </>
               </div>  
             </div>
 					</div>
