@@ -20,6 +20,7 @@ export default function Page (props) {
 				<Route exact path="/help">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 				<Route exact path="/about">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 				<Route exact path="/:owner">				<Profile {...props}/></Route>
+				<Route exact path="/:owner/friends">404: Uhhh... this doesn't exist yet. 🙈🛠</Route>
 			</Switch>
 		</div>
 	)

@@ -67,7 +67,7 @@ export default function Profile () {
 						showMore={showMore} setShowMore={setShowMore} 
 						editInfo={editInfo} setEditInfo={setEditInfo}/>
 
-					<FriendsCard profileData={profileData}/>
+					<FriendsCard owner={owner} profileData={profileData}/>
 
 					<CommentsCard
 						owner={owner} parentId={profileData._id} comments={profileData.comments} 

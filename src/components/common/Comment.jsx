@@ -51,7 +51,7 @@ export default function Comment ({owner, comment}) {
 
   if(isDeleted) return <></>
   return (
-    <div className={"flex mt-2 group hover:bg-gray-800 rounded-lg " + (isDdmOpen ? "bg-gray-800" : "")}>
+    <div id={comment._id} className={"flex mt-2 group hover:bg-gray-800 rounded-lg " + (isDdmOpen ? "bg-gray-800" : "")}>
       <Link className="cursor-pointer" to={(comment.user.username === 'banned' ? `#` : `/${comment.user.username}`)}>
         <img alt="profileIcon" src={(comment.user.profilePicture !== '' ? `${process.env.REACT_APP_S3_URL}${comment.user.profilePicture}` : defaultPhoto)} 
           className="inline mt-1.5 object-cover rounded-full h-10 w-10"/>
