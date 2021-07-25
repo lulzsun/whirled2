@@ -54,7 +54,7 @@ export default function Profile () {
 
 	if(profileData) {
 		return ( 
-			<div className="h-full overflow-y-auto container mx-auto p-5">
+			<div className="h-full overflow-y-auto p-5">
 				<div>
 					<ProfileCard
 						owner={owner} profileData={profileData}
