@@ -20,43 +20,61 @@ export default function Login ({logout}) {
 	// https://stackoverflow.com/a/54655508/8805016
 	// if not using this, it will cause an error if render isnt done
 	useEffect(() => {
-		if(logout) {
-			localStorage.clear();
-			setUser(prevState => ({...prevState, loggedIn: false}));
+		async function doLogout() {
+			if(logout && localStorage.getItem('refreshToken') !== null) {
+				try {
+					await axios.delete(`${process.env.REACT_APP_AUTH_URL}/auth/logout`, {
+						skipAuthRefresh: true,
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						data: {
+							refreshToken: localStorage.getItem('refreshToken')
+						}
+					});
+				}
+				catch (error) {
+					console.error(error);
+				}
+				localStorage.clear();
+				setUser({loggedIn: false});
+				console.log('Bye-bye!');
+			}
 		}
+		doLogout();
 	}, [setUser, logout]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 		setLoginDisabled(true);
     const login = { username, password };
-		
-		axios.post(`${process.env.REACT_APP_AUTH_URL}/auth/login`, JSON.stringify(login), {
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		}).then(response => {
-			if(response.data.accessToken) {
-				try {
-					setUser(prevState => ({...prevState, username}));
-					localStorage.setItem('username', username);
-					localStorage.setItem('accessToken', response.data.accessToken);
-					localStorage.setItem('refreshToken', response.data.refreshToken);
-					setUser(prevState => ({...prevState, loggedIn: true}));
-					history.push(`/${username}`);
-				} 
-				catch (error) {
-					alert('Issue logging in, try again later....');
-					console.error(error);
+		try {
+			let res = await axios.post(`${process.env.REACT_APP_AUTH_URL}/auth/login`, JSON.stringify(login), {
+				headers: {
+					'Content-Type': 'application/json'
 				}
+			});
+			if(res.data.accessToken) {
+				localStorage.setItem('accessToken', res.data.accessToken);
+				localStorage.setItem('refreshToken', res.data.refreshToken);
 			}
-		}).catch(error => {
-			if( error.response ) {
-				// TODO show a cool modal instead of doing this
-				alert(error.response.data.message); 
+
+			res = await axios.get(`${process.env.REACT_APP_API_URL}/api/me`, {
+				headers: {
+					'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+				}
+			});
+			if(res.data) {
+				setUser(prevState => ({...prevState, ...res.data, loggedIn: true}));
+				history.push(`/${username}`);
 			}
+		}
+		catch (error) {
+			// TODO show a cool modal instead of doing this
+			alert(error.response.data.message);
+			console.error(error);
 			setLoginDisabled(false);
-		});
+		}
   }
 
 	return (

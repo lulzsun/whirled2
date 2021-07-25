@@ -44,12 +44,11 @@ router.delete('/logout', (req, res) => {
 	jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, 
 		function(err, user) {
 			if(err) return res.sendStatus(403);
-			// query all refreshTokens of the user, and delete them
+			// verify that this refresh token exists in the redis cache
 			redisClient.get(user._id+'_'+refreshToken, 
 				function(err, _res) {
 					if(err) return res.sendStatus(401);
-					console.log(user._id+'_'+refreshToken);
-					if(_res) { // if these refreshTokens of the user exist, delete them
+					if(_res === 'true') { // if reply === 'true', we will delete token from redis
 						if(redisClient.del(user._id+'_'+refreshToken)) return res.sendStatus(204);
 					}
 					return res.sendStatus(401);
