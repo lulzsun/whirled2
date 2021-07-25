@@ -23,7 +23,7 @@ export default function CommentsCard ({owner, parentId, comments, localComments,
                 parentId={parentId} parentType={'Profile'}
                 localComments={localComments} setLocalComments={setLocalComments}/>
               {/* Other's comments */}
-              <CommentSection commentArray={comments} 
+              <CommentSection owner={owner} commentArray={comments} 
                 localComments={localComments}/>
             </div>
             {/*  Footer */}

@@ -118,4 +118,21 @@ router.post('/comment', authenticateToken, async (req, res) => {
   }
 });
 
+router.delete('/comment', authenticateToken, async (req, res) => {
+	const commentId = req.body.id;
+  const user = req.user;
+  let comment = await Comment.findOne({_id: commentId}).populate({
+    path: 'user',
+    select: 'username'
+  }).
+  exec();
+  let parent = await getModelByString(comment.parentType).findOne({_id: comment.parentId})
+  if(user.username !== comment.user.username && user.username !== parent.username) return res.sendStatus(403);
+  // if the original poster wants to delete OR the owner of the parent wants to delete
+  delete parent.comments[commentId];
+  await parent.save();
+  await comment.remove();
+  res.sendStatus(200);
+});
+
 export default router;
