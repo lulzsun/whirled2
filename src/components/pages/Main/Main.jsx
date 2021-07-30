@@ -6,23 +6,18 @@ import SplitPane from '../../common/splitpane';
  
 export default function Main(props) {
   const hidden = useRouteMatch("/").isExact;
-	const resizerStyle = { opacity: 0.3, width: '5px', cursor: 'col-resize' };
 
 	if(hidden) {
-		resizerStyle.width = '0px';
 		return (
       <div className="flex flex-grow" style={{position: "relative"}}>
-        <SplitPane split="vertical" resizerStyle={resizerStyle} defaultSize={0} minSize={0} primary="second">
-          <Game {...props}/>
-          <Page {...props}/>
-        </SplitPane>
+        <Game {...props}/>
       </div>
 		)
 	}
 
 	return (
     <div className="flex flex-grow" style={{position: "relative"}}>
-      <SplitPane split="vertical" resizerStyle={resizerStyle} defaultSize={750} minSize={750} primary="second">
+      <SplitPane split="vertical" resizerStyle={{ opacity: 0.3, width: '5px', cursor: 'col-resize' }} defaultSize={1200} minSize={100} maxSize={1200} primary="first">
         <Game {...props}/>
         <Page {...props}/>
       </SplitPane>

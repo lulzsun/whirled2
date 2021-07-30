@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Envelope } from 'react-bootstrap-icons';
+import Mail from './mail/Mail'
 
 export default function Navbar () {
 
@@ -48,11 +49,13 @@ export default function Navbar () {
 				<Bell></Bell>
 			</div>
 
-			<div className="cursor-pointer
+			<div className="
 				text-gray-300 hover:bg-gray-700
-				hover:text-white px-3 py-3 
+				hover:text-white w-12
 				rounded-md text-2xl font-medium">
-				<Envelope></Envelope>
+				<Mail className="h-full" withAction={true} icon={
+					<Envelope/>
+				}></Mail> 
 			</div>
 		</>
 	)
