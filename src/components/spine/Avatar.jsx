@@ -4,7 +4,6 @@ import {
   AssetManager, ThreeJsTexture,
   AtlasAttachmentLoader, SkeletonJson, SkeletonMesh
 } from 'spine-ts-threejs';
-//import * as spine from './spine-threejs';
 
 export default function Avatar (props) {
   const parentPath = 'https://whirled.lulzlabz.xyz/spineboy/';
@@ -58,9 +57,12 @@ export default function Avatar (props) {
         var delta = now - lastFrameTime;
         lastFrameTime = now;
 
-        // if(skelMesh)
-        //   skelMesh.current.update(delta);
-        //console.log(spine);
+        if(skelMesh) {
+          spineMesh.update(delta);
+          //skelMesh.current.update(delta);
+        }
+           
+        //console.log(spineMesh);
       }
     }
   });
