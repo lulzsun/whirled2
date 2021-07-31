@@ -1,12 +1,10 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
+import GameCanvas from '../../three/GameCanvas';
 import { FullScreen, useFullScreenHandle } from 'react-full-screen';
-import { OrbitControls, Plane, Stars } from '@react-three/drei'
-import Avatar from 'src/components/spine/Avatar';
 
 export default function Game () {
 	const handle = useFullScreenHandle();
-
 	// function handleOnClick(e) {
 	// 	if(!handle.active) {
 	// 		handle.enter();
@@ -24,13 +22,10 @@ export default function Game () {
 				<div className="flex-initial">
 					<b>top</b>
 				</div>
-				<div className="flex-auto w-full">
+				<div className="flex-auto overflow-hidden w-full">
+				{/* <Canvas orthographic camera={{ zoom: 50, position: [0, 0, 100] }}> */}
 					<Canvas>
-						<OrbitControls/>
-						<Stars/>
-						<ambientLight intensity={0.5} />
-						<Plane args={[10, 10]} position={[0, -1, 0]} rotation={[-Math.PI/2, 0, 0]} />
-						<Avatar position={[0, 0, 0]}/>
+						<GameCanvas/>
 					</Canvas>
 				</div>
 				<div className="flex-initial">
