@@ -4,7 +4,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { Main } from './components/pages';
 import axios from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
-import { UserContext } from './Contexts';
+import { UserContext } from './context/User';
 
 function App() {
   const [user, setUser] = useState({loggedIn: (localStorage.getItem('refreshToken') !== null)});

@@ -2,7 +2,7 @@ import React, { useContext, useState, useRef } from 'react';
 import { ArrowReturnLeft } from 'react-bootstrap-icons';
 import defaultPhoto from "../../media/profile_photo.png";
 import axios from 'axios';
-import { UserContext } from '../../Contexts';
+import { UserContext } from '../../context/User';
 
 export default function CommentEditor ({hidden, parentId, parentType, localComments, setLocalComments}) {
   const {user} = useContext(UserContext);

@@ -5,7 +5,7 @@ import { ThreeDots, Pencil, ZoomIn, ZoomOut, Save, XLg, PersonPlusFill, Calendar
 import DropDownMenu from '../../common/tail-kit/elements/ddm/DropDownMenu';
 import { handleContentEditableMax } from '../../common/TextArea';
 import PictureEditor from './PictureEditor';
-import { UserContext } from '../../../Contexts';
+import { UserContext } from '../../../context/User';
 //import InformationModale from 'src/components/common/tail-kit/elements/alert/InformationModale';
 
 export default function ProfileCard ({owner, profileData, editProfile, setEditProfile}) {

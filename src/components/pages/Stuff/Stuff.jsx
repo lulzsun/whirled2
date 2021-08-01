@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
-import { UserContext } from '../../../Contexts';
+import { UserContext } from '../../../context/User';
 
 import Sidebar from '../../common/tail-kit/navigation/sidebar/Sidebar';
 import Avatars from './Avatars';

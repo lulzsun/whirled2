@@ -6,7 +6,7 @@ import Button from '../../common/tail-kit/elements/buttons/Button';
 import InputText from '../../common/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
-import { UserContext } from '../../../Contexts';
+import { UserContext } from '../../../context/User';
 
 export default function Login ({logout}) {
 	const {setUser} = useContext(UserContext);

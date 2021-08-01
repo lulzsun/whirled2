@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import defaultPhoto from "../../media/profile_photo.png";
 import headerLogo from "../../media/header_logo.png";
 import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu';
-import { UserContext } from '../../Contexts';
+import { UserContext } from '../../context/User';
 
 export default function Header () {
 	const {user} = useContext(UserContext);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import moment from 'moment';
 import { Link } from 'react-router-dom';
-import { UserContext } from '../../Contexts';
+import { UserContext } from '../../context/User';
 import { ThreeDots } from 'react-bootstrap-icons';
 import defaultPhoto from "../../media/profile_photo.png";
 import DropDownMenu from '../common/tail-kit/elements/ddm/DropDownMenu'

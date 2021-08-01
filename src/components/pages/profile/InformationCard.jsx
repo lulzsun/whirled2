@@ -1,7 +1,7 @@
 import React, { useRef, useContext } from 'react';
 import axios from 'axios';
 import { Pencil, Save, XLg } from 'react-bootstrap-icons';
-import { UserContext } from '../../../Contexts';
+import { UserContext } from '../../../context/User';
 
 export default function InformationCard ({owner, profileData, showMore, setShowMore, editInfo, setEditInfo}) {
   const {user} = useContext(UserContext);
