@@ -5,10 +5,11 @@ import { Main } from './components/pages';
 import axios from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
 import { UserContext } from './context/User';
+import { SocketContext, socket } from './context/Socket';
 
 function App() {
-  const [user, setUser] = useState({loggedIn: (localStorage.getItem('refreshToken') !== null)});
-  const userContext = useMemo(() => ({user, setUser}), [user, setUser]);
+  const [currUser, setCurrUser] = useState({loggedIn: (localStorage.getItem('refreshToken') !== null)});
+  const user = useMemo(() => ({user: currUser, setUser: setCurrUser}), [currUser, setCurrUser]);
 
   useEffect(() => {
     async function getUserData() {
@@ -19,16 +20,23 @@ function App() {
 					}
 				});
 				if(res.data) {
-          //https://stackoverflow.com/a/66866460/8805016
-          setUser(prevState => ({...prevState, ...res.data}));
+          // https://stackoverflow.com/a/66866460/8805016
+          setCurrUser(prevState => ({...prevState, ...res.data}));
+          return localStorage.getItem('accessToken');
 				}
 			} catch (error) {
 				if(error !== undefined)
 				console.error(error);
 			}
+      return null;
 		}
-    if(user.loggedIn) {
-		  getUserData();
+    if(currUser.loggedIn) {
+      getUserData().then(function(token) {
+        socket.emit("auth", token); 
+      });
+    }
+    else {
+      socket.emit("auth"); 
     }
     // https://stackoverflow.com/a/55854902/8805016
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,7 +61,7 @@ function App() {
       alert('Your session has expired, please log back in.');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      setUser(prevState => ({...prevState, loggedIn: false}));
+      setCurrUser(prevState => ({...prevState, loggedIn: false}));
       window.location.reload();
       return Promise.reject();
     });
@@ -65,10 +73,12 @@ function App() {
   return (
     <Router>
       <div className="flex flex-col h-screen">
-        <UserContext.Provider value={userContext}>
+        <SocketContext.Provider value={socket}>
+        <UserContext.Provider value={user}>
           <Header/>
           <Main/>
         </UserContext.Provider>
+        </SocketContext.Provider>
       </div>
     </Router>
   );

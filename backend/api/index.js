@@ -15,7 +15,6 @@ router.get('/', (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     let profile = await Profile.findOne({username: req.user.username});
-    console.log(req.user.username);
     profile.lastOnline = Date.now();
     await profile.save();
     const me = {

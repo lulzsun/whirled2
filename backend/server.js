@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import auth from './auth/index.js';
 import api from './api/index.js';
+import game from './game/index.js';
 
 const app = express();
 
@@ -24,12 +25,13 @@ app.use(cors( {
 
 app.get('/', (req, res) => {
 	res.json({
-		message: '🦄🌈✨Hello World! 🌈✨🦄'
+		message: '🦄🌈✨Hello Whirled! 🌈✨🦄'
 	});
 });
 
 app.use('/auth', auth);
 app.use('/api', api);
+app.set('/game', game);
 
 function notFound(req, res, next) {
 	res.status(404);
@@ -50,5 +52,5 @@ app.use(errorHandler);
 
 const port = process.env.API_PORT;
 app.listen(port, () => {
-	console.log('Listening on port', port);
+	console.log('Api server listening on port', port);
 });
