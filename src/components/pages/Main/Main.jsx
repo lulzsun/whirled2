@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Game from './Game';
 import Page from './Page';
 import { useRouteMatch } from 'react-router-dom';
@@ -11,6 +11,7 @@ export default function Main(props) {
 
   // https://htmldom.dev/create-resizable-split-views/
   var gameWidth = 0;
+  const [newGameWidth, setNewGameWidth] = useState(50);
   var x = 0;
 
   const handleMouseDown = function(event) {
@@ -24,7 +25,8 @@ export default function Main(props) {
   const handleMouseMove = function(e) {
     const dx = e.clientX - x;
 
-    const newGameWidth = (gameWidth + dx) * 100 / resizer.current.parentNode.getBoundingClientRect().width;
+    let newGameWidth = (gameWidth + dx) * 100 / resizer.current.parentNode.getBoundingClientRect().width;
+    setNewGameWidth(newGameWidth);
     game.current.style.width = `${newGameWidth}%`;
 
     document.body.style.cursor = 'col-resize';
@@ -47,8 +49,8 @@ export default function Main(props) {
   
   return (
     <div className="flex flex-grow" style={{position: "relative"}}>
-      <div ref={game} style={(hidden === true ? {'width': '100%'} : {'width' : '50%'})}>
-        <Game {...props}/>
+      <div ref={game} style={(hidden === true ? {'width': '100%'} : {'width' : `${newGameWidth}%`})}>
+        <Game {...props} width={(hidden === true ? 100 : newGameWidth)}/>
       </div>
 
       <div ref={resizer} hidden={hidden} className="w-1" onMouseDown={handleMouseDown} style={{'cursor': 'col-resize'}}></div>

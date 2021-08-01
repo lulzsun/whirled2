@@ -1,34 +1,45 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import GameCanvas from '../../three/GameCanvas';
 import { FullScreen, useFullScreenHandle } from 'react-full-screen';
 
-export default function Game () {
+export default function Game (props) {
 	const handle = useFullScreenHandle();
+	const bot = useRef(), top = useRef();
+	const [height, setHeight] = useState();
 	// function handleOnClick(e) {
-	// 	if(!handle.active) {
-	// 		handle.enter();
-	// 	}
-	// 	else {
-	// 		handle.exit();
-	// 	}
+	// 	if(!handle.active) handle.enter();
+	// 	else handle.exit();
 	// }
 
+	useEffect(() => {
+		function handleResize() {
+			setHeight(bot.current.offsetHeight+top.current.offsetHeight);
+		}
+		setHeight(bot.current.offsetHeight+top.current.offsetHeight);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
 	return (
-		// i am a huge noob at flexbox and css in general, heres what i used to figure this out
-		// https://stackoverflow.com/questions/90178/make-a-div-fill-the-height-of-the-remaining-screen-space
 		<FullScreen className="h-full w-full bg-black" handle={handle}>
 			<div className="h-full flex flex-col items-center">
-				<div className="flex-initial">
+				<div ref={top} className="flex-initial">
 					<b>top</b>
 				</div>
 				<div className="flex-auto overflow-hidden w-full">
-				{/* <Canvas orthographic camera={{ zoom: 50, position: [0, 0, 100] }}> */}
-					<Canvas>
+					{/* ok, this looks like jank but it fixes a resizing bug, but please optimize? */}
+					<Canvas style={{
+						'position': 'absolute', 
+						'width': `${props.width}%`, 
+						'height': `calc(100% - ${height}px)`
+					}}>
 						<GameCanvas/>
 					</Canvas>
 				</div>
-				<div className="flex-initial">
+				<div ref={bot} className="flex-initial">
 					<b>bottom</b>
 				</div>
 			</div>
