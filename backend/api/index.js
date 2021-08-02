@@ -5,7 +5,7 @@ import { authenticateToken } from '../auth/index.js';
 import { Profile, Comment, getModelByString } from '../db/models/index.js';
 
 const router = Router();
-const redisClient = createClient({ host: process.env.REDIS_URL, port: process.env.REDIS_PORT }));
+const redisClient = createClient({ host: process.env.REDIS_URL, port: process.env.REDIS_PORT });
 
 router.get('/', (req, res) => {
   res.json({
