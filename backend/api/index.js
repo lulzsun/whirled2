@@ -1,10 +1,11 @@
-import express from 'express';
-import { authenticateToken } from '../auth/index.js';
-
-import { Profile, Comment, getModelByString } from '../db/models/index.js';
+import { Router } from 'express';
+import { createClient } from 'redis';
 import { uploadFile } from '../s3/connection.js';
+import { authenticateToken } from '../auth/index.js';
+import { Profile, Comment, getModelByString } from '../db/models/index.js';
 
-const router = express.Router();
+const router = Router();
+const redisClient = createClient({ host: process.env.REDIS_URL, port: process.env.REDIS_PORT }));
 
 router.get('/', (req, res) => {
   res.json({

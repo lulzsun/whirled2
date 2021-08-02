@@ -1,6 +1,7 @@
-import { createServer } from "http";
-import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
+import { Server } from "socket.io";
+import { createServer } from "http";
+import { createClient } from 'redis';
 
 const PORT = process.env.SOCKET_PORT || 69;
 const httpServer = createServer(function (req, res) {
@@ -17,8 +18,11 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+const pubClient = createClient({ host: 'localhost', port: 6379 });
+const subClient = pubClient.duplicate();
 
-httpServer.listen(PORT, () => console.log(`Socket server listening on port ${PORT}`));
+io.adapter(redisAdapter(pubClient, subClient));
+io.listen(PORT, () => console.log(`Socket server listening on port ${PORT}`));
 
 io.on('connection', (client) => {
   client.on('auth', handleAuth);

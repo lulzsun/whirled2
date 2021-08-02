@@ -7,6 +7,7 @@
 		"@craco/craco": "^6.2.0",
 		"@react-three/drei": "^7.3.1",
 		"@react-three/fiber": "^7.0.6",
+		"@socket.io/redis-adapter": "^7.0.0",
 		"@testing-library/jest-dom": "^5.14.1",
 		"@testing-library/react": "^11.2.7",
 		"@testing-library/user-event": "^12.8.3",
@@ -43,6 +44,7 @@
 		"web-vitals": "^1.1.2"
 	},
 	"scripts": {
+		"redis-cli": "g: && G:\\Redis-x64-3.2.100\\redis-cli.exe",
 		"redis-server": "g: && G:\\Redis-x64-3.2.100\\redis-server.exe",
 		"dev-server": "nodemon ./backend/server.js",
 		"prod-server": "node ./backend/server.js",
