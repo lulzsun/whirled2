@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { createClient } from 'redis';
-import { uploadFile } from '../s3/connection.js';
+import { setRedisKey } from '../utils/redis/connection.js';
+import { uploadFile } from '../utils/s3/connection.js';
 import { authenticateToken } from '../auth/index.js';
-import { Profile, Comment, getModelByString } from '../db/models/index.js';
+import { Profile, Comment, getModelByString } from '../utils/db/models/index.js';
 
 const router = Router();
-const redisClient = createClient({ host: process.env.REDIS_URL, port: process.env.REDIS_PORT });
 
 router.get('/', (req, res) => {
   res.json({
@@ -17,7 +16,7 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     let profile = await Profile.findOne({username: req.user.username});
     profile.lastOnline = Date.now();
-    await profile.save();
+    profile.save(); // does not need await
     const me = {
       username: profile.username,
       displayName: profile.displayName,
@@ -28,6 +27,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       bars: profile.bars,
       bling: profile.bling
     }
+    await setRedisKey(`player_${req.user._id}`, me);
     return res.json(me);
   } catch (err) {
     console.error(err);

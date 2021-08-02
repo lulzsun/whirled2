@@ -1,12 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Router } from 'express';
-import { createClient } from 'redis';
-import { User, Profile } from '../db/models/index.js';
+import redisClient from '../utils/redis/connection.js';
+import { User, Profile } from '../utils/db/models/index.js';
 import { LoginSchema, RegisterSchema, validateSchema } from '../../src/schemas/index.js';
 
 const router = Router();
-const redisClient = createClient({ host: process.env.REDIS_URL, port: process.env.REDIS_PORT });
 
 router.get('/', (req, res) => {
     res.json({

@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { Server } from "socket.io";
 import { createServer } from "http";
-import { createClient } from 'redis';
 import redisAdapter from '@socket.io/redis-adapter';
+import redisClient from '../utils/redis/connection.js';
 
 const PORT = process.env.SOCKET_PORT || 69;
 const httpServer = createServer(function (req, res) {
-  if (req.url == '/') {
+  if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write('<html><body><p>Hey! Get outta here!</p></body></html>');
     res.end();
@@ -19,7 +19,7 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
-const pubClient = createClient({ host: 'localhost', port: 6379 });
+const pubClient = redisClient;
 const subClient = pubClient.duplicate();
 
 io.adapter(redisAdapter(pubClient, subClient));
