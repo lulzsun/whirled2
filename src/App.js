@@ -30,13 +30,14 @@ function App() {
 			}
       return null;
 		}
+    // begin gameserver connection
     if(currUser.loggedIn) {
       getUserData().then(function(token) {
-        socket.emit("auth", token); 
+        socket.emit("AUTH", token); 
       });
     }
     else {
-      socket.emit("auth"); 
+      socket.emit("AUTH"); 
     }
     // https://stackoverflow.com/a/55854902/8805016
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,7 +54,7 @@ function App() {
     }).then(response => {
       localStorage.setItem('accessToken', response.data.accessToken);
       failedRequest.response.config.headers['Authorization'] = 'Bearer ' + response.data.accessToken;
-      console.log('Recieved new access token!');
+      //console.log('Recieved new access token!');
       return Promise.resolve();
     }).catch((err) => {
       console.error(err);

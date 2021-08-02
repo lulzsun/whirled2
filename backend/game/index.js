@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Server } from "socket.io";
 import { createServer } from "http";
 import redisAdapter from '@socket.io/redis-adapter';
-import redisClient from '../utils/redis/connection.js';
+import redisClient, { getRedisKey } from '../utils/redis/connection.js';
 
 const PORT = process.env.SOCKET_PORT || 69;
 const httpServer = createServer(function (req, res) {
@@ -26,14 +26,33 @@ io.adapter(redisAdapter(pubClient, subClient));
 httpServer.listen(PORT, () => console.log(`Socket server listening on port ${PORT}`));
 
 io.on('connection', (client) => {
-  client.on('auth', handleAuth);
+  client.on('AUTH', handleAuth);
+  client.on('disconnect', handleDisconnect);
+
+  function handleDisconnect() {
+    console.log(`${client.id} >>> ${client.username} disconnected`);
+  }
 
   function handleAuth(token) {
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-      if(err) user = {_id: client.id, username: 'guest'};
-      client.id = user._id;
-      client.emit('auth', user);
-      console.log(`${client.id} >>> Connected as ${user.username}`);
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, user) => {
+      let authUser = {
+        _id: client.id,
+        username: 'guest',
+        displayName: 'guest',
+      }
+
+      if(user) {
+        const userStore = await getRedisKey(`${user._id}_player`);
+        if(userStore !== null) {
+          authUser = userStore;
+          authUser._id = user._id;
+        }
+      }
+
+      client.id = authUser._id;
+      client.username = authUser.username;
+      console.log(`${client.id} >>> Connected as ${client.username}`);
+      client.emit('JOIN_GAME', authUser);
     });
   }
 });

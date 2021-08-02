@@ -7,9 +7,11 @@ import InputText from '../../common/tail-kit/form/inputtext/InputText';
 import { Divider } from '../../common';
 import memeFrog from "../../../media/passion-frog.jpg";
 import { UserContext } from '../../../context/User';
+import { SocketContext } from '../../../context/Socket';
 
 export default function Login ({logout}) {
 	const {setUser} = useContext(UserContext);
+	const socket = useContext(SocketContext);
 	const history = useHistory();
 
   const [username, setUsername] = useState('');
@@ -38,6 +40,7 @@ export default function Login ({logout}) {
 				}
 				localStorage.clear();
 				setUser({loggedIn: false});
+				socket.disconnect();
 				console.log('Bye-bye!');
 			}
 		}
@@ -66,6 +69,7 @@ export default function Login ({logout}) {
 			});
 			if(res.data) {
 				setUser(prevState => ({...prevState, ...res.data, loggedIn: true}));
+				socket.emit("AUTH", localStorage.getItem('accessToken')); 
 				history.push(`/${username}`);
 			}
 		}

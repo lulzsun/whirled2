@@ -27,7 +27,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       bars: profile.bars,
       bling: profile.bling
     }
-    await setRedisKey(`player_${req.user._id}`, me);
+    await setRedisKey(`${req.user._id}_player`, me);
     return res.json(me);
   } catch (err) {
     console.error(err);

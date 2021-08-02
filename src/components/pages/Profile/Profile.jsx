@@ -44,7 +44,6 @@ export default function Profile () {
 
 				// reset CommentCard state variables
 				setLocalComments([]);
-				console.log(res.data);
 				profileDiv.current.scrollTop = 0;
 			} catch (error) {
 				alert('404');
