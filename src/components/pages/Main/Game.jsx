@@ -31,10 +31,10 @@ export default function Game (props) {
 				</div>
 				<div className="flex-auto overflow-hidden w-full">
 					{/* ok, this looks like jank but it fixes a resizing bug, but please optimize? */}
-					<Canvas style={{
+					<Canvas camera={{position: [7,5,0]}} style={{
 						'position': 'absolute', 
 						'width': `${props.width}%`, 
-						'height': `calc(100% - ${height}px)`
+						'height': `calc(100% - ${height*2}px)`
 					}}>
 						<GameCanvas/>
 					</Canvas>

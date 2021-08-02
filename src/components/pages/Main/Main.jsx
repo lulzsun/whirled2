@@ -26,8 +26,12 @@ export default function Main(props) {
     const dx = e.clientX - x;
 
     let newGameWidth = (gameWidth + dx) * 100 / resizer.current.parentNode.getBoundingClientRect().width;
-    setNewGameWidth(newGameWidth);
-    game.current.style.width = `${newGameWidth}%`;
+
+    if(newGameWidth < 75) {
+      if(newGameWidth < 1) newGameWidth = 0;
+      setNewGameWidth(newGameWidth);
+      game.current.style.width = `${newGameWidth}%`;
+    }
 
     document.body.style.cursor = 'col-resize';
     game.current.style.userSelect = 'none';
@@ -48,7 +52,7 @@ export default function Main(props) {
   };
   
   return (
-    <div className="flex flex-grow" style={{position: "relative"}}>
+    <div className="flex flex-1 overflow-hidden">
       <div ref={game} style={(hidden === true ? {'width': '100%'} : {'width' : `${newGameWidth}%`})}>
         <Game {...props} width={(hidden === true ? 100 : newGameWidth)}/>
       </div>

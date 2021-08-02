@@ -56,7 +56,7 @@ export default function Profile () {
 
 	if(profileData) {
 		return ( 
-			<div ref={profileDiv} className="h-full overflow-y-auto p-5">
+			<div ref={profileDiv} className="h-full overflow-y-auto p-5 scrollbar-thin">
 				<div>
 					<ProfileCard
 						owner={owner} profileData={profileData}
