@@ -45,7 +45,7 @@ export default function Login ({logout}) {
 			}
 		}
 		doLogout();
-	}, [setUser, logout]);
+	}, [setUser, logout, socket]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

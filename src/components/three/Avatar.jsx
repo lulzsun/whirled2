@@ -6,7 +6,7 @@ import {
   AtlasAttachmentLoader, SkeletonJson, SkeletonMesh
 } from 'spine-ts-threejs';
 
-const Avatar = forwardRef((props, ref) => {
+const Avatar = React.memo(forwardRef((props, ref) => {
   const parentPath = 'https://whirled.lulzlabz.xyz/spineboy/';
   const skeletonFile = 'spineboy-ess.json';
   const atlasFile = 'spineboy.atlas';
@@ -90,20 +90,21 @@ const Avatar = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
     ...meshRef.current,
 
-    moveTo(position, mouseCoords={x:0, y:0}) {
+    moveTo(position, mouseCoords={x:0, y:0}, flip=null) {
       const b = nameTag.current.getBoundingClientRect();
       const nameTagCoords = {x: (b.left + b.width / 2), y: b.top + b.height / 2};
       const flipDir = mouseCoords.x > nameTagCoords.x ? 1 : -1;
-      spineMesh.skeleton.scaleX = flipDir;
+      if(flip !== null) spineMesh.skeleton.scaleX = flip;
+      else spineMesh.skeleton.scaleX = flipDir;
       
       movePosition = position;
-
+      return spineMesh.skeleton.scaleX;
     },
   }));
 
   if(spineMesh) {
     return (
-      <mesh {...props} ref={meshRef} scale={1} userData={{username: 'lulzsun'}}>
+      <mesh {...props} ref={meshRef} scale={1}>
         <Html position={[0,3,0]}>
           <span ref={nameTag} className="absolute whitespace-nowrap font-extrabold transform -translate-x-1/2" 
           style={
@@ -113,7 +114,7 @@ const Avatar = forwardRef((props, ref) => {
               'WebkitTextStroke': '0.04rem black',
               'WebkitTextFillColor': 'white'
             }}>
-          {(meshRef.current && meshRef.current.userData.username)}</span>
+          {props.user.displayName}</span>
         </Html>
         <primitive object={spineMesh} scale={0.01} />
         {/* <boxGeometry args={[1, 1, 1]} /> */}
@@ -122,6 +123,6 @@ const Avatar = forwardRef((props, ref) => {
     )
   }
   return (<></>)
-});
+}));
 
 export default Avatar;

@@ -27,33 +27,72 @@ httpServer.listen(PORT, () => console.log(`Socket server listening on port ${POR
 
 io.on('connection', (client) => {
   client.on('AUTH', handleAuth);
+  client.on('JOIN_ROOM', handleJoinRoom);
+  client.on('PLAYER_MOVE', handlePlayerMove);
   client.on('disconnect', handleDisconnect);
 
   function handleDisconnect() {
-    console.log(`${client.id} >>> ${client.username} disconnected`);
+    try {
+      client.to('homeroom').emit('PLAYER_LEAVE', client.user);
+      console.log(`${client.id} >>> ${client.user.username} disconnected`);
+    } catch (error) {
+      console.log(`${client.id} >>> client disconnected`);
+    }
   }
 
   function handleAuth(token) {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, user) => {
-      let authUser = {
-        _id: client.id,
-        username: 'guest',
+      let createUser = {
+        username: `guest_${client.id}`,
         displayName: 'guest',
+      }
+      let createAvatar = {
+        id: 0,
+        position: [0, 0, 0]
       }
 
       if(user) {
         const userStore = await getRedisKey(`${user._id}_player`);
         if(userStore !== null) {
-          authUser = userStore;
-          authUser._id = user._id;
+          createUser = userStore;
         }
       }
 
-      client.id = authUser._id;
-      client.username = authUser.username;
-      console.log(`${client.id} >>> Connected as ${client.username}`);
-      client.emit('JOIN_GAME', authUser);
+      client.user = createUser;
+      client.avatar = createAvatar;
+
+      // let this client know they successfully connected/authorized
+      client.emit('CONNECTED', client.user);
+      console.log(`${client.id} >>> Connected as ${client.user.username}`);
     });
+  }
+
+  function handleJoinRoom(roomId) {
+    if(roomId === undefined) roomId = 'homeroom';
+    client.join(roomId);
+    client.roomId = roomId;
+
+    const users = Array.from(io.sockets.adapter.rooms.get(roomId)).map(userId => {
+      if(io.of("/").sockets.get(userId).user) {
+        return {
+          username: io.of("/").sockets.get(userId).user.username,
+          displayName: io.of("/").sockets.get(userId).user.displayName,
+          avatar: io.of("/").sockets.get(userId).avatar,
+        };
+      }
+    });
+
+    // let the newly join player get all of the room information
+    client.emit('INIT_ROOM', { users });
+    // let other players know this user just joined
+    client.to('homeroom').emit('PLAYER_JOIN', {...client.user, avatar: client.avatar});
+    console.log(`${client.id} >>> Joined room ${roomId}`);
+  }
+
+  function handlePlayerMove(position, direction) {
+    // let other players know this user just updated position
+    client.avatar.position = position;
+    client.to(client.roomId).emit('PLAYER_MOVE', client.user, position, direction);
   }
 });
 

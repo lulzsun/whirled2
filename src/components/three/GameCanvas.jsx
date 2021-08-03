@@ -1,13 +1,17 @@
-import React, { useRef } from 'react';
-import { useThree } from '@react-three/fiber';
-import { OrbitControls, Plane, Stars, Stats } from '@react-three/drei'
-import Avatar from 'src/components/three/Avatar';
 import Svg from './Svg';
+import { useThree } from '@react-three/fiber';
+import { Vector3 } from 'three';
+import Avatar from 'src/components/three/Avatar';
+import React, { useRef, useEffect, useCallback } from 'react';
 import walkableSvg from '../../media/walkable.svg';
+import { OrbitControls, Plane, Stars, Stats } from '@react-three/drei'
 
 export default function GameCanvas (props) {
+  // not entirely sure why importing context and using it doesnt work, but passing it from parent as prop works...
+  const socket = props.socket;
 	const floorPlane = useRef();
-  const avatar = useRef();
+  const localAvatar = useRef();
+  const remoteAvatars = useRef([]);
   const walkTarget = useRef();
   const { gl, camera, raycaster } = useThree();
 
@@ -25,13 +29,14 @@ export default function GameCanvas (props) {
   };
 
   const handleMouseUp = (event) => {
-    if(walkTarget === null || avatar === null || event.button !== 0) return;
+    if(walkTarget === null || localAvatar === null || event.button !== 0) return;
 
     var coords = getMouse3dCoords(event);
 		raycaster.setFromCamera(coords, camera);
     var intersects = raycaster.intersectObject(floorPlane.current);
     if(intersects.length === 1 && intersects[0].point) {
-      avatar.current.moveTo(intersects[0].point, {x: event.clientX, y: event.clientY});
+      const moveDir = localAvatar.current.moveTo(intersects[0].point, {x: event.clientX, y: event.clientY});
+      socket.emit('PLAYER_MOVE', intersects[0].point, moveDir);
     }
   }
 
@@ -43,13 +48,44 @@ export default function GameCanvas (props) {
     return {x, y};
   }
 
+  const handlePlayerMove = useCallback((player, position, direction) => {
+    // this is not performant, find a way to key remote avatar dom refs
+    remoteAvatars.current.every(avatar => {
+      if(avatar.user && avatar.user.username === player.username) {
+        const vectorPos = new Vector3(position.x, position.y, position.z);
+        avatar.moveTo(vectorPos, undefined, direction);
+        return false;
+      }
+      return true;
+    });
+	}, []);
+
+  useEffect(() => {
+    if(props.users) {
+      remoteAvatars.current = remoteAvatars.current.slice(0, props.users.length-1);
+    }
+    socket.on("PLAYER_MOVE", handlePlayerMove);
+    return () => {
+			socket.off("PLAYER_MOVE", handlePlayerMove);
+    };
+  }, [socket, props.users, handlePlayerMove]);
+
 	return (
     <group>
       <ambientLight/> <OrbitControls/> <Stats className={'threeStats'}/>
       <Stars/>
       <Plane ref={floorPlane} args={[10, 10]} position={[0, 0, 0]} rotation={[-Math.PI/2, 0, 0]} 
         onPointerMove={handleMouseMove} onPointerUp={handleMouseUp} />
-      <Avatar ref={avatar} position={[0, 0, 0]}/>
+      <Plane args={[10, 10]} position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}/>
+
+      {/* https://stackoverflow.com/a/56063129/8805016 */}
+      {(props.users && props.users.map((user, i) => {
+        const vectorPos = new Vector3(user.avatar.position.x, user.avatar.position.y, user.avatar.position.z);
+        if(user.username === props.currentUser.username)
+          return <Avatar key={props.currentUser.username} ref={localAvatar} position={[0, 0, 0]} user={user}/>
+        return <Avatar key={user.username} ref={e => remoteAvatars.current[i] = e} position={vectorPos} user={user}/>
+      }))}
+
       <Svg sceneRef={walkTarget} url={walkableSvg}/>
     </group>
 	)
