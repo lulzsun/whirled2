@@ -13,6 +13,10 @@ export default function Game (props) {
 	const [currentUser, setCurrentUser] = useState();
 	const [users, setUsers] = useState();
 
+	const handleDisconnected = useCallback((user) => {
+		console.log('Disconnected to game server:', user);
+	}, []);
+
 	const handleConnected = useCallback((user) => {
 		console.log('Connected to game server as user:', user);
 		setCurrentUser(user);
@@ -46,6 +50,7 @@ export default function Game (props) {
 		setHeight(bot.current.offsetHeight+top.current.offsetHeight);
 
 		// listeners
+		socket.on("disconnect", handleDisconnected);
 		socket.on("CONNECTED", handleConnected);
 		socket.on("INIT_ROOM", handleInitRoom);
 		socket.on("PLAYER_JOIN", handlePlayerJoin);
@@ -53,12 +58,13 @@ export default function Game (props) {
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
+			socket.on("disconnect", handleDisconnected)
 			socket.off("CONNECTED", handleConnected);
 			socket.off("INIT_ROOM", handleInitRoom);
 			socket.off("PLAYER_JOIN", handlePlayerJoin);
 			socket.off("PLAYER_LEAVE", handlePlayerLeave);
     };
-  }, [socket, handleConnected, handleInitRoom, handlePlayerJoin, handlePlayerLeave]);
+  }, [socket, handleDisconnected, handleConnected, handleInitRoom, handlePlayerJoin, handlePlayerLeave]);
 
 	return (
 		<FullScreen className="h-full w-full bg-black" handle={handle}>
