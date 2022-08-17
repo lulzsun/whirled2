@@ -34,7 +34,7 @@ export default function Login() {
         console.log("successful login");
       }
     }
-  }, [isLoading, user])
+  }, [isLoading, user]);
 
   return (
     <Center className="flex flex-col w-full h-full" mx="auto">
