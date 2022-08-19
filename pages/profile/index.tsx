@@ -6,6 +6,10 @@ export default function Profile() {
   const { user, isLoading } = useUser();
 
   useEffect(() => {
+    authUser();
+  }, [])
+
+  const authUser = () => {
     if(!isLoading) {
       if (user) {
         router.push(`/profile/${user?.user_metadata['username']}`);
@@ -14,5 +18,5 @@ export default function Profile() {
         router.push('/login');
       }
     }
-  }, [isLoading, user]);
+  };
 }

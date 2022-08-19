@@ -24,6 +24,10 @@ export default function Login() {
   });
 
   useEffect(() => {
+    authUser();
+  }, [])
+
+  const authUser = () => {
     if(!isLoading) {
       if (!user) {
         setIsPageVisible(true);
@@ -31,10 +35,26 @@ export default function Login() {
       else {
         router.push('/');
         setIsPageVisible(false);
-        console.log("successful login");
       }
     }
-  }, [isLoading, user]);
+  };
+
+  const SupaBaseLogin = async (email: string, password: string) => {
+    let { user, session, error } = await supabaseClient.auth.signIn({
+      email: email,
+      password: password
+    })
+  
+    if(error) {
+      alert(error.message);
+      return;
+    }
+    else {
+      router.push('/');
+      setIsPageVisible(false);
+      console.log("successful login");
+    }
+  };
 
   return (
     <Center className="flex flex-col w-full h-full" mx="auto">
@@ -74,18 +94,4 @@ export default function Login() {
       </form>
     </Center>
   );
-}
-
-async function SupaBaseLogin(email: string, password: string) {
-  let { user, session, error } = await supabaseClient.auth.signIn({
-    email: email,
-    password: password
-  })
-
-  if(error) {
-    alert(error.message);
-    return;
-  }
-
-  console.log(session);
 }

@@ -8,6 +8,10 @@ export default function App() {
   const [isLoggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
+    authUser();
+  }, [])
+
+  const authUser = () => {
     // wait until loading stopped
     if(!isLoading) {
       // if user does not exist, redirect to login page
@@ -23,7 +27,7 @@ export default function App() {
         }
       }
     }
-  }, [isLoading, user])
+  };
 
   return (
     <div>{"hi, you shouldn't be seeing this page"}</div>
