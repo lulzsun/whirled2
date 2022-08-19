@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import { useContext, useEffect } from 'react';
 import { useUser } from '@supabase/auth-helpers-react';
-import router from 'next/router';
+import { useRouter } from 'next/router';
 import { PagePaneContext } from './_app';
 
 export default function Login() {
+  const router = useRouter();
   const {user, isLoading} = useUser();
   const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
   const form = useForm({
@@ -25,7 +26,7 @@ export default function Login() {
 
   useEffect(() => {
     authUser();
-  }, [isLoading])
+  }, [user])
 
   const authUser = () => {
     if(!isLoading) {
@@ -40,7 +41,7 @@ export default function Login() {
   };
 
   const SupaBaseLogin = async (email: string, password: string) => {
-    let { user, session, error } = await supabaseClient.auth.signIn({
+    let { error } = await supabaseClient.auth.signIn({
       email: email,
       password: password
     })

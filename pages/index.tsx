@@ -9,7 +9,7 @@ export default function App() {
 
   useEffect(() => {
     authUser();
-  })
+  }, [user])
 
   const authUser = () => {
     // wait until loading stopped
