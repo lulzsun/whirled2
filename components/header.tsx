@@ -1,10 +1,26 @@
-import { Avatar, Group, Menu, Tabs, UnstyledButton } from "@mantine/core";
+import { Avatar, Button, Group, Menu, Tabs, UnstyledButton } from "@mantine/core";
 import { IconBasket, IconArmchair2, IconBrandAppleArcade, 
   IconDoor, IconUser, IconWorld, IconLogout } from "@tabler/icons";
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import Link from "next/link";
+import { useUser } from "@supabase/auth-helpers-react";
+import { useState, useEffect } from "react";
 
 export default function Header() {
+  const {user, isLoading} = useUser();
+  const [isLoggedIn, setLoggedIn] = useState(true);
+
+  useEffect(() => {
+    if(!isLoading) {
+      if (!user) {
+        setLoggedIn(false);
+      }
+      else {
+        if(!isLoggedIn) setLoggedIn(true);
+      }
+    }
+  }, [isLoading, user])
+  
   return (
     <div className="flex-initial">
       <Group position="apart" className="border-b border-gray-700">
@@ -58,6 +74,7 @@ export default function Header() {
             </Tabs.List>
           </Tabs>
           <Group className="p-1" position="center">
+          {(isLoggedIn ?
             <Menu position="bottom-end">
               <Menu.Target>
                 <UnstyledButton>
@@ -67,10 +84,19 @@ export default function Header() {
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>Application</Menu.Label>
                 <Menu.Item icon={<IconLogout size={14}/>} onClick={() => supabaseClient.auth.signOut()}>Logout</Menu.Item>
               </Menu.Dropdown>
             </Menu>
+            :
+            <>
+              <Link href="/signup" passHref>
+                <Button component="a" variant="gradient" gradient={{ from: 'orange', to: 'red' }}>Join Now!</Button>
+              </Link>
+              <Link href="/login" passHref>
+                <Button variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>Login</Button>
+              </Link>
+            </>
+          )}
           </Group>
         </div>
       </Group>
