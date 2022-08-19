@@ -25,7 +25,7 @@ export default function Login() {
 
   useEffect(() => {
     authUser();
-  }, [])
+  }, [isLoading])
 
   const authUser = () => {
     if(!isLoading) {

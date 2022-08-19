@@ -7,7 +7,7 @@ export default function Profile() {
 
   useEffect(() => {
     authUser();
-  }, [])
+  }, [user])
 
   const authUser = () => {
     if(!isLoading) {
