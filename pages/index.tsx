@@ -21,9 +21,12 @@ export default function App() {
       }
       // else do logged in stuff
       else {
-        if(!isLoggedIn) setLoggedIn(true);
+        if(!isLoggedIn) {
+          setLoggedIn(true);
+          console.log("you are now logged in");
+        }
         else {
-          console.log("you are logged in");
+          // do stuff
         }
       }
     }
