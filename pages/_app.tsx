@@ -5,19 +5,18 @@ import { createEmotionCache, MantineProvider } from '@mantine/core';
 import { AllotmentProps } from "allotment";
 import "allotment/dist/style.css";
 import Game from '../components/game';
-import { ComponentType, useEffect, useRef, useState } from 'react';
+import { ComponentType, createContext, Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { PaneProps } from 'allotment/dist/types/src/allotment';
 import Header from '../components/header';
 import { UserProvider } from '@supabase/auth-helpers-react';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
-import React from 'react';
 
 interface PagePaneContext {
   isPageVisible: boolean,
-  setIsPageVisible: React.Dispatch<React.SetStateAction<boolean>>
+  setIsPageVisible: Dispatch<SetStateAction<boolean>>
 }
 
-export const PagePaneContext = React.createContext<PagePaneContext>({} as PagePaneContext);
+export const PagePaneContext = createContext<PagePaneContext>({} as PagePaneContext);
 
 export default function App(props: AppProps) {
   const { Component, pageProps } = props;

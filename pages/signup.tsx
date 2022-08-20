@@ -77,7 +77,7 @@ async function SupaBaseSignUp(email: string, password: string, username: string,
   }, 
   {
     data: { 
-      username, birthday: dayjs(birthday).format('MM/DD/YYYY')
+      username, birthday: dayjs(birthday).format('MM/DD/YYYY'),
     }
   })
 
