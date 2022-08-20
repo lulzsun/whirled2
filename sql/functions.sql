@@ -27,18 +27,3 @@ DROP trigger IF EXISTS on_auth_user_created on public.profiles;
 CREATE trigger on_auth_user_created
   after insert on public.profiles
   for each row execute procedure public.create_stuff_for_user();
-
--- Create a function & trigger to insert post after inserting into profiles
-CREATE OR REPLACE function public.create_post_for_profile()
-returns trigger as $$
-begin
-  insert into public.posts(user_id, post_type)
-  values(new.id, 'profile');
-  return new;
-end;
-$$ language plpgsql security definer;
-
-DROP trigger IF EXISTS on_profile_created on public.profiles;
-CREATE trigger on_profile_created
-  after insert on public.profiles
-  for each row execute procedure public.create_post_for_profile();

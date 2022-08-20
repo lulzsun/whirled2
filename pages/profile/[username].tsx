@@ -2,15 +2,28 @@ import { createClient } from "@supabase/supabase-js";
 import { GetServerSidePropsContext } from "next";
 import { useContext, useEffect } from "react";
 import { PagePaneContext } from "../_app";
+import ErrorPage from 'next/error'
+import ProfileCard from "../../components/profile/profileCard";
+import Comments from "../../components/comments";
 
 interface PageProps {
   pageData: {
     profile: Profile;
+    comments: ProfileComments;
     errors?: string;
   };
 }
 
-interface Profile {
+export type Profile = {
+  id: string;
+  nickname: string;
+  username: string;
+  avatar_url: string;
+  birthday?: string;
+}
+
+export type ProfileComments = {
+  nickname: string;
   username: string;
   avatar_url: string;
   birthday?: string;
@@ -23,13 +36,16 @@ export default function Id({ pageData }: PageProps) {
     setIsPageVisible(true);
   }, []);
 
-  const profile = pageData.profile;
+  const profile: Profile = pageData.profile;
+  const comments: ProfileComments = pageData.comments;
+
+  if(!profile) {
+    return <ErrorPage statusCode={404} />
+  }
   
-  return (
-  <>
-    <div>user: {profile.username}</div>
-    <div>birthday: {profile.birthday}</div>
-    <div>avatar_url: {profile.avatar_url}</div>
+  return (<>
+    <ProfileCard {...profile}/>
+    <Comments id={profile.id} type_id={"profile_id"}/>
   </>
   );
 }
