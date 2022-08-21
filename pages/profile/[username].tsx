@@ -4,25 +4,17 @@ import { useContext, useEffect } from "react";
 import { PagePaneContext } from "../_app";
 import ErrorPage from 'next/error'
 import ProfileCard from "../../components/profile/profileCard";
-import Comments from "../../components/comments";
+import ProfileComments from "../../components/comments";
 
 interface PageProps {
   pageData: {
     profile: Profile;
-    comments: ProfileComments;
     errors?: string;
   };
 }
 
 export type Profile = {
   id: string;
-  nickname: string;
-  username: string;
-  avatar_url: string;
-  birthday?: string;
-}
-
-export type ProfileComments = {
   nickname: string;
   username: string;
   avatar_url: string;
@@ -37,7 +29,6 @@ export default function Id({ pageData }: PageProps) {
   }, []);
 
   const profile: Profile = pageData.profile;
-  const comments: ProfileComments = pageData.comments;
 
   if(!profile) {
     return <ErrorPage statusCode={404} />
@@ -45,7 +36,7 @@ export default function Id({ pageData }: PageProps) {
   
   return (<>
     <ProfileCard {...profile}/>
-    <Comments id={profile.id} type_id={"profile_id"}/>
+    <ProfileComments id={profile.id}/>
   </>
   );
 }

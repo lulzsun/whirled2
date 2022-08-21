@@ -1,9 +1,9 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import Image from 'next/image';
 
 type Props = {
   id: string;
-  type_id: string;
 }
 
 type CommentProps = {
@@ -14,49 +14,33 @@ interface Comment {
   id: number, 
   parent_id: number,
   content: string,
+  username: string,
+  nickname: string,
+  avatar_url: string,
   children: Comment[],
 }
 
-export default function Comments({id, type_id}: Props) {
+export default function ProfileComments({id}: Props) {
   const [comments, setComments] = useState<Comment[]>();
   useEffect(() => {
     (async () => {
-      const { data: sqlComments } = await supabaseClient.from('comments').select('id, content, parent_id').order('id').eq(type_id, id);
-      let newComments: Comment[] = [];
+      const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
+        '_profile_id': id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3
+      });
 
+      let newComments: Comment[] = [];
       sqlComments?.forEach(sqlComment => {
-        let t: Comment = {
-          id: sqlComment.id,
-          parent_id: sqlComment.parent_id,
-          content: sqlComment.content,
-          children: [],
-        } 
+        let t: Comment = sqlComment;
+        t.children = [];
         newComments.push(t);
       });
 
-      console.log(createTree(newComments));
       setComments(createTree(newComments));
     })();
   }, []);
 
-  const CommentNode = ({comment}: CommentProps) => {
-    return (
-      <div className="border border-white-900 shadow-lg rounded-3xl p-4 m-4">
-        {/* parent */}
-        {comment.id}....{comment.content}
-        {/* children, if any */}
-        {/* {(comment.children && comment.children.length > 0) && comment.children.map((index: number) => (
-          (comments[index].children) &&
-          <Fragment key={comment.id}>
-            <CommentNode comment={comment}/>
-          </Fragment>
-        ))} */}
-      </div>
-    )
-  }
-
   return (
-    <div className="border border-white-900 shadow-lg rounded-3xl p-4 m-4">
+    <div className="flex flex-col space-y-4 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
       {comments?.map((comment) => {
         return <Comment key={comment.id} comment={comment} />
       })}
@@ -88,13 +72,20 @@ function Comment({comment}: CommentProps) {
   })
 
   return (
-    <div style={{ marginLeft: '25px', marginTop: '16px' }}>
-      <div
-        style={{margin: '0 0 2px 0', fontSize: '9pt' }}
-      >
-        {comment.id}
+    <div className="mt-2 ml-4">
+      <div className="flex flex-row space-x-2 mb-2">
+        <div>
+          <Image className="rounded-2xl" 
+          src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
+          alt="profile picture" width="24" height="24" />
+        </div>
+        <div className="flex-none">
+          <div style={{margin: '0 0 2px 0', fontSize: '9pt'}}>
+            {comment.nickname} | @{comment.username}
+          </div>
+          <div style={{fontSize: '10pt' }}>{comment.content}</div>
+        </div>
       </div>
-      <div style={{fontSize: '10pt' }}>{comment.content}</div>
       {nestedComments}
     </div>
   )

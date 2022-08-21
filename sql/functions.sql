@@ -33,14 +33,17 @@ CREATE trigger on_auth_user_created
 -- Create a function to retrieve profile comments with limits
 DROP FUNCTION IF EXISTS public.get_profile_comments;
 CREATE FUNCTION public.get_profile_comments(_profile_id uuid, parent_offset bigint, parent_limit bigint, max_depth bigint)
-RETURNS TABLE (id bigint, parent_id bigint, content text, depth bigint)
+RETURNS TABLE (
+  id bigint, parent_id bigint, content text, user_id uuid, 
+  created_at timestamp with time zone, updated_at timestamp with time zone, depth bigint,
+  username text, nickname text, avatar_url text
+)
 AS $$
 BEGIN
   RETURN QUERY
-  with recursive entries (id, parent_id) as (
-    (
+  with recursive entries (id, parent_id) as ((
       select 
-        pc.id, pc.parent_id, pc.content,
+        pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at,
         CAST(0 as bigint) as _depth
       from comments as pc
       where pc.parent_id is null and pc.profile_id = _profile_id
@@ -48,15 +51,17 @@ BEGIN
       limit parent_limit -- max root comments
       offset parent_offset -- offset root comments (for pagination)
     ) 
-    union all
-    (
+    union all (
       select 
-        comments.id, comments.parent_id, comments.content,
+        comments.id, comments.parent_id, comments.content, comments.user_id, comments.created_at, comments.updated_at,
         _depth+1 as _depth
       from entries inner join comments on (comments.parent_id = entries.id) 
       where not _depth = max_depth -- max child comments
     )
-  ) 
-  table entries;
+  )
+  select 
+    entries.*, 
+    profiles.username, profiles.nickname, profiles.avatar_url 
+  from entries left join profiles on entries.user_id = profiles.id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql security definer;
