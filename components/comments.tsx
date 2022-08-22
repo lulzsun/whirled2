@@ -82,16 +82,16 @@ function Comment({comment}: CommentProps) {
           alt="profile picture" width="24" height="24" />
         </div>
         <div className="flex-none">
-          <div style={{margin: '0 0 2px 0', fontSize: '9pt'}}>
+          <div className="text-sm">
             {comment.nickname} | @{comment.username}
           </div>
-          <div style={{fontSize: '10pt' }}>{comment.content}</div>
+          <div className="text-sm">{comment.content}</div>
         </div>
       </div>
       {(comment.hidden_children == 0 ? 
         nestedComments
         : 
-        (<div style={{fontSize: '10pt' }}>
+        (<div className="text-sm">
           {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
         </div>)
       )}
