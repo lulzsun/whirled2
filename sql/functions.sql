@@ -32,7 +32,9 @@ CREATE trigger on_auth_user_created
 
 -- Create a function to retrieve profile comments with limits
 DROP FUNCTION IF EXISTS public.get_profile_comments;
-CREATE FUNCTION public.get_profile_comments(_profile_id uuid, parent_offset bigint, parent_limit bigint, max_depth bigint)
+CREATE FUNCTION public.get_profile_comments(
+  _profile_id uuid, parent_limit bigint default 100, parent_offset bigint default 0,
+  max_depth bigint default -1, _parent_id bigint default -1)
 RETURNS TABLE (
   id bigint, parent_id bigint, content text, user_id uuid, 
   created_at timestamp with time zone, updated_at timestamp with time zone, depth bigint,
@@ -46,7 +48,9 @@ BEGIN
         pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at,
         CAST(0 as bigint) as _depth
       from comments as pc
-      where pc.parent_id is null and pc.profile_id = _profile_id
+      where 
+      ((pc.parent_id is null and _parent_id = -1) or (pc.parent_id = _parent_id and _parent_id != -1))
+      and pc.profile_id = _profile_id
       order by pc.id 
       limit parent_limit -- max root comments
       offset parent_offset -- offset root comments (for pagination)
