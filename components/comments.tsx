@@ -18,6 +18,7 @@ interface Comment {
   nickname: string,
   avatar_url: string,
   children: Comment[],
+  hidden_children: number,
 }
 
 export default function ProfileComments({id}: Props) {
@@ -35,6 +36,7 @@ export default function ProfileComments({id}: Props) {
         newComments.push(t);
       });
 
+      console.log(sqlComments);
       setComments(createTree(newComments));
     })();
   }, []);
@@ -86,7 +88,13 @@ function Comment({comment}: CommentProps) {
           <div style={{fontSize: '10pt' }}>{comment.content}</div>
         </div>
       </div>
-      {nestedComments}
+      {(comment.hidden_children == 0 ? 
+        nestedComments
+        : 
+        (<div style={{fontSize: '10pt' }}>
+          {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
+        </div>)
+      )}
     </div>
   )
 }
