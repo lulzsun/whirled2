@@ -1,6 +1,12 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
 import { useEffect, useState } from "react";
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import Link from "next/link";
+import { Anchor, Button } from "@mantine/core";
+import dayjs from "dayjs";
+import relativeTime from 'dayjs/plugin/relativeTime.js'
+dayjs.extend(relativeTime);
 
 type Props = {
   id: string;
@@ -14,6 +20,8 @@ interface Comment {
   id: number, 
   parent_id: number,
   content: string,
+  created_at: Date,
+  updated_at: Date,
   username: string,
   nickname: string,
   avatar_url: string,
@@ -23,6 +31,7 @@ interface Comment {
 
 export default function ProfileComments({id}: Props) {
   const [comments, setComments] = useState<Comment[]>();
+  
   useEffect(() => {
     (async () => {
       const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
@@ -42,11 +51,11 @@ export default function ProfileComments({id}: Props) {
   }, []);
 
   return (
-    <div className="flex flex-col space-y-4 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
+    <>
       {comments?.map((comment) => {
         return <Comment key={comment.id} comment={comment} />
       })}
-    </div>
+    </>
   );
 }
 
@@ -74,26 +83,37 @@ function Comment({comment}: CommentProps) {
   })
 
   return (
-    <div className="mt-2 ml-4">
-      <div className="flex flex-row space-x-2 mb-2">
+    <div className="border-l pl-4">
+      <div className="flex flex-row space-x-2">
         <div>
           <Image className="rounded-2xl" 
           src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
           alt="profile picture" width="24" height="24" />
         </div>
         <div className="flex-none">
-          <div className="text-sm">
-            {comment.nickname} | @{comment.username}
+          <div className="flex flex-row space-x-1">
+            <div className="text-sm font-semibold">{comment.nickname}</div>
+            <div className="text-xs">
+              <Link passHref href={{
+                pathname: `/profile/[username]`,
+                query: {
+                  username: comment.nickname,
+                },
+              }}><Anchor component="a">@{comment.nickname}</Anchor></Link>
+            </div>
+            <div className="text-xs">
+              • {dayjs().to(dayjs(comment.created_at))}
+            </div>
           </div>
-          <div className="text-sm">{comment.content}</div>
+          <div className="text-sm pb-2"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
         </div>
       </div>
       {(comment.hidden_children == 0 ? 
         nestedComments
         : 
-        (<div className="text-sm">
+        (<Button variant="subtle" color="gray">
           {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
-        </div>)
+        </Button>)
       )}
     </div>
   )
