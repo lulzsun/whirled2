@@ -1,5 +1,5 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import Link from "next/link";
@@ -30,29 +30,73 @@ interface Comment {
 }
 
 export default function ProfileComments({id}: Props) {
-  const [comments, setComments] = useState<Comment[]>();
+  const [comments, setComments] = useState<Comment[]>([]);
   
   useEffect(() => {
-    (async () => {
-      const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
-        '_profile_id': id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3
-      });
+    getCommentsFromSupa();
+  }, [comments?.length]);
 
-      let newComments: Comment[] = [];
-      sqlComments?.forEach(sqlComment => {
-        let t: Comment = sqlComment;
-        t.children = [];
+  async function getCommentsFromSupa(parent_id: number = -1) {
+    const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
+      '_profile_id': id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3, '_parent_id': parent_id
+    });
+
+    let newComments: Comment[] = Array.from(comments);
+    sqlComments?.forEach(sqlComment => {
+      let t: Comment = sqlComment;
+      t.children = [];
+      if(!newComments.some(c => c.id === t.id)) {
         newComments.push(t);
-      });
+      }
+    });
 
-      console.log(sqlComments);
-      setComments(createTree(newComments));
-    })();
-  }, []);
+    console.log("comments", newComments);
+    setComments(newComments);
+  }
+
+  const Comment = ({comment}: CommentProps) => {
+    const nestedComments = (comment.children || []).map((comment) => {
+      return <Comment key={comment.id} comment={comment} />
+    })
+  
+    return (
+      <div className="border-l pl-4">
+        <div className="flex flex-row space-x-2">
+          <div>
+            <Image className="rounded-2xl" 
+            src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
+            alt="profile picture" width="24" height="24" />
+          </div>
+          <div className="flex-none">
+            <div className="flex flex-row space-x-1">
+              <div className="text-sm font-semibold">{comment.nickname}</div>
+              <div className="text-xs">
+                <Link passHref href={{
+                  pathname: `/profile/[username]`,
+                  query: {
+                    username: comment.nickname,
+                  },
+                }}><Anchor component="a">@{comment.nickname}</Anchor></Link>
+              </div>
+              <div className="text-xs">
+                • {dayjs().to(dayjs(comment.created_at))}
+              </div>
+            </div>
+            <div className="text-sm pb-2"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
+          </div>
+        </div>
+        {(comment.hidden_children == 0 || comment.children.length > 0 ? nestedComments : 
+          (<Button variant="subtle" color="gray" onClick={() => {getCommentsFromSupa(comment.id)}}>
+            {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
+          </Button>)
+        )}
+      </div>
+    )
+  }
 
   return (
     <>
-      {comments?.map((comment) => {
+      {comments && createTree(comments).map((comment) => {
         return <Comment key={comment.id} comment={comment} />
       })}
     </>
@@ -75,46 +119,4 @@ function createTree(list: Comment[]) {
       }
   }
   return roots;
-}
-
-function Comment({comment}: CommentProps) {
-  const nestedComments = (comment.children || []).map((comment) => {
-    return <Comment key={comment.id} comment={comment} />
-  })
-
-  return (
-    <div className="border-l pl-4">
-      <div className="flex flex-row space-x-2">
-        <div>
-          <Image className="rounded-2xl" 
-          src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
-          alt="profile picture" width="24" height="24" />
-        </div>
-        <div className="flex-none">
-          <div className="flex flex-row space-x-1">
-            <div className="text-sm font-semibold">{comment.nickname}</div>
-            <div className="text-xs">
-              <Link passHref href={{
-                pathname: `/profile/[username]`,
-                query: {
-                  username: comment.nickname,
-                },
-              }}><Anchor component="a">@{comment.nickname}</Anchor></Link>
-            </div>
-            <div className="text-xs">
-              • {dayjs().to(dayjs(comment.created_at))}
-            </div>
-          </div>
-          <div className="text-sm pb-2"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
-        </div>
-      </div>
-      {(comment.hidden_children == 0 ? 
-        nestedComments
-        : 
-        (<Button variant="subtle" color="gray">
-          {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
-        </Button>)
-      )}
-    </div>
-  )
 }
