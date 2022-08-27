@@ -62,10 +62,11 @@ BEGIN
       from entries inner join comments on (comments.parent_id = entries.id) 
     )
   )
+  SELECT * FROM (
   select DISTINCT ON (_path[1:max_depth])
     entries.*, 
     profiles.username, profiles.nickname, profiles.avatar_url,
     count(*) OVER (PARTITION BY _path[1:max_depth]) - 1 AS hidden_children
-  from entries left join profiles on entries.user_id = profiles.id;
+  from entries left join profiles on entries.user_id = profiles.id) s order by id desc;
 END;
 $$ LANGUAGE plpgsql security definer;
