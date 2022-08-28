@@ -51,7 +51,7 @@ BEGIN
       where 
       ((pc.parent_id is null and _parent_id = -1) or (pc.parent_id = _parent_id and _parent_id != -1))
       and pc.profile_id = _profile_id
-      order by pc.id 
+      order by pc.id desc
       limit parent_limit -- max root comments
       offset parent_offset -- offset root comments (for pagination)
     ) 
@@ -67,6 +67,6 @@ BEGIN
     entries.*, 
     profiles.username, profiles.nickname, profiles.avatar_url,
     count(*) OVER (PARTITION BY _path[1:max_depth]) - 1 AS hidden_children
-  from entries left join profiles on entries.user_id = profiles.id) s order by id desc;
+  from entries left join profiles on entries.user_id = profiles.id ORDER BY _path[1:max_depth], _path <> _path[1:max_depth]) s order by id desc;
 END;
 $$ LANGUAGE plpgsql security definer;
