@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { GetServerSidePropsContext } from "next";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { PagePaneContext } from "../_app";
 import ErrorPage from 'next/error'
 import ProfileCard from "../../components/profile/profileCard";
-import ProfileComments from "../../components/comments";
-import CommentEditor from "../../components/commentEditor";
+import ProfileComments, { Comment } from "../../components/comments";
+import ProfileCommentEditor from "../../components/commentEditor";
 
 interface PageProps {
   pageData: {
@@ -23,6 +23,7 @@ export type Profile = {
 }
 
 export default function Id({ pageData }: PageProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
   const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
 
   useEffect(() => {
@@ -38,8 +39,8 @@ export default function Id({ pageData }: PageProps) {
   return (<>
     <ProfileCard {...profile}/>
     <div className="flex flex-col space-y-4 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
-      <CommentEditor/>
-      <ProfileComments id={profile.id}/>
+      <ProfileCommentEditor profile_id={profile.id} comments={comments} setComments={setComments}/>
+      <ProfileComments profile_id={profile.id} comments={comments} setComments={setComments}/>
     </div>
   </>
   );

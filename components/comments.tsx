@@ -1,22 +1,26 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import Link from "next/link";
-import { Anchor, Button } from "@mantine/core";
+import { ActionIcon, Anchor, Button } from "@mantine/core";
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
+import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons";
+import ProfileCommentEditor from "./commentEditor";
 dayjs.extend(relativeTime);
 
 type Props = {
-  id: string;
+  profile_id: string;
+  comments: Comment[];
+  setComments: Dispatch<SetStateAction<Comment[]>>;
 }
 
 type CommentProps = {
   comment: Comment
 }
 
-interface Comment {
+export interface Comment {
   id: number, 
   parent_id: number,
   content: string,
@@ -29,16 +33,17 @@ interface Comment {
   hidden_children: number,
 }
 
-export default function ProfileComments({id}: Props) {
-  const [comments, setComments] = useState<Comment[]>([]);
+export default function ProfileComments({profile_id, comments, setComments}: Props) {
+  const [replyId, setReplyId] = useState(-1);
   
   useEffect(() => {
     getCommentsFromSupa();
+    setReplyId(-1);
   }, [comments?.length]);
 
   async function getCommentsFromSupa(parent_id: number = -1) {
     const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
-      '_profile_id': id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3, '_parent_id': parent_id
+      '_profile_id': profile_id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3, '_parent_id': parent_id
     });
 
     let newComments: Comment[] = Array.from(comments);
@@ -50,7 +55,6 @@ export default function ProfileComments({id}: Props) {
       }
     });
 
-    console.log("comments", newComments);
     setComments(newComments);
   }
 
@@ -60,14 +64,14 @@ export default function ProfileComments({id}: Props) {
     })
   
     return (
-      <div className="border-l pl-4">
+      <div className="border-l pl-4 pb-1.5">
         <div className="flex flex-row space-x-2">
           <div>
             <Image className="rounded-2xl" 
             src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
             alt="profile picture" width="24" height="24" />
           </div>
-          <div className="flex-none">
+          <div className="flex-none grow">
             <div className="flex flex-row space-x-1">
               <div className="text-sm font-semibold">{comment.nickname}</div>
               <div className="text-xs">
@@ -82,11 +86,25 @@ export default function ProfileComments({id}: Props) {
                 • {dayjs().to(dayjs(comment.created_at))}
               </div>
             </div>
-            <div className="text-sm pb-2"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
+            <div className="text-sm"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
+            <div className="flex flex-row items-center -ml-2">
+              <ActionIcon variant="subtle" color="orange"><IconArrowUp size={16}/></ActionIcon>
+              <span className="text-xs">0</span>
+              <ActionIcon variant="subtle" color="blue"><IconArrowDown size={16}/></ActionIcon>
+              <Button variant="subtle" color="gray" size="xs" leftIcon={<IconMessage size={14}/>} onClick={() => {
+                if(replyId != comment.id) setReplyId(comment.id);
+                else setReplyId(-1);
+              }}>
+              {`Reply`}
+              </Button>
+            </div>
+            {replyId == comment.id && <div className="pb-2">
+              <ProfileCommentEditor profile_id={profile_id} parent_id={comment.id} comments={comments} setComments={setComments}/>
+            </div>}
           </div>
         </div>
         {(comment.hidden_children == 0 || comment.children.length > 0 ? nestedComments : 
-          (<Button variant="subtle" color="gray" onClick={() => {getCommentsFromSupa(comment.id)}}>
+          (<Button variant="subtle" color="gray" size="xs" onClick={() => {getCommentsFromSupa(comment.id)}}>
             {`${comment.hidden_children} more repl` + (comment.hidden_children > 1 ? 'ies' : 'y')}
           </Button>)
         )}
@@ -111,7 +129,7 @@ function createTree(list: Comment[]) {
   }
   for (i = 0; i < list.length; i += 1) {
       node = list[i];
-      if (node.parent_id) {
+      if (node.parent_id && list[map[node.parent_id]]) {
           // if you have dangling branches check that map[node.ParentId] exists
           list[map[node.parent_id]].children.push(node);
       } else {
