@@ -4,8 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { PagePaneContext } from "../_app";
 import ErrorPage from 'next/error'
 import ProfileCard from "../../components/profile/profileCard";
-import ProfileComments, { Comment } from "../../components/comments";
-import ProfileCommentEditor from "../../components/commentEditor";
+import ProfileCommentSection from "../../components/commentSection";
 
 interface PageProps {
   pageData: {
@@ -23,14 +22,12 @@ export type Profile = {
 }
 
 export default function Id({ pageData }: PageProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
   const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
+  const profile: Profile = pageData.profile;
 
   useEffect(() => {
     setIsPageVisible(true);
   }, []);
-
-  const profile: Profile = pageData.profile;
 
   if(!profile) {
     return <ErrorPage statusCode={404} />
@@ -38,10 +35,7 @@ export default function Id({ pageData }: PageProps) {
   
   return (<>
     <ProfileCard {...profile}/>
-    <div className="flex flex-col space-y-4 border border-white-900 shadow-lg rounded-3xl p-4 m-4">
-      <ProfileCommentEditor profile_id={profile.id} comments={comments} setComments={setComments}/>
-      <ProfileComments profile_id={profile.id} comments={comments} setComments={setComments}/>
-    </div>
+    <ProfileCommentSection {...profile}/>
   </>
   );
 }
