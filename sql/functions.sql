@@ -38,7 +38,8 @@ CREATE FUNCTION public.get_profile_comments(
 RETURNS TABLE (
   id bigint, parent_id bigint, content text, user_id uuid, 
   created_at timestamp with time zone, updated_at timestamp with time zone, depth int,
-  path bigint[], username text, nickname text, avatar_url text, hidden_children bigint
+  path bigint[], username text, nickname text, avatar_url text, hidden_children bigint,
+  votes bigint
 )
 AS $$
 BEGIN
@@ -66,7 +67,28 @@ BEGIN
   select DISTINCT ON (_path[1:max_depth])
     entries.*, 
     profiles.username, profiles.nickname, profiles.avatar_url,
-    count(*) OVER (PARTITION BY _path[1:max_depth]) - 1 AS hidden_children
+    count(*) OVER (PARTITION BY _path[1:max_depth]) - 1 AS hidden_children, 
+    coalesce((
+      select sum(v.value)
+      from votes v
+      where v.comment_id = entries.id
+    ), 0) as votes
   from entries left join profiles on entries.user_id = profiles.id ORDER BY _path[1:max_depth], _path <> _path[1:max_depth]) s order by id desc;
 END;
 $$ LANGUAGE plpgsql security definer;
+
+-- Create a function & trigger to insert votes after inserting into comments
+DROP FUNCTION IF EXISTS public.create_vote_after_comment;
+CREATE function public.create_vote_after_comment()
+returns trigger as $$
+begin
+  insert into public.votes(user_id, comment_id, value)
+  values(new.user_id, new.id, 0);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+DROP trigger IF EXISTS on_new_comment on public.profiles;
+CREATE trigger on_new_comment
+  after insert on public.comments
+  for each row execute procedure public.create_vote_after_new_comment();

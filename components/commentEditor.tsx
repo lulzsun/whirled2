@@ -37,6 +37,7 @@ export default function ProfileCommentEditor({profile_id, parent_id, comments, s
         newComment.avatar_url = comment.profiles.avatar_url;
         newComment.children = [];
         newComment.hidden_children = 0;
+        newComment.votes = 0;
         newComments.unshift(newComment);
         setComments(newComments);
         onChange('');
