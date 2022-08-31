@@ -78,12 +78,13 @@ END;
 $$ LANGUAGE plpgsql security definer;
 
 -- Create a function & trigger to insert votes after inserting into comments
+-- This will auto upvote the user's own comment
 DROP FUNCTION IF EXISTS public.create_vote_after_comment;
 CREATE function public.create_vote_after_comment()
 returns trigger as $$
 begin
   insert into public.votes(user_id, comment_id, value)
-  values(new.user_id, new.id, 0);
+  values(new.user_id, new.id, 1);
   return new;
 end;
 $$ language plpgsql security definer;
