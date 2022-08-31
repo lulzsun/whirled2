@@ -50,7 +50,7 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
     });
 
     let newComments: Comment[] = [];
-    if(comments.length != 0 && comments[comments.length-1].id !== -1)
+    if(comments.length != 0 && comments[comments.length-1].id > 0)
       newComments = Array.from(comments);
     sqlComments?.forEach(sqlComment => {
       let t: Comment = sqlComment;
@@ -77,16 +77,25 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
       let sv = sqlSelfVotes.find(sv => sv.comment_id == nc.id);
       if(sv)  nc.self_votes = sv.value;
       else    nc.self_votes = 0;
-    })
+    });
 
     console.log(newComments);
     setComments(newComments);
   }
 
   const Comment = ({comment}: CommentProps) => {
-    const [votes, setVotes] = useState(comment.votes | 0);
+    const [selfVotes, setSelfVotes] = useState(comment.self_votes | 0);
+    const [originalSelfVote] = useState(comment.self_votes | 0);
+
+    function calcVotesWithoutSelf() {
+      if(originalSelfVote < 0) return 1
+      else if(originalSelfVote > 0) return -1
+      else return 0;
+    }
 
     async function setVote(isUpvote: boolean) {
+      let oldVote = comment.self_votes;
+
       if(isUpvote) {
         comment.self_votes++;
         if(comment.self_votes > 1) comment.self_votes = 0; 
@@ -102,10 +111,11 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
 
       if(error) {
         console.log(error);
+        comment.self_votes = oldVote;
         return;
       }
 
-      setVotes((comment.votes | 0) + comment.self_votes);
+      setSelfVotes(comment.self_votes);
     }
 
     const nestedComments = (comment.children || []).map((comment) => {
@@ -135,9 +145,9 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
             </div>
             <div className="text-sm"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
             <div className="flex flex-row items-center -ml-2 pb-1.5">
-              <ActionIcon variant={(comment.self_votes == 1 ? 'outline' : 'subtle')} color="orange" onClick={() => setVote(true)}><IconArrowUp size={16}/></ActionIcon>
-              <span className="text-xs px-2">{votes}</span>
-              <ActionIcon variant={(comment.self_votes ==-1 ? 'outline' : 'subtle')} color="blue" onClick={() => setVote(false)}><IconArrowDown size={16}/></ActionIcon>
+              <ActionIcon variant={(selfVotes == 1 ? 'outline' : 'subtle')} color="orange" onClick={() => setVote(true)}><IconArrowUp size={16}/></ActionIcon>
+              <span className="text-xs px-2">{comment.votes + calcVotesWithoutSelf() + selfVotes}</span>
+              <ActionIcon variant={(selfVotes ==-1 ? 'outline' : 'subtle')} color="blue" onClick={() => setVote(false)}><IconArrowDown size={16}/></ActionIcon>
               <Button variant="subtle" color="gray" size="xs" leftIcon={<IconMessage size={14}/>} onClick={() => {
                 if(replyId != comment.id) setReplyId(comment.id);
                 else setReplyId(-1);
@@ -162,8 +172,9 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
   return (
     <>
       {comments && createTree(comments).map((comment) => {
-        if(comment.id == -1) return <></>;
-        return <Comment key={comment.id} comment={comment} />
+        if(comment.id > 0) { // there shouldn't be any id less than 0 unless we are using them for a purpose
+          return <Comment key={comment.id} comment={comment} />
+        }
       })}
     </>
   );
