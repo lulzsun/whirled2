@@ -37,16 +37,16 @@ CREATE FUNCTION public.get_profile_comments(
   max_depth bigint default 100, _parent_id bigint default -1)
 RETURNS TABLE (
   id bigint, parent_id bigint, content text, user_id uuid, 
-  created_at timestamp with time zone, updated_at timestamp with time zone, depth int,
+  created_at timestamp with time zone, updated_at timestamp with time zone, max_pages bigint, depth int,
   path bigint[], username text, nickname text, avatar_url text, hidden_children bigint,
   votes bigint
 )
 AS $$
 BEGIN
   RETURN QUERY
-  with recursive entries (id, parent_id) as ((
+  with recursive entries as ((
       select 
-        pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at,
+        pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at, count(*) OVER() AS max_pages,
         0 as _depth, array[pc.id] AS _path
       from comments as pc
       where 
@@ -58,7 +58,7 @@ BEGIN
     ) 
     union all (
       select 
-        comments.id, comments.parent_id, comments.content, comments.user_id, comments.created_at, comments.updated_at,
+        comments.id, comments.parent_id, comments.content, comments.user_id, comments.created_at, comments.updated_at, null as max_pages,
         _depth+1 as _depth, entries._path || comments.id
       from entries inner join comments on (comments.parent_id = entries.id) 
     )
@@ -92,4 +92,4 @@ $$ language plpgsql security definer;
 DROP trigger IF EXISTS on_new_comment on public.profiles;
 CREATE trigger on_new_comment
   after insert on public.comments
-  for each row execute procedure public.create_vote_after_new_comment();
+  for each row execute procedure public.create_vote_after_comment();

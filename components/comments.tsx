@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import Link from "next/link";
-import { ActionIcon, Anchor, Button } from "@mantine/core";
+import { ActionIcon, Anchor, Button, Pagination } from "@mantine/core";
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
 import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons";
@@ -39,13 +39,19 @@ export interface Comment {
 
 export default function ProfileComments({profile_id, comments, setComments}: Props) {
   const [activePage, setPage] = useState(1);
+  const [commentCount, setCommentCount] = useState(0);
+  const [maxPages, setMaxPages] = useState(0);
   const [replyId, setReplyId] = useState(-1);
   
   useEffect(() => {
     getCommentsFromSupa(0);
   }, [profile_id]);
 
-  async function getCommentsFromSupa(parent_id: number = -1) {
+  useEffect(() => {
+    getCommentsFromSupa(0, (activePage-1)*5);
+  }, [activePage]);
+
+  async function getCommentsFromSupa(parent_id: number = -1, parent_offset: number = 0, parent_limit: number = 5) {
     let newComments: Comment[] = [];
     if(comments.length != 0 && parent_id != 0) {
       newComments = Array.from(comments);
@@ -53,7 +59,7 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
     if(parent_id == 0) parent_id = -1;
     
     const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
-      '_profile_id': profile_id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3, '_parent_id': parent_id
+      '_profile_id': profile_id, parent_offset, parent_limit, 'max_depth': 3, '_parent_id': parent_id
     });
 
     sqlComments?.forEach(sqlComment => {
@@ -81,6 +87,12 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
       let sv = sqlSelfVotes.find(sv => sv.comment_id == nc.id);
       if(sv)  nc.self_votes = sv.value;
       else    nc.self_votes = 0;
+
+      if(nc.full_count != null && parent_id == -1) {
+        console.log('pages', nc.full_count / 5, 'commentCount', nc.full_count);
+        setCommentCount(nc.full_count);
+        setMaxPages(Math.ceil(nc.full_count / 5));
+      }
     });
 
     console.log(newComments);
@@ -180,6 +192,9 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
           return <Comment key={comment.id} comment={comment} />
         }
       })}
+      {maxPages > 1 && <div className="w-full flex justify-center">
+        <Pagination page={activePage} onChange={(index) => {setPage(index);}} total={maxPages} siblings={1} initialPage={1} />
+      </div>}
     </>
   );
 }
