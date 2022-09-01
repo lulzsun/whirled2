@@ -34,24 +34,28 @@ export interface Comment {
   hidden_children: number,
   votes: number,
   self_votes: number,
+  full_count?: number
 }
 
 export default function ProfileComments({profile_id, comments, setComments}: Props) {
+  const [activePage, setPage] = useState(1);
   const [replyId, setReplyId] = useState(-1);
   
   useEffect(() => {
-    getCommentsFromSupa();
-    setReplyId(-1);
-  }, [comments?.length]);
+    getCommentsFromSupa(0);
+  }, [profile_id]);
 
   async function getCommentsFromSupa(parent_id: number = -1) {
+    let newComments: Comment[] = [];
+    if(comments.length != 0 && parent_id != 0) {
+      newComments = Array.from(comments);
+    }
+    if(parent_id == 0) parent_id = -1;
+    
     const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
       '_profile_id': profile_id, 'parent_offset': 0, 'parent_limit': 5, 'max_depth': 3, '_parent_id': parent_id
     });
 
-    let newComments: Comment[] = [];
-    if(comments.length != 0 && comments[comments.length-1].id > 0)
-      newComments = Array.from(comments);
     sqlComments?.forEach(sqlComment => {
       let t: Comment = sqlComment;
       t.children = [];
