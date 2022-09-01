@@ -37,7 +37,7 @@ CREATE FUNCTION public.get_profile_comments(
   max_depth bigint default 100, _parent_id bigint default -1)
 RETURNS TABLE (
   id bigint, parent_id bigint, content text, user_id uuid, 
-  created_at timestamp with time zone, updated_at timestamp with time zone, max_pages bigint, depth int,
+  created_at timestamp with time zone, updated_at timestamp with time zone, full_count bigint, depth int,
   path bigint[], username text, nickname text, avatar_url text, hidden_children bigint,
   votes bigint
 )
@@ -46,7 +46,7 @@ BEGIN
   RETURN QUERY
   with recursive entries as ((
       select 
-        pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at, count(*) OVER() AS max_pages,
+        pc.id, pc.parent_id, pc.content, pc.user_id, pc.created_at, pc.updated_at, count(*) OVER() AS full_count,
         0 as _depth, array[pc.id] AS _path
       from comments as pc
       where 
@@ -58,7 +58,7 @@ BEGIN
     ) 
     union all (
       select 
-        comments.id, comments.parent_id, comments.content, comments.user_id, comments.created_at, comments.updated_at, null as max_pages,
+        comments.id, comments.parent_id, comments.content, comments.user_id, comments.created_at, comments.updated_at, null as full_count,
         _depth+1 as _depth, entries._path || comments.id
       from entries inner join comments on (comments.parent_id = entries.id) 
     )
