@@ -1,4 +1,4 @@
-import { Allotment, AllotmentProps } from "allotment";
+import { AllotmentProps } from "allotment";
 import { PaneProps } from "allotment/dist/types/src/allotment";
 import { useRef, useState, ComponentType, useEffect } from "react";
 import { useRecoilState } from "recoil";
