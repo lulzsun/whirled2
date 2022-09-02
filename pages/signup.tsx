@@ -1,12 +1,37 @@
-import { TextInput, PasswordInput, Checkbox, 
-  Button, Group, Space, Center, Anchor, Text } from '@mantine/core';
+import { TextInput, PasswordInput, Button, 
+  Group, Space, Center, Anchor, Text } from '@mantine/core';
 import dayjs from 'dayjs';
 import { DatePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
+import { useUser } from '@supabase/auth-helpers-react';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+import { useRecoilState } from 'recoil';
+import { pageVisibilty } from '../recoil/pageVisibility.recoil';
 
 export default function SignUp() {
+  const router = useRouter();
+  const {user, isLoading} = useUser();
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
+  
+  useEffect(() => {
+    authUser();
+  }, [user])
+
+  const authUser = () => {
+    if(!isLoading) {
+      if (!user) {
+        setIsPageVisible(true);
+      }
+      else {
+        router.push('/');
+        setIsPageVisible(false);
+      }
+    }
+  };
+  
   const form = useForm({
     initialValues: {
       username: '',

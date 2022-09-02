@@ -1,11 +1,12 @@
 import { useUser } from "@supabase/auth-helpers-react";
 import router from "next/router";
-import { useContext, useEffect } from "react";
-import { PagePaneContext } from "./_app";
+import { useEffect } from "react";
+import { useRecoilState } from "recoil";
+import { pageVisibilty } from "../recoil/pageVisibility.recoil";
 
 export default function Rooms() {
   const { user, isLoading } = useUser();
-  const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
 
   useEffect(() => {
     if(!isLoading) {

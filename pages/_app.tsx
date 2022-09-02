@@ -4,23 +4,16 @@ import Head from 'next/head';
 import { createEmotionCache, MantineProvider } from '@mantine/core';
 import { AllotmentProps } from "allotment";
 import "allotment/dist/style.css";
-import Game from '../components/game';
 import { ComponentType, createContext, Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { PaneProps } from 'allotment/dist/types/src/allotment';
-import Header from '../components/header';
+import Main from '../components/main';
 import { UserProvider } from '@supabase/auth-helpers-react';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
-
-interface PagePaneContext {
-  isPageVisible: boolean,
-  setIsPageVisible: Dispatch<SetStateAction<boolean>>
-}
-
-export const PagePaneContext = createContext<PagePaneContext>({} as PagePaneContext);
+import { RecoilRoot, useRecoilState } from 'recoil';
+import { pageVisibilty } from '../recoil/pageVisibility.recoil';
 
 export default function App(props: AppProps) {
   const { Component, pageProps } = props;
-  const [isPageVisible, setIsPageVisible] = useState(false);
   const emotionCache = createEmotionCache({ key: 'mantine', prepend: false }); // fixes tailwind
 
   // https://github.com/johnwalley/allotment/issues/81
@@ -56,8 +49,8 @@ export default function App(props: AppProps) {
         <title>Hello Whirled</title>
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width" />
       </Head>
-
-      <PagePaneContext.Provider value={{isPageVisible, setIsPageVisible}}>
+      
+      <RecoilRoot>
       <UserProvider supabaseClient={supabaseClient}>
       <MantineProvider
         withGlobalStyles
@@ -68,24 +61,12 @@ export default function App(props: AppProps) {
           colorScheme: 'dark',
         }}
       >
-        <div className='flex flex-col h-screen'>
-          <Header/>
-          <div className='w-full h-full'>
-            <Allotment>
-              <Allotment.Pane minSize={0}>
-                <Game/>
-              </Allotment.Pane>
-              <Allotment.Pane minSize={500} visible={isPageVisible}>
-                <div className='w-full h-full overflow-y-auto'>
-                  <Component {...pageProps} />
-                </div>
-              </Allotment.Pane>
-            </Allotment>
-          </div>
-        </div>
+        <Main>
+          <Component {...pageProps} />
+        </Main>
       </MantineProvider>
       </UserProvider>
-      </PagePaneContext.Provider>
+      </RecoilRoot>
     </>
   );
 }

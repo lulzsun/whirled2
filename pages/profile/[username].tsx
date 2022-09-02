@@ -1,10 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { GetServerSidePropsContext } from "next";
-import { useContext, useEffect, useState } from "react";
-import { PagePaneContext } from "../_app";
+import { useEffect } from "react";
 import ErrorPage from 'next/error'
 import ProfileCard from "../../components/profile/profileCard";
 import ProfileCommentSection from "../../components/commentSection";
+import { useRecoilState } from "recoil";
+import { pageVisibilty } from "../../recoil/pageVisibility.recoil";
 
 interface PageProps {
   pageData: {
@@ -22,7 +23,7 @@ export type Profile = {
 }
 
 export default function Id({ pageData }: PageProps) {
-  const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
   const profile: Profile = pageData.profile;
 
   useEffect(() => {

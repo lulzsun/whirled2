@@ -3,15 +3,16 @@ import { TextInput, PasswordInput, Checkbox,
 import { useForm } from '@mantine/form';
 import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
-import { useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
-import { PagePaneContext } from './_app';
+import { useRecoilState } from 'recoil';
+import { pageVisibilty } from '../recoil/pageVisibility.recoil';
 
 export default function Login() {
   const router = useRouter();
   const {user, isLoading} = useUser();
-  const {isPageVisible, setIsPageVisible} = useContext(PagePaneContext);
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
   const form = useForm({
     initialValues: {
       email: '',
