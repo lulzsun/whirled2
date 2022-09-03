@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 export default function ProfileCard(profile: Profile) {
   return (
-    <div className="border border-white-900 shadow-lg rounded-3xl p-4 m-4">
+    <div className="border border-gray-900 dark:border-white shadow-lg rounded-3xl p-4 m-4">
       <div className="flex flex-row space-x-4">
         <Image className="rounded-2xl" src={(profile.avatar_url == null ? '/default_profile.png' : profile.avatar_url)} alt="profile picture" width="128" height="128" />
         <div>

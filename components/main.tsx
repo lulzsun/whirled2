@@ -11,10 +11,11 @@ import Header from "./header/header";
 import TitleBar from "./titleBar";
 
 type Props = {
+  colorScheme: string,
   children: JSX.Element,
 };
 
-export default function Main({children} : Props) {
+export default function Main({colorScheme, children} : Props) {
   const {user, isLoading} = useUser();
   const [isLoggedIn, setLoggedIn] = useState(true);
   const [isPageVisible] = useRecoilState(pageVisibiltyState);
@@ -27,6 +28,7 @@ export default function Main({children} : Props) {
   const setUser = async () => {
     if(!isLoading) {
       if (!user) {
+        if(!supabaseClient.auth.session()) return;
         setLoggedIn(false);
         // @ts-ignore
         setUserState(null);
@@ -67,7 +69,7 @@ export default function Main({children} : Props) {
   // #endregion
   
   return (
-    <div className='flex flex-col h-screen'>
+    <div className={'flex flex-col h-screen ' + colorScheme}>
       <Header/>
       <div className='w-full h-full'>
         <Allotment>

@@ -30,7 +30,7 @@ export default function App(props: AppProps) {
           colorScheme: 'dark',
         }}
       >
-        <Main>
+        <Main colorScheme={'dark'}>
           <Component {...pageProps} />
         </Main>
       </MantineProvider>
