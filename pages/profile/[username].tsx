@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { GetServerSidePropsContext } from "next";
 import { useEffect } from "react";
-import ErrorPage from 'next/error'
+import ErrorPage from 'next/error';
 import ProfileCard from "../../components/profile/profileCard";
 import ProfileCommentSection from "../../components/commentSection";
 import { useRecoilState } from "recoil";
