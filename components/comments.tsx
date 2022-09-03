@@ -155,9 +155,9 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
                 <Link passHref href={{
                   pathname: `/profile/[username]`,
                   query: {
-                    username: comment.nickname,
+                    username: comment.username,
                   },
-                }}><Anchor component="a">@{comment.nickname}</Anchor></Link>
+                }}><Anchor component="a">@{comment.username}</Anchor></Link>
               </div>
               <div className="text-xs">• {dayjs().to(dayjs(comment.created_at))}</div>
             </div>
