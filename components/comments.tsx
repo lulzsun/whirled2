@@ -89,13 +89,11 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
       else    nc.self_votes = 0;
 
       if(nc.full_count != null && parent_id == -1) {
-        console.log('pages', nc.full_count / 5, 'commentCount', nc.full_count);
         setCommentCount(nc.full_count);
         setMaxPages(Math.ceil(nc.full_count / 5));
       }
     });
 
-    console.log(newComments);
     setComments(newComments);
   }
 
