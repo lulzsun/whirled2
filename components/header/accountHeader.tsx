@@ -17,7 +17,7 @@ export default function AccountHeader() {
           </UnstyledButton>
         </Menu.Target>
         <Menu.Dropdown>
-           <Link passHref href={{
+          <Link passHref href={{
               pathname: `/profile/[username]`,
               query: {
                 username: user.username,
@@ -39,7 +39,7 @@ export default function AccountHeader() {
               <div className="text-xs text-gray-500">@{user.nickname}</div>
             </Menu.Item>
           </Link>
-          <Menu.Divider />
+          <Menu.Divider/>
             <Menu.Item icon={<IconWallet size={14} />}>
               <div className="flex flex-row space-x-4">
                 <span>Wallet</span>
