@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRecoilState } from 'recoil';
 import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
 import { userState } from '../recoil/user.recoil';
