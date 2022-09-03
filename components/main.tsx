@@ -30,7 +30,7 @@ export default function Main({colorScheme, children} : Props) {
       // @ts-ignore
       setUserState(userMemo);
     }, 0);
-  }, [userMemo]);
+  }, [JSON.stringify(userMemo)]);
 
   useEffect(() => {
     setUser();
