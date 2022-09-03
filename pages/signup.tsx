@@ -5,7 +5,7 @@ import { DatePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
-import { useUser } from '@supabase/auth-helpers-react';
+import { userState } from '../recoil/user.recoil';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { useRecoilState } from 'recoil';
@@ -13,24 +13,18 @@ import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
 
 export default function SignUp() {
   const router = useRouter();
-  const {user, isLoading} = useUser();
+  const [user] = useRecoilState(userState);
   const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   
   useEffect(() => {
-    authUser();
-  }, [user])
-
-  const authUser = () => {
-    if(!isLoading) {
-      if (!user) {
-        setIsPageVisible(true);
-      }
-      else {
-        router.push('/');
-        setIsPageVisible(false);
-      }
+    if (!user) {
+      setIsPageVisible(true);
     }
-  };
+    else {
+      router.push('/');
+      setIsPageVisible(false);
+    }
+  }, [user])
   
   const form = useForm({
     initialValues: {

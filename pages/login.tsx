@@ -4,14 +4,14 @@ import { useForm } from '@mantine/form';
 import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import { useEffect } from 'react';
-import { useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
 import { useRecoilState } from 'recoil';
 import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
+import { userState } from '../recoil/user.recoil';
 
 export default function Login() {
   const router = useRouter();
-  const {user, isLoading} = useUser();
+  const [user] = useRecoilState(userState);
   const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   const form = useForm({
     initialValues: {
@@ -26,20 +26,14 @@ export default function Login() {
   });
 
   useEffect(() => {
-    authUser();
-  }, [user])
-
-  const authUser = () => {
-    if(!isLoading) {
-      if (!user) {
-        setIsPageVisible(true);
-      }
-      else {
-        router.push('/');
-        setIsPageVisible(false);
-      }
+    if (!user) {
+      setIsPageVisible(true);
     }
-  };
+    else {
+      router.push('/');
+      setIsPageVisible(false);
+    }
+  }, [user])
 
   const SupaBaseLogin = async (email: string, password: string) => {
     let { error } = await supabaseClient.auth.signIn({

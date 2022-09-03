@@ -1,9 +1,11 @@
+import { supabaseClient } from "@supabase/auth-helpers-nextjs";
 import { useUser } from "@supabase/auth-helpers-react";
 import { AllotmentProps } from "allotment";
 import { PaneProps } from "allotment/dist/types/src/allotment";
 import { useRef, useState, ComponentType, useEffect } from "react";
-import { useRecoilState } from "recoil";
+import { useRecoilState, useSetRecoilState } from "recoil";
 import { pageVisibiltyState } from "../recoil/pageVisibility.recoil";
+import { userState } from "../recoil/user.recoil";
 import Game from "./game";
 import Header from "./header";
 import TitleBar from "./titleBar";
@@ -16,8 +18,28 @@ export default function Main({children} : Props) {
   const {user, isLoading} = useUser();
   const [isLoggedIn, setLoggedIn] = useState(true);
   const [isPageVisible] = useRecoilState(pageVisibiltyState);
+  const setUserState = useSetRecoilState(userState);
 
-  // https://github.com/johnwalley/allotment/issues/81
+  useEffect(() => {
+    setUser();
+  }, [isLoading, user]);
+
+  const setUser = async () => {
+    if(!isLoading) {
+      if (!user) {
+        setLoggedIn(false);
+        // @ts-ignore
+        setUserState(null);
+      }
+      else {
+        if(!isLoggedIn) setLoggedIn(true);
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        setUserState({id: user.id, username: profile.username, nickname: profile.nickname});
+      }
+    }
+  };
+
+  // #region https://github.com/johnwalley/allotment/issues/81
   // all this below can be wrapped into useAllotment hook or smth like that
   const isMountedRef = useRef(false);
   const [Allotment, setAllotment] = useState<
@@ -42,18 +64,7 @@ export default function Main({children} : Props) {
   if (!Allotment) {
     return <div>loading...</div>;
   }
-  // end of hook
-
-  // useEffect(() => {
-  //   if(!isLoading) {
-  //     if (!user) {
-  //       setLoggedIn(false);
-  //     }
-  //     else {
-  //       if(!isLoggedIn) setLoggedIn(true);
-  //     }
-  //   }
-  // }, [isLoading, user])
+  // #endregion
   
   return (
     <div className='flex flex-col h-screen'>

@@ -1,25 +1,13 @@
-import { Avatar, Button, Group, Menu, Tabs, UnstyledButton } from "@mantine/core";
+import { Avatar, Badge, Button, Group, Menu, Tabs, UnstyledButton } from "@mantine/core";
 import { IconBasket, IconArmchair2, IconBrandAppleArcade, 
-  IconDoor, IconUser, IconWorld, IconLogout } from "@tabler/icons";
+  IconDoor, IconUser, IconWorld, IconLogout, IconSettings, IconMessageCircle } from "@tabler/icons";
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import Link from "next/link";
-import { useUser } from "@supabase/auth-helpers-react";
-import { useState, useEffect } from "react";
+import { userState } from "../recoil/user.recoil";
+import { useRecoilState } from "recoil";
 
 export default function Header() {
-  const {user, isLoading} = useUser();
-  const [isLoggedIn, setLoggedIn] = useState(true);
-
-  useEffect(() => {
-    if(!isLoading) {
-      if (!user) {
-        setLoggedIn(false);
-      }
-      else {
-        if(!isLoggedIn) setLoggedIn(true);
-      }
-    }
-  }, [isLoading, user])
+  const [user] = useRecoilState(userState);
   
   return (
     <div className="flex-initial">
@@ -74,7 +62,7 @@ export default function Header() {
             </Tabs.List>
           </Tabs>
           <Group className="p-1" position="center">
-          {(isLoggedIn ?
+          {(user ?
             <Menu position="bottom-end">
               <Menu.Target>
                 <UnstyledButton>
@@ -84,6 +72,23 @@ export default function Header() {
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
+                <Menu.Item
+                  icon={
+                    <Avatar color="blue" radius="xl">
+                      <IconUser size={24} />
+                    </Avatar>
+                  }
+                  component="a"
+                  href="https://mantine.dev"
+                  target="_blank"
+                >
+                  <div>{user.username}</div>
+                  <div>@{user.nickname}</div>
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item icon={<IconMessageCircle size={14} />}>Messages<Badge color="red" variant="filled">10</Badge></Menu.Item>
+                <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+                <Menu.Divider />
                 <Menu.Item icon={<IconLogout size={14}/>} onClick={() => supabaseClient.auth.signOut()}>Logout</Menu.Item>
               </Menu.Dropdown>
             </Menu>

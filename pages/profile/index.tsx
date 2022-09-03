@@ -1,23 +1,17 @@
-import { useUser } from "@supabase/auth-helpers-react";
-import { useRouter } from "next/router";
-import { useContext, useEffect } from "react";
+import router from "next/router";
+import { useEffect } from "react";
+import { useRecoilState } from "recoil";
+import { userState } from "../../recoil/user.recoil";
 
 export default function Profile() {
-  const router = useRouter();
-  const { user, isLoading } = useUser();
+  const [user] = useRecoilState(userState);
 
   useEffect(() => {
-    authUser();
-  }, [user])
-
-  const authUser = () => {
-    if(!isLoading) {
-      if (user) {
-        router.push(`/profile/${user?.user_metadata['username']}`);
-      }
-      else {
-        router.push('/login');
-      }
+    if (user) {
+      router.push(`/profile/${user.username}`);
     }
-  };
+    else {
+      router.push('/login');
+    }
+  }, [user]);
 }
