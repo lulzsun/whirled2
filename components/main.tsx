@@ -2,7 +2,7 @@ import { supabaseClient } from "@supabase/auth-helpers-nextjs";
 import { useUser } from "@supabase/auth-helpers-react";
 import { AllotmentProps } from "allotment";
 import { PaneProps } from "allotment/dist/types/src/allotment";
-import { useRef, useState, ComponentType, useEffect } from "react";
+import { useRef, useState, ComponentType, useEffect, useMemo } from "react";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import { pageVisibiltyState } from "../recoil/pageVisibility.recoil";
 import { userState } from "../recoil/user.recoil";
@@ -17,9 +17,20 @@ type Props = {
 
 export default function Main({colorScheme, children} : Props) {
   const {user, isLoading} = useUser();
+  // @ts-ignore
+  const [userMemo, setUserMemo] = useState({});
   const [isLoggedIn, setLoggedIn] = useState(true);
   const [isPageVisible] = useRecoilState(pageVisibiltyState);
   const setUserState = useSetRecoilState(userState);
+
+  // #region User auth check and state store
+  useMemo(() => {
+    // reason for setTimeout: https://github.com/facebookexperimental/Recoil/issues/12
+    setTimeout(() => {
+      // @ts-ignore
+      setUserState(userMemo);
+    }, 0);
+  }, [userMemo]);
 
   useEffect(() => {
     setUser();
@@ -31,15 +42,17 @@ export default function Main({colorScheme, children} : Props) {
         if(!supabaseClient.auth.session()) return;
         setLoggedIn(false);
         // @ts-ignore
-        setUserState(null);
+        setUserMemo(null);
       }
       else {
         if(!isLoggedIn) setLoggedIn(true);
         const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-        setUserState({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
+        // @ts-ignore
+        setUserMemo({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
       }
     }
   };
+  // #endregion
 
   // #region https://github.com/johnwalley/allotment/issues/81
   // all this below can be wrapped into useAllotment hook or smth like that
