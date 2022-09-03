@@ -5,7 +5,8 @@ import ErrorPage from 'next/error'
 import ProfileCard from "../../components/profile/profileCard";
 import ProfileCommentSection from "../../components/commentSection";
 import { useRecoilState } from "recoil";
-import { pageVisibilty } from "../../recoil/pageVisibility.recoil";
+import { pageVisibiltyState } from "../../recoil/pageVisibility.recoil";
+import Head from "next/head";
 
 interface PageProps {
   pageData: {
@@ -23,7 +24,7 @@ export type Profile = {
 }
 
 export default function Id({ pageData }: PageProps) {
-  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   const profile: Profile = pageData.profile;
 
   useEffect(() => {
@@ -35,6 +36,9 @@ export default function Id({ pageData }: PageProps) {
   }
   
   return (<>
+    <Head>
+      <title>{profile.nickname} (@{profile.username}) - Profile</title>
+    </Head>
     <ProfileCard {...profile}/>
     <ProfileCommentSection {...profile}/>
   </>

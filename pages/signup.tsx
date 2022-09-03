@@ -9,12 +9,12 @@ import { useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { useRecoilState } from 'recoil';
-import { pageVisibilty } from '../recoil/pageVisibility.recoil';
+import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
 
 export default function SignUp() {
   const router = useRouter();
   const {user, isLoading} = useUser();
-  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibilty);
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   
   useEffect(() => {
     authUser();

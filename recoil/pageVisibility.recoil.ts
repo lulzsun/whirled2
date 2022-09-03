@@ -1,6 +1,6 @@
 import { atom } from 'recoil';
 
-export const pageVisibilty = atom({
-  key: 'pageVisibilty',
+export const pageVisibiltyState = atom({
+  key: 'pageVisibiltyState',
   default: false,
 });
