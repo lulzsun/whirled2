@@ -1,14 +1,10 @@
-import { Avatar, Badge, Button, Group, Menu, Tabs, UnstyledButton } from "@mantine/core";
+import { Group, Tabs } from "@mantine/core";
 import { IconBasket, IconArmchair2, IconBrandAppleArcade, 
-  IconDoor, IconUser, IconWorld, IconLogout, IconSettings, IconMessageCircle } from "@tabler/icons";
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
+  IconDoor, IconUser, IconWorld } from "@tabler/icons";
 import Link from "next/link";
-import { userState } from "../recoil/user.recoil";
-import { useRecoilState } from "recoil";
+import AccountHeader from "./accountHeader";
 
 export default function Header() {
-  const [user] = useRecoilState(userState);
-  
   return (
     <div className="flex-initial">
       <Group position="apart" className="border-b border-gray-700">
@@ -62,46 +58,7 @@ export default function Header() {
             </Tabs.List>
           </Tabs>
           <Group className="p-1" position="center">
-          {(user ?
-            <Menu position="bottom-end">
-              <Menu.Target>
-                <UnstyledButton>
-                  <Avatar color="blue" radius="xl">
-                    <IconUser size={24} />
-                  </Avatar>
-                </UnstyledButton>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  icon={
-                    <Avatar color="blue" radius="xl">
-                      <IconUser size={24} />
-                    </Avatar>
-                  }
-                  component="a"
-                  href="https://mantine.dev"
-                  target="_blank"
-                >
-                  <div>{user.username}</div>
-                  <div>@{user.nickname}</div>
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item icon={<IconMessageCircle size={14} />}>Messages<Badge color="red" variant="filled">10</Badge></Menu.Item>
-                <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
-                <Menu.Divider />
-                <Menu.Item icon={<IconLogout size={14}/>} onClick={() => supabaseClient.auth.signOut()}>Logout</Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-            :
-            <>
-              <Link href="/signup" passHref>
-                <Button component="a" variant="gradient" gradient={{ from: 'orange', to: 'red' }}>Join Now!</Button>
-              </Link>
-              <Link href="/login" passHref>
-                <Button variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>Login</Button>
-              </Link>
-            </>
-          )}
+            <AccountHeader/>
           </Group>
         </div>
       </Group>

@@ -7,7 +7,7 @@ import { useRecoilState, useSetRecoilState } from "recoil";
 import { pageVisibiltyState } from "../recoil/pageVisibility.recoil";
 import { userState } from "../recoil/user.recoil";
 import Game from "./game";
-import Header from "./header";
+import Header from "./header/header";
 import TitleBar from "./titleBar";
 
 type Props = {
@@ -34,7 +34,7 @@ export default function Main({children} : Props) {
       else {
         if(!isLoggedIn) setLoggedIn(true);
         const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-        setUserState({id: user.id, username: profile.username, nickname: profile.nickname});
+        setUserState({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
       }
     }
   };

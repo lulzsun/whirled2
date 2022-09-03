@@ -4,6 +4,7 @@ export interface User {
   id: string | null;
   username: string;
   nickname: string;
+  avatar_url?: string;
 }
 
 export const userState = atom({
