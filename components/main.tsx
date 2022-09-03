@@ -23,7 +23,7 @@ export default function Main({colorScheme, children} : Props) {
 
   useEffect(() => {
     setUser();
-  }, [isLoading, user]);
+  }, [user]);
 
   const setUser = async () => {
     if(!isLoading) {

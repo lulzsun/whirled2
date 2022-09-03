@@ -1,5 +1,5 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import Link from "next/link";
@@ -38,6 +38,7 @@ export interface Comment {
 }
 
 export default function ProfileComments({profile_id, comments, setComments}: Props) {
+  const isInitialMount = useRef(true);
   const [activePage, setPage] = useState(1);
   const [commentCount, setCommentCount] = useState(0);
   const [maxPages, setMaxPages] = useState(0);
@@ -48,7 +49,11 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
   }, [profile_id]);
 
   useEffect(() => {
-    getCommentsFromSupa(0, (activePage-1)*5);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    } else {
+      getCommentsFromSupa(0, (activePage-1)*5);
+    }
   }, [activePage]);
 
   async function getCommentsFromSupa(parent_id: number = -1, parent_offset: number = 0, parent_limit: number = 5) {
@@ -93,7 +98,6 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
         setMaxPages(Math.ceil(nc.full_count / 5));
       }
     });
-
     setComments(newComments);
   }
 

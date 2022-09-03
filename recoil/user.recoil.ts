@@ -9,5 +9,5 @@ export interface User {
 
 export const userState = atom({
   key: 'userState',
-  default: null as unknown as User,
+  default: {} as unknown as User,
 });
