@@ -95,7 +95,7 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
 
       if(nc.full_count != null && parent_id == -1) {
         setCommentCount(nc.full_count);
-        setMaxPages(Math.ceil(nc.full_count / 5));
+        setMaxPages(Math.ceil(nc.full_count / parent_limit));
       }
     });
     setComments(newComments);
