@@ -40,7 +40,6 @@ export interface Comment {
 export default function ProfileComments({profile_id, comments, setComments}: Props) {
   const isInitialMount = useRef(true);
   const [activePage, setPage] = useState(1);
-  const [commentCount, setCommentCount] = useState(0);
   const [maxPages, setMaxPages] = useState(0);
   const [replyId, setReplyId] = useState(-1);
   
@@ -94,7 +93,6 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
       else    nc.self_votes = 0;
 
       if(nc.full_count != null && parent_id == -1) {
-        setCommentCount(nc.full_count);
         setMaxPages(Math.ceil(nc.full_count / parent_limit));
       }
     });
