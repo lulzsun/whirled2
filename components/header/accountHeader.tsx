@@ -19,14 +19,10 @@ export default function AccountHeader() {
         <Menu.Dropdown>
           <Link passHref href={{
               pathname: `/profile/[username]`,
-              query: {
-                username: user.username,
-              },
+              query: { username: user.username, },
             }}>
             <Menu.Item
-              icon={
-                <Avatar src={user.avatar_url} color="blue" radius="xl"/>
-              }
+              icon={<Avatar src={user.avatar_url} color="blue" radius="xl"/>}
               component="a"
             >
               <div className="flex flex-row space-x-4">
@@ -40,25 +36,27 @@ export default function AccountHeader() {
             </Menu.Item>
           </Link>
           <Menu.Divider/>
-            <Menu.Item icon={<IconWallet size={14} />}>
-              <div className="flex flex-row space-x-4">
-                <span>Wallet</span>
-                <div className="w-full"/>
-                <div className="flex flex-row space-x-4 text-xs">
-                  <IconCoin size={16}/> 69k
-                  <IconCash size={16}/> 420
-                </div>
-              </div>
-            </Menu.Item>
-          <Menu.Item icon={<IconMessageCircle size={14} />}>
+          <Menu.Item icon={<IconWallet size={14} />}>
             <div className="flex flex-row space-x-4">
-              <span>Messages</span>
+              <span>Wallet</span>
               <div className="w-full"/>
-              <div>
-                <Badge size="xs" color="red" variant="filled">10</Badge>
+              <div className="flex flex-row space-x-4 text-xs">
+                <IconCoin size={16}/> 69k
+                <IconCash size={16}/> 420
               </div>
             </div>
           </Menu.Item>
+          <Link passHref href={'/messages'}>
+            <Menu.Item icon={<IconMessageCircle size={14} />} component="a">
+              <div className="flex flex-row space-x-4">
+                <span>Messages</span>
+                <div className="w-full"/>
+                <div>
+                  <Badge size="xs" color="red" variant="filled">10</Badge>
+                </div>
+              </div>
+            </Menu.Item>
+          </Link>
           <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
           <Menu.Divider />
           <Menu.Item icon={<IconLogout size={14}/>} onClick={() => supabaseClient.auth.signOut()}>Logout</Menu.Item>
