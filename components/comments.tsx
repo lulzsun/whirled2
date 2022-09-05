@@ -51,11 +51,11 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
     if (isInitialMount.current) {
       isInitialMount.current = false;
     } else {
-      getCommentsFromSupa(0, (activePage-1)*5);
+      getCommentsFromSupa(0, (activePage-1));
     }
   }, [activePage]);
 
-  async function getCommentsFromSupa(parent_id: number = -1, parent_offset: number = 0, parent_limit: number = 5) {
+  async function getCommentsFromSupa(parent_id: number = -1, page: number = 0, parent_limit: number = 5) {
     let newComments: Comment[] = [];
     if(comments.length != 0 && parent_id != 0) {
       newComments = Array.from(comments);
@@ -63,7 +63,7 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
     if(parent_id == 0) parent_id = -1;
     
     const { data: sqlComments } = await supabaseClient.rpc('get_profile_comments', {
-      '_profile_id': profile_id, parent_offset, parent_limit, 'max_depth': 3, '_parent_id': parent_id
+      '_profile_id': profile_id, parent_offset: page*parent_limit, parent_limit, 'max_depth': 3, '_parent_id': parent_id
     });
 
     sqlComments?.forEach(sqlComment => {
