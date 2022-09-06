@@ -22,7 +22,7 @@ CREATE TABLE comments (
   parent_id bigint references comments (id),
   created_at timestamp with time zone default now() not null,
   updated_at timestamp with time zone default now() null,
-  content text not null CHECK (char_length(content) <= 255),
+  content text not null CHECK (char_length(content) <= 280),
   is_deleted boolean default false not null
 );
 
@@ -44,3 +44,21 @@ create policy "Allow individual read access" on public.votes for select using ( 
 create policy "Allow individual insert access" on public.votes for insert with check ( auth.uid() = user_id );
 create policy "Allow individual update access" on public.votes for update using ( auth.uid() = user_id );
 alter table public.votes enable row level security;
+
+-- Create messages table
+CREATE TABLE messages (
+  id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
+  parent_id bigint references messages (id),
+  latest_reply bigint references messages (id),
+  sender_id uuid not null references profiles (id) default uid(),
+  reciever_id uuid not null references profiles (id) default uid(),
+  title text not null CHECK (char_length(content) <= 280),
+  content text not null CHECK (char_length(content) <= 2000),
+  created_at timestamp with time zone default now() not null,
+  sender_is_read boolean default false not null,
+  reciever_is_read boolean default false not null,
+  sender_is_deleted boolean default false not null,
+  reciever_is_deleted boolean default false not null
+);
+
+alter table public.messages enable row level security;

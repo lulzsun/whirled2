@@ -75,8 +75,7 @@ BEGIN
       order by pc.id desc
       limit parent_limit -- max root comments
       offset parent_offset -- offset root comments (for pagination)
-    ) 
-    union all (
+    ) union all (
       select 
         comments.id, 
         comments.parent_id, 
@@ -125,3 +124,79 @@ DROP trigger IF EXISTS on_new_comment on public.profiles;
 CREATE trigger on_new_comment
   after insert on public.comments
   for each row execute procedure public.create_vote_after_comment();
+
+-- Create a function to retrieve user's messages with limits
+DROP FUNCTION IF EXISTS public.get_messages;
+CREATE FUNCTION public.get_messages(msg_limit bigint default 10, msg_offset bigint default 0)
+RETURNS TABLE (
+  id bigint,
+  sender text, 
+  sender_nick text,
+  sender_avatar text,
+  title text, 
+  content text, 
+  content_sender text,
+  created_at timestamp with time zone,
+  full_count bigint
+)
+AS $$
+BEGIN
+  RETURN QUERY
+  select 
+    m.id,
+    p.username as sender, 
+    p.nickname as sender_nick, 
+    p.avatar_url as sender_avatar,
+    m.title,
+    COALESCE(NULLIF(me.content,''), m.content) as content,
+    COALESCE(pr.username, p.username) as content_sender,
+    COALESCE(me.created_at, m.created_at) as created_at,
+    count(*) OVER() AS full_count
+  from messages m 
+  left join messages me on m.latest_reply = me.id
+  left join profiles p on p.id = m.sender_id
+  left join profiles pr on pr.id = me.sender_id
+  where m.parent_id is null
+  and (m.sender_id = auth.uid() or m.reciever_id = auth.uid())
+  and ((m.sender_id = auth.uid() and m.sender_is_deleted = false) 
+  or (m.reciever_id = auth.uid() and m.reciever_is_deleted = false))
+  order by m.created_at desc
+  limit msg_limit -- max msgs
+  offset msg_offset; -- offset msgs (for pagination)
+END;
+$$ LANGUAGE plpgsql security definer;
+
+-- Create a function to retrieve full message thread
+DROP FUNCTION IF EXISTS public.get_message_thread;
+CREATE FUNCTION public.get_message_thread(msg_id bigint, msg_limit bigint default 10, msg_offset bigint default 0)
+RETURNS TABLE (
+  id bigint,
+  sender text, 
+  sender_nick text,
+  sender_avatar text,
+  title text, 
+  content text, 
+  created_at timestamp with time zone,
+  full_count bigint
+)
+AS $$
+BEGIN
+  RETURN QUERY
+  select 
+    m.id,
+    p.username as sender, 
+    p.nickname as sender_nick, 
+    p.avatar_url as sender_avatar,
+    m.title,
+    m.content,
+    m.created_at,
+    count(*) OVER() AS full_count
+  from messages m 
+  left join profiles p on p.id = m.sender_id
+  where (m.parent_id = msg_id or m.id = msg_id)
+  and (m.sender_id = auth.uid() or m.reciever_id = auth.uid())
+  order by m.created_at desc
+  limit msg_limit -- max msgs
+  offset msg_offset; -- offset msgs (for pagination)
+END;
+$$ LANGUAGE plpgsql security definer;
