@@ -1,6 +1,6 @@
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
-import Image from 'next/image';
+import { Image } from "@mantine/core";
 import ReactMarkdown from 'react-markdown';
 import Link from "next/link";
 import { ActionIcon, Anchor, Button, Pagination } from "@mantine/core";
@@ -139,14 +139,13 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
     })
   
     return (
-      <div className="border-l pl-4">
-        <div className="flex flex-row space-x-2">
+      <div className="border-l pl-4 mt-2">
+        <div className="flex flex-row space-x-2" style={{wordBreak: 'break-word'}}>
           <div>
-            <Image className="rounded-2xl" 
-            src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)} 
-            alt="profile picture" width="24" height="24" />
+            <Image width={24} alt="profile picture" radius="md"
+              src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)}/>
           </div>
-          <div className="flex-none grow">
+          <div className='flex flex-col'>
             <div className="flex flex-row space-x-1">
               <div className="text-sm font-semibold">{comment.nickname}</div>
               <div className="text-xs">
@@ -159,7 +158,9 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
               </div>
               <div className="text-xs">• {dayjs().to(dayjs(comment.created_at))}</div>
             </div>
-            <div className="text-sm"><ReactMarkdown>{comment.content}</ReactMarkdown></div>
+            <div>
+              <ReactMarkdown className="text-sm">{comment.content}</ReactMarkdown>
+            </div>
             <div className="flex flex-row items-center -ml-2 pb-1.5">
               <ActionIcon variant={(selfVotes == 1 ? 'outline' : 'subtle')} color="orange" onClick={() => setVote(true)}><IconArrowUp size={16}/></ActionIcon>
               <span className="text-xs px-2">{comment.votes + calcVotesWithoutSelf() + selfVotes}</span>
@@ -187,11 +188,13 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
 
   return (
     <>
-      {comments && createTree(comments).map((comment) => {
-        if(comment.id > 0) { // there shouldn't be any id less than 0 unless we are using them for a purpose
-          return <Comment key={comment.id} comment={comment} />
-        }
-      })}
+      <div className="mx-auto grid grid-cols-1 w-full">
+        {comments && createTree(comments).map((comment) => {
+          if(comment.id > 0) { // there shouldn't be any id less than 0 unless we are using them for a purpose
+            return <Comment key={comment.id} comment={comment} />
+          }
+        })}
+      </div>
       {maxPages > 1 && <div className="w-full flex justify-center">
         <Pagination page={activePage} onChange={(index) => {setPage(index);}} total={maxPages} siblings={1} initialPage={1} />
       </div>}
