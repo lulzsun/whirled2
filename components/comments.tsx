@@ -145,7 +145,7 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
             <Image width={24} alt="profile picture" radius="md"
               src={(comment.avatar_url == null ? '/default_profile.png' : comment.avatar_url)}/>
           </div>
-          <div className='flex flex-col'>
+          <div className='flex flex-col w-full'>
             <div className="flex flex-row space-x-1">
               <div className="text-sm font-semibold">{comment.nickname}</div>
               <div className="text-xs">
