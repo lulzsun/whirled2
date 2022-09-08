@@ -7,8 +7,9 @@ import ProfileCommentSection from "../../components/commentSection";
 import { useRecoilState } from "recoil";
 import { pageVisibiltyState } from "../../recoil/pageVisibility.recoil";
 import Head from "next/head";
+import { userState } from "../../recoil/user.recoil";
 
-interface PageProps {
+interface Props {
   pageData: {
     profile: Profile;
     errors?: string;
@@ -23,9 +24,10 @@ export type Profile = {
   birthday?: string;
 }
 
-export default function Id({ pageData }: PageProps) {
-  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
+export default function Id({ pageData }: Props) {
+  const [user] = useRecoilState(userState);
   const profile: Profile = pageData.profile;
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
 
   useEffect(() => {
     setIsPageVisible(true);
@@ -39,8 +41,8 @@ export default function Id({ pageData }: PageProps) {
     <Head>
       <title>{profile.nickname} (@{profile.username}) - Profile</title>
     </Head>
-    <ProfileCard {...profile}/>
-    <ProfileCommentSection {...profile}/>
+    <ProfileCard {...{ profile, user }}/>
+    <ProfileCommentSection {...{ profile, user }}/>
   </>
   );
 }

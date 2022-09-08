@@ -8,12 +8,14 @@ import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
 import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons";
 import ProfileCommentEditor from "./commentEditor";
+import { User } from "../recoil/user.recoil";
 dayjs.extend(relativeTime);
 
 type Props = {
   profile_id: string;
   comments: Comment[];
   setComments: Dispatch<SetStateAction<Comment[]>>;
+  user: User;
 }
 
 type CommentProps = {
@@ -37,7 +39,7 @@ export interface Comment {
   full_count?: number
 }
 
-export default function ProfileComments({profile_id, comments, setComments}: Props) {
+export default function ProfileComments({profile_id, comments, setComments, user}: Props) {
   const isInitialMount = useRef(true);
   const [activePage, setPage] = useState(1);
   const [maxPages, setMaxPages] = useState(0);
@@ -162,10 +164,31 @@ export default function ProfileComments({profile_id, comments, setComments}: Pro
               <ReactMarkdown className="text-sm">{comment.content}</ReactMarkdown>
             </div>
             <div className="flex flex-row items-center -ml-2 pb-1.5">
-              <ActionIcon variant={(selfVotes == 1 ? 'outline' : 'subtle')} color="orange" onClick={() => setVote(true)}><IconArrowUp size={16}/></ActionIcon>
+              <ActionIcon variant={(selfVotes == 1 ? 'outline' : 'subtle')} color="orange" 
+                onClick={() => {
+                  if(!user) {
+                    alert('You must be logged in to perform this action!');
+                    return;
+                  }
+                  setVote(true);
+                }}>
+                <IconArrowUp size={16}/>
+              </ActionIcon>
               <span className="text-xs px-2">{comment.votes + calcVotesWithoutSelf() + selfVotes}</span>
-              <ActionIcon variant={(selfVotes ==-1 ? 'outline' : 'subtle')} color="blue" onClick={() => setVote(false)}><IconArrowDown size={16}/></ActionIcon>
+              <ActionIcon variant={(selfVotes ==-1 ? 'outline' : 'subtle')} color="blue" onClick={() => {
+                if(!user) {
+                  alert('You must be logged in to perform this action!');
+                  return;
+                }
+                setVote(false);
+              }}>
+                <IconArrowDown size={16}/>
+              </ActionIcon>
               <Button variant="subtle" color="gray" size="xs" leftIcon={<IconMessage size={14}/>} onClick={() => {
+                if(!user) {
+                  alert('You must be logged in to perform this action!');
+                  return;
+                }
                 if(replyId != comment.id) setReplyId(comment.id);
                 else setReplyId(-1);
               }}>
