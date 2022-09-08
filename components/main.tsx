@@ -77,7 +77,7 @@ export default function Main({colorScheme, children} : Props) {
   }, []);
 
   if (!Allotment) {
-    return <div>loading...</div>;
+    return <div>Whirled is loading...</div>;
   }
   // #endregion
   
