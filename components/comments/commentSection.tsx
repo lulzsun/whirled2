@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Profile } from "../pages/profile/[username]";
-import { User } from "../recoil/user.recoil";
+import { Profile } from "../../pages/profile/[username]";
+import { User } from "../../recoil/user.recoil";
 import ProfileCommentEditor from "./commentEditor";
 import ProfileComments, { Comment } from "./comments";
 

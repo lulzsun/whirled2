@@ -3,7 +3,7 @@ import { GetServerSidePropsContext } from "next";
 import { useEffect } from "react";
 import ErrorPage from 'next/error';
 import ProfileCard from "../../components/profile/profileCard";
-import ProfileCommentSection from "../../components/commentSection";
+import ProfileCommentSection from "../../components/comments/commentSection";
 import { useRecoilState } from "recoil";
 import { pageVisibiltyState } from "../../recoil/pageVisibility.recoil";
 import Head from "next/head";

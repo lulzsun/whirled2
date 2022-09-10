@@ -2,7 +2,7 @@ import { ActionIcon, Textarea } from '@mantine/core';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import { IconDots, IconSend } from '@tabler/icons';
 import { Dispatch, SetStateAction, useState } from 'react';
-import { Comment } from "../components/comments";
+import { Comment } from "./comments";
 
 type Props = {
   profile_id: string;

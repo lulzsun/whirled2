@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
 import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons";
 import ProfileCommentEditor from "./commentEditor";
-import { User } from "../recoil/user.recoil";
+import { User } from "../../recoil/user.recoil";
 dayjs.extend(relativeTime);
 
 type Props = {
