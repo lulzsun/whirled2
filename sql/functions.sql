@@ -200,3 +200,40 @@ BEGIN
   offset msg_offset; -- offset msgs (for pagination)
 END;
 $$ LANGUAGE plpgsql security definer;
+
+-- Create a function to allow users to send messages
+DROP FUNCTION IF EXISTS public.send_message;
+CREATE FUNCTION public.send_message(
+  msg_username text, 
+  msg_content text, 
+  msg_title text, 
+  msg_reply_id bigint default null)
+RETURNS TABLE (
+  id bigint,
+  title text, 
+  content text, 
+  created_at timestamp with time zone
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH r as (
+    INSERT INTO messages (
+      parent_id, 
+      sender_id, 
+      reciever_id, 
+      title, 
+      content, 
+      sender_is_read
+    ) VALUES (
+      msg_reply_id, 
+      auth.uid(), 
+      (SELECT p.id FROM profiles p WHERE p.username = msg_username), 
+      COALESCE(NULLIF(msg_title,''), 'No Subject'), 
+      msg_content, 
+      true
+    )
+    RETURNING *
+  )
+  SELECT r.id, r.title, r.content, r.created_at FROM r;
+END;
+$$ LANGUAGE plpgsql security definer;

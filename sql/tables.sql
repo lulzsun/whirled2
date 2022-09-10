@@ -53,7 +53,7 @@ CREATE TABLE messages (
   sender_id uuid not null references profiles (id) default uid(),
   reciever_id uuid not null references profiles (id) default uid(),
   title text not null CHECK (char_length(content) <= 280),
-  content text not null CHECK (char_length(content) <= 2000),
+  content text not null CHECK (char_length(content) BETWEEN 1 AND 2001),
   created_at timestamp with time zone default now() not null,
   sender_is_read boolean default false not null,
   reciever_is_read boolean default false not null,

@@ -4,7 +4,7 @@ export interface User {
   id: string | null;
   username: string;
   nickname: string;
-  avatar_url?: string;
+  avatar_url: string | '/default_profile.png';
 }
 
 export const userState = atom({

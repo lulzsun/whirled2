@@ -78,7 +78,7 @@ export default function Id() {
               <div className={'text-sm -mt-1 ' + (message.sender == user.username ? 'place-self-end' : '')}>
                 {message.sender} sent {dayjs().to(dayjs(message.created_at))}
               </div>
-              <div className={"border border-gray-900 dark:border-white shadow-lg p-5 rounded-2xl " + 
+              <div className={"border border-gray-900 dark:border-white shadow-lg p-2.5 rounded-2xl " + 
               (message.sender == user.username ? 'rounded-tr-none' : 'rounded-tl-none')}>
                 <ReactMarkdown>{message.content}</ReactMarkdown>
               </div>
