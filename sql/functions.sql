@@ -130,7 +130,7 @@ DROP FUNCTION IF EXISTS public.get_messages;
 CREATE FUNCTION public.get_messages(msg_limit bigint default 10, msg_offset bigint default 0)
 RETURNS TABLE (
   id bigint,
-  sender text, 
+  sender_name text, 
   sender_nick text,
   sender_avatar text,
   title text, 
@@ -144,7 +144,7 @@ BEGIN
   RETURN QUERY
   select 
     m.id,
-    p.username as sender, 
+    p.username as sender_name, 
     p.nickname as sender_nick, 
     p.avatar_url as sender_avatar,
     m.title,
