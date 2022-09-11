@@ -2,23 +2,12 @@ import { Checkbox, Anchor, Image, Button } from "@mantine/core";
 import dayjs from "dayjs";
 import Link from "next/link";
 import router from "next/router";
+import { Message } from "../../pages/messages";
 import { User } from "../../recoil/user.recoil";
 
 interface Props {
   user: User,
   messages: Message[];
-}
-
-interface Message {
-  id: number,
-  content: string,
-  content_sender: string,
-  created_at: Date,
-  sender: string,
-  sender_avatar: string | null,
-  sender_nick: string,
-  title: string,
-  selected?: boolean,
 }
 
 export default function Messages({user, messages}: Props) {
@@ -53,9 +42,9 @@ export default function Messages({user, messages}: Props) {
                     <Link passHref href={{
                       pathname: `/profile/[username]`,
                       query: {
-                        username: message.sender,
+                        username: message.sender_name,
                       },
-                    }}><Anchor component="a" onClick={(event) => {event.stopPropagation();}}>@{message.sender}</Anchor></Link>
+                    }}><Anchor component="a" onClick={(event) => {event.stopPropagation();}}>@{message.sender_name}</Anchor></Link>
                   </div>
                   <span className="w-full text-right">{dayjs().to(dayjs(message.created_at))}</span>
                 </div>

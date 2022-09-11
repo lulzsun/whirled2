@@ -61,4 +61,6 @@ CREATE TABLE messages (
   reciever_is_deleted boolean default false not null
 );
 
+create policy "Allow individual read access" on public.messages for select using ( auth.uid() = sender_id or auth.uid() = reciever_id );
 alter table public.messages enable row level security;
+alter publication supabase_realtime add table public.messages;

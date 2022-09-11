@@ -171,7 +171,11 @@ DROP FUNCTION IF EXISTS public.get_message_thread;
 CREATE FUNCTION public.get_message_thread(msg_id bigint, msg_limit bigint default 10, msg_offset bigint default 0)
 RETURNS TABLE (
   id bigint,
-  sender text, 
+  reciever_id uuid, 
+  reciever_name text,
+  reciever_nick text,
+  sender_id uuid, 
+  sender_name text,
   sender_nick text,
   sender_avatar text,
   title text, 
@@ -184,15 +188,20 @@ BEGIN
   RETURN QUERY
   select 
     m.id,
-    p.username as sender, 
-    p.nickname as sender_nick, 
-    p.avatar_url as sender_avatar,
+    pr.id as reciever_id,
+    pr.username as reciever_name,
+    pr.nickname as reciever_nick,
+    ps.id as sender_id, 
+    ps.username as sender_name, 
+    ps.nickname as sender_nick, 
+    ps.avatar_url as sender_avatar,
     m.title,
     m.content,
     m.created_at,
     count(*) OVER() AS full_count
   from messages m 
-  left join profiles p on p.id = m.sender_id
+  left join profiles pr on pr.id = m.reciever_id
+  left join profiles ps on ps.id = m.sender_id
   where (m.parent_id = msg_id or m.id = msg_id)
   and (m.sender_id = auth.uid() or m.reciever_id = auth.uid())
   order by m.created_at desc
@@ -233,7 +242,7 @@ BEGIN
       true
     )
     RETURNING *
-  )
+  ), u AS (UPDATE "messages" me SET latest_reply = r.id from r WHERE me.id = r.parent_id RETURNING *)
   SELECT r.id, r.title, r.content, r.created_at FROM r;
 END;
 $$ LANGUAGE plpgsql security definer;

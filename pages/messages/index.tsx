@@ -5,10 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRecoilState } from "recoil";
 import { pageVisibiltyState } from "../../recoil/pageVisibility.recoil";
 import { userState } from "../../recoil/user.recoil";
-import { Anchor, Checkbox, Image, Modal, Pagination } from "@mantine/core";
+import { Checkbox, Modal, Pagination } from "@mantine/core";
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
-import Link from "next/link";
 import Messages from "../../components/messages/messages";
 import MessageEditor from "../../components/messages/messageEditor";
 dayjs.extend(relativeTime);
@@ -18,9 +17,12 @@ export interface Message {
   content: string,
   content_sender: string,
   created_at: Date,
-  sender: string,
-  sender_avatar: string | null,
+  reciever_id?: string,
+  reciever_name: string,
+  sender_id?: string,
+  sender_name: string,
   sender_nick: string,
+  sender_avatar: string | null,
   title: string,
   selected?: boolean,
 }
@@ -86,19 +88,21 @@ export default function MessagesPage() {
           overlay: {zIndex: 1}
         }}
       >
-        <MessageEditor recipient={router.query["compose"] as string} 
+        <MessageEditor isModal recipient={router.query["compose"] as string} 
           onClose={() => setComposeOpen(false)} 
           addMessage={(msg) => {
-            setMessages([{
+            setMessages((prevMessages) => [{
               id: msg.id,
               title: msg.title,
               content: msg.content,
               content_sender: user.username,
-              sender: user.username,
+              reciever_id: messages[0].reciever_id,
+              reciever_name: messages[0].reciever_name,
+              sender_name: user.username,
               sender_nick: user.nickname,
               sender_avatar: user.avatar_url,
               created_at: msg.created_at
-            }, ...messages]);
+            }, ...prevMessages]);
           }}/>
       </Modal>
       <div className="flex border-b border-gray-900 dark:border-white shadow-lg p-5 whitespace-nowrap">
