@@ -2,35 +2,55 @@ import { Button, MultiSelect, ActionIcon, Textarea, TextInput } from "@mantine/c
 import { supabaseClient } from "@supabase/auth-helpers-nextjs";
 import { IconDots, IconSend, IconUser } from "@tabler/icons";
 import { useState } from "react";
-import { Message } from "../../pages/messages";
+import { GetRecipients, Message } from "../../pages/messages";
+import { User } from "../../recoil/user.recoil";
 
 type Props = {
   isModal?: boolean,
+  user: User,
   recipient: string,
-  parent_id?: number | null,
+  group_id?: number | null,
   onClose?: () => void, 
   addMessage: (msg: Message) => void
 }
 
-export default function MessageEditor({isModal=false, recipient, parent_id, onClose, addMessage}: Props) {
-  // it is planned to have group messages(?)
-  const [recipients, setRecipients] = useState<string[]>([recipient]);
+export default function MessageEditor({isModal=false, user, recipient, group_id, onClose, addMessage}: Props) {
+  const [recipients, setRecipients] = useState<string[]>([user.username, recipient]);
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
 
   async function SendMessage() {
-    const { data: sqlMessages } = await supabaseClient.rpc('send_message', {
-      msg_username: recipients[0],
-      msg_title: subject,
-      msg_content: content,
-      msg_reply_id: parent_id
-    });
+    // send_message is for messaging an existing message group
+    // compose_message is for creating and messaging a new message group
+    const { data: sqlMessages } = await supabaseClient.rpc((group_id ? 'send_message' : 'compose_message'), 
+    (group_id ? {
+      _group_id: group_id,
+      body: content,
+    } : {
+      usernames: recipients,
+      subject: subject,
+      body: content,
+    }));
 
     if(!sqlMessages) {
       alert('error sending message');
+      console.log(recipients, subject, content);
     }
     else {
-      addMessage(sqlMessages[0] as unknown as Message);
+      let recievingUser = GetRecipients(sqlMessages[0]);
+
+      addMessage({
+        id: (!group_id ? sqlMessages[0]._group_id : sqlMessages[0].msg_id),
+        title: subject,
+        content: content,
+        content_username: user.username,
+        content_nickname: user.nickname,
+        content_avatar: user.avatar_url,
+        username: recievingUser.username,
+        nickname: recievingUser.nickname,
+        avatar: recievingUser.avatar,
+        created_at: new Date()
+      });
       setSubject('');
       setContent('');
     }

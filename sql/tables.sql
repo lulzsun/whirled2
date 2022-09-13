@@ -45,22 +45,43 @@ create policy "Allow individual insert access" on public.votes for insert with c
 create policy "Allow individual update access" on public.votes for update using ( auth.uid() = user_id );
 alter table public.votes enable row level security;
 
+-- Create message groups table
+CREATE TABLE message_groups (
+  id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
+  owner_id uuid not null references profiles (id),
+  title text CHECK (char_length(title) <= 280),
+  created_at timestamp with time zone default now() not null
+);
+
 -- Create messages table
 CREATE TABLE messages (
   id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
-  parent_id bigint references messages (id),
-  latest_reply bigint references messages (id),
-  sender_id uuid not null references profiles (id) default uid(),
-  reciever_id uuid not null references profiles (id) default uid(),
-  title text not null CHECK (char_length(content) <= 280),
+  group_id bigint not null references message_groups (id),
+  user_id uuid not null references profiles (id) default uid(),
   content text not null CHECK (char_length(content) BETWEEN 1 AND 2001),
-  created_at timestamp with time zone default now() not null,
-  sender_is_read boolean default false not null,
-  reciever_is_read boolean default false not null,
-  sender_is_deleted boolean default false not null,
-  reciever_is_deleted boolean default false not null
+  created_at timestamp with time zone default now() not null
 );
 
-create policy "Allow individual read access" on public.messages for select using ( auth.uid() = sender_id or auth.uid() = reciever_id );
+-- Create users table for message groups
+CREATE TABLE message_group_users (
+  user_id uuid not null references profiles (id),
+  group_id bigint not null references message_groups (id),
+  PRIMARY KEY(user_id, group_id)
+);
+
+-- Create all rls policies for messages, message_groups, and message_group_users
+create policy "Allow individual read access" on public.message_group_users for select using ( auth.uid() = user_id );
+create policy "Allow individual read access" on public.message_groups for select using (
+  EXISTS( 
+    SELECT 1 FROM message_group_users mgp WHERE mgp.group_id = message_groups.id AND auth.uid() = mgp.user_id
+  )
+);
+create policy "Allow individual read access" on public.messages for select using (
+  EXISTS( 
+    SELECT 1 FROM message_group_users mgp WHERE mgp.group_id = messages.group_id AND auth.uid() = mgp.user_id
+  )
+);
+alter table public.message_group_users enable row level security;
+alter table public.message_groups enable row level security;
 alter table public.messages enable row level security;
 alter publication supabase_realtime add table public.messages;

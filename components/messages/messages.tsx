@@ -33,18 +33,18 @@ export default function Messages({user, messages}: Props) {
               <Checkbox onClick={(event) => {event.stopPropagation();}}/>
               <div>
                 <Image width={64} alt="profile picture" radius="md"
-                  src={(message.sender_avatar == null ? '/default_profile.png' : message.sender_avatar)}/>
+                  src={(message.avatar == null ? '/default_profile.png' : message.avatar)}/>
               </div>
               <div className="text-sm w-full truncate">
                 <div className="flex flex-row w-full whitespace-nowrap">
-                  <span className="font-semibold">{message.sender_nick}</span>
+                  <span className="font-semibold">{message.nickname}</span>
                   <div className="pl-1 text-xs">
                     <Link passHref href={{
                       pathname: `/profile/[username]`,
                       query: {
-                        username: message.sender_name,
+                        username: message.username,
                       },
-                    }}><Anchor component="a" onClick={(event) => {event.stopPropagation();}}>@{message.sender_name}</Anchor></Link>
+                    }}><Anchor component="a" onClick={(event) => {event.stopPropagation();}}>@{message.username}</Anchor></Link>
                   </div>
                   <span className="w-full text-right">{dayjs().to(dayjs(message.created_at))}</span>
                 </div>
@@ -53,7 +53,7 @@ export default function Messages({user, messages}: Props) {
                 </span>
                 <br/>
                 <span className="text-xs">
-                  {user && user.username === message.content_sender && <b>You: </b>} {message.content}
+                  {user && (user.username === message.content_username ? <b>You: </b> : <b>{message.content_nickname}: </b>)} {message.content}
                 </span>
               </div>
             </div>

@@ -14,17 +14,29 @@ dayjs.extend(relativeTime);
 
 export interface Message {
   id: number,
-  content: string,
-  content_sender: string,
-  created_at: Date,
-  reciever_id?: string,
-  reciever_name: string,
-  sender_id?: string,
-  sender_name: string,
-  sender_nick: string,
-  sender_avatar: string | null,
   title: string,
+  content: string,
+  content_username?: string,
+  content_nickname?: string,
+  content_avatar?: string,
+  created_at: Date,
+  username: string,
+  nickname: string,
+  avatar: string,
   selected?: boolean,
+}
+
+export function GetRecipients(msg: {users: any, username: string, owner_username: string}) {
+    // shoddy way of finding the reciever of the message (not accounting for group chats)
+    let recievingUser: {username: string, nickname: string, avatar: string} =
+    msg.users.find((u: { username: string; }) => (
+      msg.owner_username == msg.username && msg.username != u.username
+    ));
+
+    // if this is true, that probably means we are messaging ourselves
+    if(recievingUser == undefined) recievingUser = msg.users[0];
+
+    return recievingUser;
 }
 
 export default function MessagesPage() {
@@ -63,11 +75,29 @@ export default function MessagesPage() {
   async function getMessagesFromSupa(page: number=1, limit: number=10) {
     if(page < 1) page = 1;
     
-    const { data: sqlMessages } = await supabaseClient.rpc('get_messages', {
+    const { data: sqlMessages } = await supabaseClient.rpc('get_message_groups', {
       'msg_limit': limit, 'msg_offset': (page-1)*limit
     });
     if(sqlMessages && sqlMessages.length > 0) {
-      setMessages(sqlMessages);
+      // shoddy way of finding the reciever of the message (not accounting for group chats)
+      let recievingUser = GetRecipients(sqlMessages[0]);
+      let temp: Message[] = [];
+
+      sqlMessages.forEach((msg) => {
+        temp.push({
+          id: msg.group_id,
+          title: msg.title,
+          content: msg.msg,
+          content_username: msg.msg_username,
+          content_nickname: msg.msg_nickname,
+          content_avatar: msg.msg_avatar,
+          created_at: msg.created_at,
+          username: recievingUser.username,
+          nickname: recievingUser.nickname,
+          avatar: recievingUser.avatar
+        })
+      })
+      setMessages(temp);
       setMaxPages(Math.ceil(sqlMessages[0].full_count / limit));
     }
   }
@@ -88,21 +118,10 @@ export default function MessagesPage() {
           overlay: {zIndex: 1}
         }}
       >
-        <MessageEditor isModal recipient={router.query["compose"] as string} 
+        <MessageEditor isModal user={user} recipient={router.query["compose"] as string} 
           onClose={() => setComposeOpen(false)} 
           addMessage={(msg) => {
-            setMessages((prevMessages) => [{
-              id: msg.id,
-              title: msg.title,
-              content: msg.content,
-              content_sender: user.username,
-              reciever_id: messages[0].reciever_id,
-              reciever_name: messages[0].reciever_name,
-              sender_name: user.username,
-              sender_nick: user.nickname,
-              sender_avatar: user.avatar_url,
-              created_at: msg.created_at
-            }, ...prevMessages]);
+            setMessages((prevMessages) => [msg, ...prevMessages]);
           }}/>
       </Modal>
       <div className="flex border-b border-gray-900 dark:border-white shadow-lg p-5 whitespace-nowrap">
