@@ -17,43 +17,43 @@ type Props = {
 
 export default function Main({colorScheme, children} : Props) {
   const {user, isLoading} = useUser();
-  // @ts-ignore
   const [userMemo, setUserMemo] = useState({});
-  const [isLoggedIn, setLoggedIn] = useState(true);
   const [isPageVisible] = useRecoilState(pageVisibiltyState);
   const setUserState = useSetRecoilState(userState);
 
   // #region User auth check and state store
   useMemo(() => {
     // reason for setTimeout: https://github.com/facebookexperimental/Recoil/issues/12
-    setTimeout(() => {
-      if(Object.keys(userMemo).length == 0) {
-        // @ts-ignore
-        setUserState(null);
-      } else {
-        // @ts-ignore
-        setUserState(userMemo);
+    setTimeout(async () => {
+      if(!isLoading) {
+        // crude way of checking to see if user cookie already exists
+        const { data } = await supabaseClient.from('profiles').select('*').single();
+
+        if(Object.keys(userMemo).length == 0 || !data) {
+          // @ts-ignore
+          setUserState(null);
+        } else {
+          // @ts-ignore
+          setUserState(userMemo);
+        }
       }
     }, 0);
   }, [JSON.stringify(userMemo)]);
 
   useEffect(() => {
     setUser();
-  }, [user]);
+  }, [user, isLoading]);
 
   const setUser = async () => {
     if(!isLoading) {
       if (!user) {
-        if(!supabaseClient.auth.session()) return;
-        setLoggedIn(false);
         // @ts-ignore
-        setUserMemo(null);
+        setUserState(null);
       }
       else {
-        if(!isLoggedIn) setLoggedIn(true);
         const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
         // @ts-ignore
-        setUserMemo({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
+        setUserState({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
       }
     }
   };

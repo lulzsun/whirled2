@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useRecoilState } from 'recoil';
+import { useRecoilState, useSetRecoilState } from 'recoil';
 import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
 import { userState } from '../recoil/user.recoil';
 
 export default function Login() {
   const router = useRouter();
   const [user] = useRecoilState(userState);
+  const setUserState = useSetRecoilState(userState);
   const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   const form = useForm({
     initialValues: {
@@ -46,6 +47,8 @@ export default function Login() {
       return;
     }
     else {
+      // @ts-ignore
+      setUserState({});
       router.push('/');
       setIsPageVisible(false);
       console.log("successful login");
