@@ -27,8 +27,13 @@ export default function Main({colorScheme, children} : Props) {
   useMemo(() => {
     // reason for setTimeout: https://github.com/facebookexperimental/Recoil/issues/12
     setTimeout(() => {
-      // @ts-ignore
-      setUserState(userMemo);
+      if(Object.keys(userMemo).length == 0) {
+        // @ts-ignore
+        setUserState(null);
+      } else {
+        // @ts-ignore
+        setUserState(userMemo);
+      }
     }, 0);
   }, [JSON.stringify(userMemo)]);
 
