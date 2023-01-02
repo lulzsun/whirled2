@@ -85,3 +85,42 @@ alter table public.message_group_users enable row level security;
 alter table public.message_groups enable row level security;
 alter table public.messages enable row level security;
 alter publication supabase_realtime add table public.messages;
+
+-- Create forums table (groups)
+CREATE TABLE forums (
+  id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
+  owner_id uuid not null references profiles (id),
+  name unique text not null CHECK (char_length(name) <= 15),
+  description text not null CHECK (char_length(description) <= 280),
+  created_at timestamp with time zone default now() not null,
+  is_private boolean default false not null,
+  avatar_url text not null
+);
+
+CREATE TABLE forum_members (
+  user_id uuid not null references profiles (id),
+  forum_id bigint not null references forums (id),
+  created_at timestamp with time zone default now() not null,
+  is_mod boolean default false not null,
+  PRIMARY KEY(user_id, group_id)
+);
+
+CREATE TABLE forum_threads (
+  id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
+  user_id uuid not null references profiles (id),
+  title unique text not null CHECK (char_length(name) <= 15),
+  created_at timestamp with time zone default now() not null,
+  is_locked boolean default false not null,
+  is_pinned boolean default false not null
+);
+
+CREATE TABLE forum_thread_comments (
+  id bigint unique primary key GENERATED ALWAYS AS IDENTITY,
+  thread_id uuid not null references thread (id),
+  user_id uuid not null references profiles (id) default uid(),
+  parent_id bigint references comments (id),
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() null,
+  content text not null CHECK (char_length(content) <= 280),
+  is_deleted boolean default false not null
+);
