@@ -4,13 +4,20 @@ import Head from 'next/head';
 import { createEmotionCache, MantineProvider } from '@mantine/core';
 import "allotment/dist/style.css";
 import Main from '../components/main';
-import { UserProvider } from '@supabase/auth-helpers-react';
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
 import { RecoilRoot } from 'recoil';
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { SessionContextProvider, Session } from '@supabase/auth-helpers-react';
+import { useState } from 'react';
 
-export default function App(props: AppProps) {
-  const { Component, pageProps } = props;
+export default function App({
+  Component,
+  pageProps,
+}: AppProps<{
+  initialSession: Session
+}>) {
   const emotionCache = createEmotionCache({ key: 'mantine', prepend: false }); // fixes tailwind
+  // Create a new supabase browser client on every first render.
+  const [supabaseClient] = useState(() => createBrowserSupabaseClient())
 
   return (
     <>
@@ -20,7 +27,10 @@ export default function App(props: AppProps) {
       </Head>
       
       <RecoilRoot>
-      <UserProvider supabaseClient={supabaseClient}>
+      <SessionContextProvider
+        supabaseClient={supabaseClient}
+        initialSession={pageProps.initialSession}
+      >
       <MantineProvider
         withGlobalStyles
         withNormalizeCSS
@@ -34,7 +44,7 @@ export default function App(props: AppProps) {
           <Component {...pageProps} />
         </Main>
       </MantineProvider>
-      </UserProvider>
+      </SessionContextProvider>
       </RecoilRoot>
     </>
   );

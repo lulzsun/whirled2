@@ -1,6 +1,6 @@
 import { ActionIcon, Textarea } from '@mantine/core';
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
-import { IconDots, IconSend } from '@tabler/icons';
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { IconDots, IconSend } from '@tabler/icons-react';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { Comment } from "./comments";
 
@@ -13,6 +13,8 @@ type Props = {
 
 export default function ProfileCommentEditor({profile_id, parent_id, comments, setComments}: Props) {
   const [content, onChange] = useState('');
+  const supabaseClient = createBrowserSupabaseClient();
+
   return <div className='flex flex-row space-x-2'>
     <Textarea value={content} onChange={(event) => onChange(event.currentTarget.value)}
       className='grow'

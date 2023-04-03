@@ -2,7 +2,7 @@ import { TextInput, PasswordInput, Checkbox,
   Button, Group, Space, Center, Anchor, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import Link from 'next/link';
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useRecoilState, useSetRecoilState } from 'recoil';
@@ -14,6 +14,8 @@ export default function Login() {
   const [user] = useRecoilState(userState);
   const setUserState = useSetRecoilState(userState);
   const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
+  const supabaseClient = useSupabaseClient();
+
   const form = useForm({
     initialValues: {
       email: '',
@@ -37,7 +39,7 @@ export default function Login() {
   }, [user])
 
   const SupaBaseLogin = async (email: string, password: string) => {
-    let { error } = await supabaseClient.auth.signIn({
+    let { error } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: password
     })
@@ -56,22 +58,22 @@ export default function Login() {
   };
 
   return (
-    <Center className="flex flex-col w-full h-full" mx="auto">
-      <Text size="xl" mt="md">Hello, Whirled!</Text>
+    <Center className="flex flex-col w-full h-full">
+      <Text size="xl">Hello, Whirled!</Text>
       <Text size="xs">Welcome back to the brave new whirled!</Text>
 
       <form className="w-72" onSubmit={form.onSubmit((values) => SupaBaseLogin(values.email, values.password))}>
-        <Text size="sm" mt="md">Email</Text>
+        <Text size="sm">Email</Text>
         <TextInput required placeholder="your@email.com"
           {...form.getInputProps('email')}
         />
 
-        <Text size="sm" mt="md">Password</Text>
+        <Text size="sm">Password</Text>
         <PasswordInput required placeholder="Your password"
           {...form.getInputProps('password')}
         />
 
-        <Group position="apart" mt="md">
+        <Group position="apart">
           <Checkbox label="Remember me" />
           <Anchor
             onClick={(event: { preventDefault: () => void; }) => event.preventDefault()}
@@ -82,13 +84,13 @@ export default function Login() {
           </Anchor>
         </Group>
 
-        <Group position="center" mt="md">
-          <Space h="md" />
+        <Group position="center">
+          <Space />
           <Button fullWidth type="submit">Login</Button>
         </Group>
-        <Group position="center" mt="md" className="text-sm">
+        <Group position="center" className="text-sm">
           {"Don't have an account?"}
-          <Link href="signup"><Anchor>Sign Up</Anchor></Link>
+          <Link href="signup">Sign Up</Link>
         </Group>
       </form>
     </Center>

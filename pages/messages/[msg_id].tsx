@@ -1,4 +1,4 @@
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from 'react';
 import { useRecoilState } from 'recoil';
@@ -10,8 +10,7 @@ import relativeTime from 'dayjs/plugin/relativeTime.js'
 import ReactMarkdown from 'react-markdown';
 import MessageEditor from '../../components/messages/messageEditor';
 import { GetRecipients, Message } from '.';
-import { RealtimeSubscription } from '@supabase/supabase-js';
-import Link from 'next/link';
+import { RealtimeChannel } from '@supabase/supabase-js';
 dayjs.extend(relativeTime);
 
 export default function Id() {
@@ -26,6 +25,7 @@ export default function Id() {
   const [recipient, setRecipient] = useState('');
   const endOfChat = useRef<HTMLDivElement>(null);
   const [idNameMap, setIdNameMap] = useState(new Map());
+  const supabaseClient = createBrowserSupabaseClient();
   
   useEffect(() => {
     if (user) {
@@ -45,14 +45,15 @@ export default function Id() {
     // correctly remove subscription on unmount
     // https://discord.com/channels/839993398554656828/1006849587723632751/1009596156235497563
     // https://discord.com/channels/839993398554656828/1009076491922985051/1009856310860328971
-    let subscription: RealtimeSubscription | null = null;
+    let subscription: RealtimeChannel | null = null;
     const timer = setTimeout(() => subscription = subscribeToTable(), 1000);
 
     function subscribeToTable() {
       return (
         supabaseClient
-        .from('messages:group_id=eq.' + parseInt(msg_id as string))
-        .on('INSERT', (payload) => {
+        .channel('any')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'group_id=eq.' + parseInt(msg_id as string) }, 
+        (payload) => {
           if(payload.new.user_id == user.id) return;
           setMessages((prevMessages) => [{
             id: payload.new.id,
@@ -75,7 +76,7 @@ export default function Id() {
         return clearTimeout(timer);
       }
 
-      supabaseClient.removeSubscription(subscription);
+      supabaseClient.removeChannel(subscription);
     };
   }, [idNameMap]);
 

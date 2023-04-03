@@ -1,4 +1,4 @@
-import { supabaseClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -49,6 +49,7 @@ export default function MessagesPage() {
   const [maxPages, setMaxPages] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
+  const supabaseClient = createBrowserSupabaseClient();
 
   useEffect(() => {
     if (user) {
@@ -83,7 +84,7 @@ export default function MessagesPage() {
       let recievingUser = GetRecipients(sqlMessages[0]);
       let temp: Message[] = [];
 
-      sqlMessages.forEach((msg) => {
+      sqlMessages.forEach((msg: { group_id: any; title: any; msg: any; msg_username: any; msg_nickname: any; msg_avatar: any; created_at: any; }) => {
         temp.push({
           id: msg.group_id,
           title: msg.title,
@@ -114,7 +115,7 @@ export default function MessagesPage() {
         target={rootDiv.current!} withinPortal={false}
         styles={{
           root: {position: 'static'},
-          modal: {zIndex: 2},
+          content: {zIndex: 2},
           overlay: {zIndex: 1}
         }}
       >
@@ -127,7 +128,7 @@ export default function MessagesPage() {
       <div className="flex border-b border-gray-900 dark:border-white shadow-lg p-5 whitespace-nowrap">
         <Checkbox label="Select All" />
         {maxPages > 1 && <div className="flex flex-col w-full items-end">
-          <Pagination page={activePage} total={maxPages} siblings={0} initialPage={1} 
+          <Pagination value={activePage} total={maxPages} siblings={0} defaultValue={1} 
             onChange={(index) => {
               setPage(index);
               router.push({

@@ -1,4 +1,4 @@
-import { supabaseClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { Image } from "@mantine/core";
 import ReactMarkdown from 'react-markdown';
@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ActionIcon, Anchor, Button, Pagination } from "@mantine/core";
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime.js'
-import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons";
+import { IconArrowDown, IconArrowUp, IconMessage } from "@tabler/icons-react";
 import ProfileCommentEditor from "./commentEditor";
 import { User } from "../../recoil/user.recoil";
 dayjs.extend(relativeTime);
@@ -44,6 +44,7 @@ export default function ProfileComments({profile_id, comments, setComments, user
   const [activePage, setPage] = useState(1);
   const [maxPages, setMaxPages] = useState(0);
   const [replyId, setReplyId] = useState(-1);
+  const supabaseClient = useSupabaseClient();
   
   useEffect(() => {
     getCommentsFromSupa(0);
@@ -68,7 +69,7 @@ export default function ProfileComments({profile_id, comments, setComments, user
       '_profile_id': profile_id, parent_offset: page*parent_limit, parent_limit, 'max_depth': 3, '_parent_id': parent_id
     });
 
-    sqlComments?.forEach(sqlComment => {
+    sqlComments?.forEach((sqlComment: Comment) => {
       let t: Comment = sqlComment;
       t.children = [];
       let cIndex = newComments.findIndex(c => c.id == t.id);
@@ -156,7 +157,7 @@ export default function ProfileComments({profile_id, comments, setComments, user
                   query: {
                     username: comment.username,
                   },
-                }}><Anchor component="a">@{comment.username}</Anchor></Link>
+                }}>@{comment.username}</Link>
               </div>
               <div className="text-xs">• {dayjs().to(dayjs(comment.created_at))}</div>
             </div>
@@ -219,7 +220,7 @@ export default function ProfileComments({profile_id, comments, setComments, user
         })}
       </div>
       {maxPages > 1 && <div className="w-full flex justify-center">
-        <Pagination page={activePage} onChange={(index) => {setPage(index);}} total={maxPages} siblings={1} initialPage={1} />
+        <Pagination value={activePage} onChange={(index) => {setPage(index);}} total={maxPages} siblings={1} defaultValue={1}/>
       </div>}
     </>
   );

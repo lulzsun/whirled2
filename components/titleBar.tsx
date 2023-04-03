@@ -1,5 +1,5 @@
 import { ActionIcon, Box } from "@mantine/core";
-import { IconArrowBackUp, IconX } from "@tabler/icons";
+import { IconArrowBackUp, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/router";
 
 export default function TitleBar() {

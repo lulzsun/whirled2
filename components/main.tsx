@@ -1,4 +1,4 @@
-import { supabaseClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import { useUser } from "@supabase/auth-helpers-react";
 import { AllotmentProps } from "allotment";
 import { PaneProps } from "allotment/dist/types/src/allotment";
@@ -16,16 +16,17 @@ type Props = {
 };
 
 export default function Main({colorScheme, children} : Props) {
-  const {user, isLoading} = useUser();
+  const user = useUser();
   const [userMemo, setUserMemo] = useState({});
   const [isPageVisible] = useRecoilState(pageVisibiltyState);
   const setUserState = useSetRecoilState(userState);
+  const supabaseClient = createBrowserSupabaseClient();
 
   // #region User auth check and state store
   useMemo(() => {
     // reason for setTimeout: https://github.com/facebookexperimental/Recoil/issues/12
     setTimeout(async () => {
-      if(!isLoading) {
+      if(!user) {
         // crude way of checking to see if user cookie already exists
         const { data } = await supabaseClient.from('profiles').select('*').single();
 
@@ -40,21 +41,20 @@ export default function Main({colorScheme, children} : Props) {
     }, 0);
   }, [JSON.stringify(userMemo)]);
 
-  useEffect(() => {
-    setUser();
-  }, [user, isLoading]);
+  // useEffect(() => {
+  //   setUser();
+  // }, [user]);
 
   const setUser = async () => {
-    if(!isLoading) {
-      if (!user) {
-        // @ts-ignore
-        setUserState(null);
-      }
-      else {
-        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-        // @ts-ignore
-        setUserState({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
-      }
+    if(!user) {
+      // @ts-ignore
+      setUserState(null);
+    }
+    else {
+      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+      console.log("bbbbbb");
+      // @ts-ignore
+      setUserState({id: user.id, username: profile.username, nickname: profile.nickname, avatar_url: (profile.avatar_url ? profile.avatar_url : '/default_profile.png')});
     }
   };
   // #endregion

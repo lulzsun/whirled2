@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { Profile } from "../../pages/profile/[username]";
 import { Button, Image } from "@mantine/core";
 import { User } from "../../recoil/user.recoil";
-import { IconMessage2, IconUserPlus } from "@tabler/icons";
+import { IconMessage2, IconUserPlus } from "@tabler/icons-react";
 
 interface Props {
   profile: Profile;

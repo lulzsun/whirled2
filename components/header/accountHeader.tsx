@@ -1,12 +1,13 @@
 import { Menu, UnstyledButton, Avatar, Badge, Button } from "@mantine/core";
-import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { IconMessageCircle, IconSettings, IconLogout, IconWallet, IconCoin, IconCash, IconStar } from "@tabler/icons";
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { IconMessageCircle, IconSettings, IconLogout, IconWallet, IconCoin, IconCash, IconStar } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRecoilState } from "recoil";
 import { userState } from "../../recoil/user.recoil";
 
 export default function AccountHeader() {
   const [user] = useRecoilState(userState);
+  const supabaseClient = createBrowserSupabaseClient();
 
   return (
     (user ?
@@ -23,7 +24,6 @@ export default function AccountHeader() {
             }}>
             <Menu.Item
               icon={<Avatar src={user.avatar_url} color="blue" radius="xl"/>}
-              component="a"
             >
               <div className="flex flex-row space-x-4">
                 <div>{user.username}</div>
@@ -47,7 +47,7 @@ export default function AccountHeader() {
             </div>
           </Menu.Item>
           <Link passHref href={'/messages'}>
-            <Menu.Item icon={<IconMessageCircle size={14} />} component="a">
+            <Menu.Item icon={<IconMessageCircle size={14} />}>
               <div className="flex flex-row space-x-4">
                 <span>Messages</span>
                 <div className="w-full"/>
@@ -65,7 +65,7 @@ export default function AccountHeader() {
       :
       <>
         <Link href="/signup" passHref>
-          <Button component="a" variant="gradient" gradient={{ from: 'orange', to: 'red' }}>Join Now!</Button>
+          <Button variant="gradient" gradient={{ from: 'orange', to: 'red' }}>Join Now!</Button>
         </Link>
         <Link href="/login" passHref>
           <Button variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>Login</Button>

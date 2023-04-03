@@ -1,6 +1,6 @@
 import { Button, MultiSelect, ActionIcon, Textarea, TextInput } from "@mantine/core";
-import { supabaseClient } from "@supabase/auth-helpers-nextjs";
-import { IconDots, IconSend, IconUser } from "@tabler/icons";
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { IconDots, IconSend, IconUser } from "@tabler/icons-react";
 import { useState } from "react";
 import { GetRecipients, Message } from "../../pages/messages";
 import { User } from "../../recoil/user.recoil";
@@ -18,6 +18,7 @@ export default function MessageEditor({isModal=false, user, recipient, group_id,
   const [recipients, setRecipients] = useState<string[]>([user.username, recipient]);
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
+  const supabaseClient = createBrowserSupabaseClient();
 
   async function SendMessage() {
     // send_message is for messaging an existing message group

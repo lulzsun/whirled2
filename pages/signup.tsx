@@ -1,10 +1,10 @@
 import { TextInput, PasswordInput, Button, 
   Group, Space, Center, Anchor, Text } from '@mantine/core';
 import dayjs from 'dayjs';
-import { DatePicker } from '@mantine/dates';
+import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import Link from 'next/link';
-import { supabaseClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { userState } from '../recoil/user.recoil';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
@@ -54,10 +54,8 @@ export default function SignUp() {
         />
 
         <Text size="sm" mt="md">Birthday</Text>
-        <DatePicker required placeholder="Your birthday" 
-          allowFreeInput 
-          inputFormat="MM/DD/YYYY"
-          labelFormat="MM/YYYY"
+        <DatePickerInput required placeholder="Your birthday"  
+          valueFormat="MM/DD/YYYY"
           {...form.getInputProps('birthday')}
         />
 
@@ -82,7 +80,7 @@ export default function SignUp() {
         </Group>
         <Group position="center" mt="md" className="text-sm">
           Already have an account?
-          <Link href="login"><Anchor>Login</Anchor></Link>
+          <Link href="login">Login</Link>
         </Group>
       </form>
     </Center>
@@ -90,20 +88,19 @@ export default function SignUp() {
 }
 
 async function SupaBaseSignUp(email: string, password: string, username: string, birthday: Date) {
-  let { user, error } = await supabaseClient.auth.signUp(
-  {
-    email, password
-  }, 
-  {
-    data: { 
-      username, birthday: dayjs(birthday).format('MM/DD/YYYY'),
+  const supabaseClient = useSupabaseClient();
+  let { data, error } = await supabaseClient.auth.signUp({
+    email, password, options: {
+      data: { 
+        username, birthday: dayjs(birthday).format('MM/DD/YYYY'),
+      }
     }
-  })
+  });
 
   if(error) {
     alert(error.message);
     return;
   }
 
-  console.log(user);
+  console.log(data);
 }

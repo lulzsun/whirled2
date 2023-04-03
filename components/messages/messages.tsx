@@ -44,7 +44,7 @@ export default function Messages({user, messages}: Props) {
                       query: {
                         username: message.username,
                       },
-                    }}><Anchor component="a" onClick={(event) => {event.stopPropagation();}}>@{message.username}</Anchor></Link>
+                    }}>@{message.username}</Link>
                   </div>
                   <span className="w-full text-right">{dayjs().to(dayjs(message.created_at))}</span>
                 </div>
