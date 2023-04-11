@@ -2,6 +2,10 @@ import ReactDOMServer from 'react-dom/server'
 import { escapeInject, dangerouslySkipEscape } from 'vite-plugin-ssr/server'
 import type { PageContextServer } from './types'
 import PageShell from '../components/PageShell'
+import React from 'react'
+import { MantineProvider } from '@mantine/core'
+import { RecoilRoot } from 'recoil'
+import RecoilNexus from 'recoil-nexus'
 
 export { render }
 export { passToClient }
@@ -18,9 +22,23 @@ async function render(pageContext: PageContextServer) {
   const description = (metaData && metaData.description) || "Hello, Whirled"
 
   const pageHtml = ReactDOMServer.renderToString(
+    <React.StrictMode>
+    <RecoilRoot>
+    <RecoilNexus />
+    <MantineProvider
+      withGlobalStyles
+      withNormalizeCSS
+      theme={{
+        /** Put your mantine theme override here */
+        colorScheme: 'dark',
+      }}
+    >
     <PageShell>
       <Page {...pageProps} />
     </PageShell>
+    </MantineProvider>
+    </RecoilRoot>
+    </React.StrictMode>
   )
 
   return escapeInject`<!DOCTYPE html>

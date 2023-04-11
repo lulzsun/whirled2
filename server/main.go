@@ -5,9 +5,11 @@ import (
 	"log"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
 
@@ -41,6 +43,7 @@ func main() {
 	app := pocketbase.NewWithConfig(&pocketbase.Config{
 		// DefaultDebug: false,
 	})
+
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		// production(?)
 		// e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("pb_public"), true))
@@ -49,6 +52,16 @@ func main() {
 		url, _ := url.Parse("http://localhost:8091")
 		proxy := httputil.NewSingleHostReverseProxy(url)
 		e.Router.GET("/*", echo.WrapHandler(proxy))
+		return nil
+	})
+
+	app.OnRecordBeforeCreateRequest().Add(func(e *core.RecordCreateEvent) error {
+		if e.Collection.Name == "users" {
+			dob, err := time.Parse("2006-01-02 15:04:05.000Z", e.Record.GetDateTime("birthday").String())
+			if err != nil || int(time.Since(dob).Hours()/24/365) < 13 {
+				return apis.NewBadRequestError("You must be at least 13 years or older to register.", err)
+			}
+		}
 		return nil
 	})
 	app.Bootstrap()

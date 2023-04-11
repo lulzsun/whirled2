@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
-import { useRecoilState } from 'recoil';
+import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { navigate } from 'vite-plugin-ssr/client/router';
+import { pageVisibiltyState } from '../recoil/pageVisibility.recoil';
+import { pocketBaseState } from '../recoil/pocketBase.recoil';
 
 Page.metaData = {
   title: 'Hello, Whirled!',
@@ -9,13 +10,20 @@ Page.metaData = {
 }
 
 export function Page() {
-  // const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
+  const setIsPageVisible = useSetRecoilState(pageVisibiltyState);
+  const {pb} = useRecoilValue(pocketBaseState);
   
   useEffect(() => {
-    navigate('/login');
+    if (pb.authStore.isValid) {
+      setIsPageVisible(false);
+    }
+    else {
+      setIsPageVisible(true);
+      navigate('/login');
+    }
   }, [])
 
   return (
-    <div>{"hi, you shouldn't be seeing this page"}</div>
+    <div></div>
   )
 }
