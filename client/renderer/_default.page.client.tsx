@@ -27,7 +27,7 @@ async function render(pageContext: PageContextClient) {
         colorScheme: 'dark',
       }}
     >
-    <PageShell>
+    <PageShell urlPath={window.location.pathname}>
       <Page {...pageProps} />
     </PageShell>
     </MantineProvider>

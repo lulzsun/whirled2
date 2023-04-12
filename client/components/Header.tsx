@@ -1,15 +1,13 @@
 import { Group, Tabs, Text } from "@mantine/core";
 import { IconBasket, IconArmchair2, IconBrandAppleArcade, 
   IconDoor, IconUser, IconWorld } from "@tabler/icons-react";
-import { useRecoilState } from "recoil";
-import { pageVisibiltyState } from "../recoil/pageVisibility.recoil";
-import { useState } from "react";
 import AccountHeader from "./AccountHeader";
 
-export default function Header() {
-  const [activeTab, setActiveTab] = useState<string | null>();
-  const [_, setIsPageVisible] = useRecoilState(pageVisibiltyState);
-  
+interface Props {
+  urlPath?: string
+}
+
+export default function Header({urlPath}: Props) {
   return (
     <div className="flex-initial">
       <Group position="apart" className="border-b border-gray-700">
@@ -17,45 +15,45 @@ export default function Header() {
           Whirled 2.0
         </div>
         <div className="flex flex-row space-x-4 pr-2">
-          <Tabs className="self-end" value={activeTab} onTabChange={setActiveTab}>
+          <Tabs className="self-end" value={`/${urlPath?.split('/')[1]}`}>
             <Tabs.List position="right">
-              <Tabs.Tab value="me" icon={<IconUser size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/profile"} className="absolute inset-0 w-full h-full flex items-center no-underline" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/profile" icon={<IconUser size={15}/>}>
+                <Text component="a" href={"/profile"} className="absolute inset-0 w-full h-full flex items-center no-underline" style={{textIndent: '32px'}}>
                   Me
                 </Text>
                 <span className="text-transparent">Me</span>
               </Tabs.Tab>
 
-              <Tabs.Tab value="stuff" icon={<IconArmchair2 size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/stuff"} className="absolute inset-0 w-full h-full flex items-center no-underline" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/stuff" icon={<IconArmchair2 size={15}/>}>
+                <Text component="a" href={"/stuff"} className="absolute inset-0 w-full h-full flex items-center no-underline" style={{textIndent: '32px'}}>
                   Stuff
                 </Text>
                 <span className="text-transparent">Stuff</span>
               </Tabs.Tab>
 
-              <Tabs.Tab value="games" icon={<IconBrandAppleArcade size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/games"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/games" icon={<IconBrandAppleArcade size={15}/>}>
+                <Text component="a" href={"/games"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
                   Games
                 </Text>
                 <span className="text-transparent">Games</span>
               </Tabs.Tab>
               
-              <Tabs.Tab value="rooms" icon={<IconDoor size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/rooms"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/rooms" icon={<IconDoor size={15}/>}>
+                <Text component="a" href={"/rooms"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
                   Rooms
                 </Text>
                 <span className="text-transparent">Rooms</span>
               </Tabs.Tab>
 
-              <Tabs.Tab value="groups" icon={<IconWorld size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/groups"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/groups" icon={<IconWorld size={15}/>}>
+                <Text component="a" href={"/groups"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
                   Groups
                 </Text>
                 <span className="text-transparent">Groups</span>
               </Tabs.Tab>
 
-              <Tabs.Tab value="shop" icon={<IconBasket size={15}/>}>
-                <Text component="a" onClick={() => setIsPageVisible(true)} href={"/shop"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
+              <Tabs.Tab value="/shop" icon={<IconBasket size={15}/>}>
+                <Text component="a" href={"/shop"} className="absolute inset-0 w-full h-full flex items-center" style={{textIndent: '32px'}}>
                   Shop
                 </Text>
                 <span className="text-transparent">Shop</span>

@@ -13,15 +13,21 @@ import { useRecoilState } from "recoil";
 import { pageVisibiltyState } from "../recoil/pageVisibility.recoil";
 
 interface Props {
+  urlPath?: string,
   children: React.ReactNode
 }
 
-export const PageShell: React.FC<Props> = ({children}) => {  
-  const [isPageVisible] = useRecoilState(pageVisibiltyState);
+export default function PageShell({urlPath, children}: Props) {
+  const [isPageVisible, setIsPageVisible] = useRecoilState(pageVisibiltyState);
   const isMountedRef = useRef(false);
   const [Allotment, setAllotment] = useState<
     (ComponentType<AllotmentProps> & { Pane: ComponentType<PaneProps> }) | null
   >(null);
+
+  useEffect(() => {
+    if (urlPath === '/') setIsPageVisible(false)
+    else setIsPageVisible(true)
+  }, [urlPath])
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -47,7 +53,7 @@ export const PageShell: React.FC<Props> = ({children}) => {
   
   return (
     <div className={'flex flex-col h-screen dark'}>
-      <Header/>
+      <Header urlPath={urlPath}/>
       <div className='w-full h-full'>
         <Allotment>
           <Allotment.Pane minSize={0}>
@@ -66,5 +72,3 @@ export const PageShell: React.FC<Props> = ({children}) => {
     </div>
   )
 }
-
-export default PageShell;
