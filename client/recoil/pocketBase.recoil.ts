@@ -9,7 +9,7 @@ interface AuthToken {
 
 const userState = atom<Record | Admin | null>({
   key: 'user',
-  default: null,
+  default: undefined,
 });
 
 const pbState = atom({
@@ -46,7 +46,7 @@ export const pocketBaseState = selector({
   get: ({get}) => {
     const pb = get(pbState);
     let user = get(userState);
-    if (user == null) {
+    if (user == undefined) {
       user = pb.authStore.model;
     }
     return {pb, user};
