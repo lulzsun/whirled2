@@ -8,5 +8,6 @@ module.exports = {
   theme: {
     extend: {},
   },
+  preflight: false,
   plugins: [],
 }

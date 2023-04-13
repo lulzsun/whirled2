@@ -12,7 +12,7 @@ export function Page() {
   const form = useForm({
     initialValues: {
       username: '',
-      birthday: new Date(),
+      birthday: new Date("1999-04-08"),
       email: '',
       password: '',
       confirmPassword: '',

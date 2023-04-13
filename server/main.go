@@ -12,6 +12,8 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/forms"
+	"github.com/pocketbase/pocketbase/models"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
 )
@@ -52,6 +54,9 @@ func main() {
 		url, _ := url.Parse("http://localhost:8091")
 		proxy := httputil.NewSingleHostReverseProxy(url)
 		e.Router.GET("/*", echo.WrapHandler(proxy))
+		e.Router.GET("/api/hello", func(c echo.Context) error {
+			return c.String(200, "Hello whirled!")
+		})
 		return nil
 	})
 
@@ -64,6 +69,29 @@ func main() {
 		}
 		return nil
 	})
+
+	app.OnRecordAfterCreateRequest().Add(func(e *core.RecordCreateEvent) error {
+		if e.Collection.Name == "users" {
+			collection, err := app.Dao().FindCollectionByNameOrId("profiles")
+			if err != nil {
+				return err
+			}
+			record := models.NewRecord(collection)
+			form := forms.NewRecordUpsert(app, record)
+
+			form.LoadData(map[string]any{
+				"id":       e.Record.Id,
+				"username": e.Record.Username(),
+				"nickname": e.Record.Username(),
+			})
+
+			if err := form.Submit(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	app.Bootstrap()
 	serveCmd := cmd.NewServeCommand(app, true)
 	// serveCmd.SetArgs([]string{"--http=127.0.0.1:8092"})
