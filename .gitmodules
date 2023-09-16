@@ -1,0 +1,3 @@
+[submodule "gecgos.io"]
+	path = gecgos.io
+	url = https://github.com/lulzsun/gecgos.io.git

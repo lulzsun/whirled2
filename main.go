@@ -11,6 +11,8 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
+
+	gecgosio "github.com/lulzsun/gecgos.io"
 )
 
 type Film struct {
@@ -19,6 +21,29 @@ type Film struct {
 }
 
 func main() {
+	go func() {
+		server := gecgosio.Gecgos(nil)
+
+		server.OnConnection(func(peer gecgosio.Peer) {
+			log.Printf("Client %s has connected!\n", peer.Id)
+
+			// Example of sending and recieving from client(s)
+			// Server will recieve the event 'ping' with data 'hello'
+			// Server will send the event 'pong' with data 'world'
+			peer.On("ping", func(msg string) {
+				log.Printf("Client %s sent event 'ping' with data '%s', emitting back 'pong'\n", peer.Id, msg)
+				// peer.Reliable(150, 10).Emit("pong", "world")
+				peer.Emit("pong", "world")
+			})
+		})
+
+		server.OnDisconnect(func(peer gecgosio.Peer) {
+			log.Printf("Client %s has disconnected!\n", peer.Id)
+		})
+
+		// server.Listen(420)
+	}()
+
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		// DefaultDebug: false,
 	})
