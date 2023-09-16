@@ -2,7 +2,7 @@ module whirled2
 
 go 1.20
 
-replace github.com/lulzsun/gecgos.io => ./gecgos.io
+replace github.com/lulzsun/gecgos.io => ./gecgos
 
 require (
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
