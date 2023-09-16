@@ -45,3 +45,4 @@ pb_data/*
 # Go workspace file
 go.work
 go.work.sum
+web/static/styles.css
