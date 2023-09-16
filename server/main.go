@@ -2,7 +2,11 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"time"
@@ -53,6 +57,23 @@ func main() {
 		// development
 		url, _ := url.Parse("http://localhost:8091")
 		proxy := httputil.NewSingleHostReverseProxy(url)
+		proxy.ModifyResponse = func(r *http.Response) error {
+			if r.Header.Get("Content-Type") != "text/html;charset=utf-8" &&
+				r.Request.Header.Get("Sec-Fetch-Dest") != "document" {
+				return nil
+			}
+			b, err := io.ReadAll(r.Body) //Read html
+			if err != nil {
+				return err
+			} else {
+				log.Println(r.Request.URL.Path)
+			}
+			buf := bytes.NewBufferString("")
+			buf.Write(b)
+			r.Body = io.NopCloser(buf)
+			r.Header["Content-Length"] = []string{fmt.Sprint(buf.Len())}
+			return nil
+		}
 		e.Router.GET("/*", echo.WrapHandler(proxy))
 		e.Router.GET("/api/hello", func(c echo.Context) error {
 			return c.String(200, "Hello whirled!")
@@ -94,6 +115,6 @@ func main() {
 
 	app.Bootstrap()
 	serveCmd := cmd.NewServeCommand(app, true)
-	// serveCmd.SetArgs([]string{"--http=127.0.0.1:8092"})
+	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
 	serveCmd.Execute()
 }
