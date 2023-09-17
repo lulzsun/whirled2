@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"whirled2/api"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -48,6 +49,8 @@ func main() {
 		// DefaultDebug: false,
 	})
 
+	api.AddAuthEventHooks(app)
+
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		e.Router.GET("/static/*", func(c echo.Context) error {
@@ -55,16 +58,46 @@ func main() {
 			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
-		e.Router.GET("/*", func(c echo.Context) error {
-			tmpl := template.Must(template.ParseFiles("web/templates/index.html"))
-			films := map[string][]Film{
-				"Films": {
-					{Title: "The Godfather", Director: "Francis Ford Coppola"},
-					{Title: "Blade Runner", Director: "Ridley Scott"},
-					{Title: "The Things", Director: "John Carpenter"},
-				},
+		e.Router.GET("/", func(c echo.Context) error {
+			tmpl, err := template.New("").ParseFiles("web/templates/login.html", "web/templates/index.html")
+			if err != nil {
+				return err
 			}
-			if err := tmpl.Execute(c.Response().Writer, films); err != nil {
+			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
+				return err
+			}
+			return nil
+		})
+		e.Router.GET("/signup", func(c echo.Context) error {
+			if c.Request().Header.Get("HX-Request") == "true" {
+				tmpl := template.Must(template.ParseFiles("web/templates/signup.html"))
+				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
+					return err
+				}
+				return nil
+			}
+			tmpl, err := template.New("").ParseFiles("web/templates/signup.html", "web/templates/index.html")
+			if err != nil {
+				return err
+			}
+			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
+				return err
+			}
+			return nil
+		})
+		e.Router.GET("/login", func(c echo.Context) error {
+			if c.Request().Header.Get("HX-Request") == "true" {
+				tmpl := template.Must(template.ParseFiles("web/templates/login.html"))
+				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
+					return err
+				}
+				return nil
+			}
+			tmpl, err := template.New("").ParseFiles("web/templates/login.html", "web/templates/index.html")
+			if err != nil {
+				return err
+			}
+			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
 				return err
 			}
 			return nil

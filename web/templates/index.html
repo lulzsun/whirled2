@@ -1,16 +1,41 @@
+{{define "base"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/styles.css" type="text/css" rel="stylesheet">
+    <style>
+    .split {
+        display: flex;
+        flex-direction: row;
+    }
+    .gutter {
+        background-color: #eee;
+        background-repeat: no-repeat;
+        background-position: 50%;
+    }
+    .gutter.gutter-horizontal {
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+        cursor: col-resize;
+    }
+    </style>
     <script src="/static/htmx.min.js"></script>
-    <title>Document</title>
+    <script src="/static/split.min.js"></script>
+    <title>Whirled</title>
 </head>
-<body>
-    <h1 class="border-2 border-cyan-100">Hello, Whirled!</h1>
-    {{ range .Films }}
-        <p>{{ .Title }} - {{ .Director }}</p>
-    {{ end }}
+<body hx-boost="true">
+    <div class="split">
+        <div id="game">
+        </div>
+        <div id="content" class="h-screen">
+            {{ template "content" . }}
+        </div>
+    </div>
+    <script type="text/javascript">
+        Split(['#game', '#content'])
+    </script>
+</div>
 </body>
-</html> 
+</html>
+{{end}}
