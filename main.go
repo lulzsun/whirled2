@@ -68,9 +68,9 @@ func main() {
 				return apis.NewBadRequestError("JSON endpoint not yet implemented", nil)
 			}
 			if c.Request().Header.Get("HX-Request") == "true" {
-				tmpl, err := template.ParseFiles("web/templates/pages/" + path + ".html")
+				tmpl, err := template.ParseFiles("web/templates/pages/" + path + ".gohtml")
 				if err != nil {
-					tmpl := template.Must(template.ParseFiles("web/templates/pages/error.html"))
+					tmpl := template.Must(template.ParseFiles("web/templates/pages/error.gohtml"))
 					formatErr := map[string]string{
 						"Error": err.Error(),
 					}
@@ -86,17 +86,17 @@ func main() {
 			}
 
 			tmpl, err := template.ParseFiles(
-				"web/templates/pages/"+path+".html",
-				"web/templates/pages/index.html",
-				"web/templates/components/header.html",
-				"web/templates/components/profileHeader.html",
+				"web/templates/pages/"+path+".gohtml",
+				"web/templates/pages/index.gohtml",
+				"web/templates/components/header.gohtml",
+				"web/templates/components/profileHeader.gohtml",
 			)
 			if err != nil {
 				tmpl := template.Must(template.ParseFiles(
-					"web/templates/pages/error.html",
-					"web/templates/pages/index.html",
-					"web/templates/components/header.html",
-					"web/templates/components/profileHeader.html",
+					"web/templates/pages/error.gohtml",
+					"web/templates/pages/index.gohtml",
+					"web/templates/components/header.gohtml",
+					"web/templates/components/profileHeader.gohtml",
 				))
 				formatErr := map[string]string{
 					"Error": err.Error(),
@@ -119,7 +119,7 @@ func main() {
 			return c.String(200, "Hello whirled!")
 		})
 		e.Router.GET("/test", func(c echo.Context) error {
-			tmpl := template.Must(template.ParseFiles("web/templates/pages/test.html"))
+			tmpl := template.Must(template.ParseFiles("web/templates/pages/test.gohtml"))
 			if err := tmpl.Execute(c.Response().Writer, nil); err != nil {
 				return err
 			}
