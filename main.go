@@ -89,6 +89,13 @@ func main() {
 		e.Router.GET("/api/hello", func(c echo.Context) error {
 			return c.String(200, "Hello whirled!")
 		})
+		e.Router.GET("/test", func(c echo.Context) error {
+			tmpl := template.Must(template.ParseFiles("web/templates/test.html"))
+			if err := tmpl.Execute(c.Response().Writer, nil); err != nil {
+				return err
+			}
+			return nil
+		})
 		return nil
 	})
 
