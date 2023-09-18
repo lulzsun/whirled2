@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"strings"
 	"whirled2/api"
 
 	"github.com/labstack/echo/v5"
@@ -51,56 +52,39 @@ func main() {
 
 	api.AddAuthEventHooks(app)
 
-	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		// serves static files from the provided public dir (if exists)
 		e.Router.GET("/static/*", func(c echo.Context) error {
 			// Disable client-side caching for development
 			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
-		e.Router.GET("/", func(c echo.Context) error {
-			tmpl, err := template.New("").ParseFiles("web/templates/login.html", "web/templates/index.html")
+		e.Router.GET("/*", func(c echo.Context) error {
+			path := strings.TrimSuffix(c.PathParam("*"), ".html")
+			if path == "" {
+				path = "login"
+			}
+			if strings.HasSuffix(path, ".json") {
+				return apis.NewBadRequestError("JSON endpoint not yet implemented", nil)
+			}
+			if c.Request().Header.Get("HX-Request") == "true" {
+				tmpl := template.Must(template.ParseFiles("web/templates/" + path + ".html"))
+				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
+					return err
+				}
+				return nil
+			}
+			tmpl, err := template.ParseFiles("web/templates/"+path+".html", "web/templates/index.html")
 			if err != nil {
-				return err
+				return apis.NewNotFoundError("Page not found", err)
 			}
 			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
 				return err
 			}
 			return nil
 		})
-		e.Router.GET("/signup", func(c echo.Context) error {
-			if c.Request().Header.Get("HX-Request") == "true" {
-				tmpl := template.Must(template.ParseFiles("web/templates/signup.html"))
-				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
-					return err
-				}
-				return nil
-			}
-			tmpl, err := template.New("").ParseFiles("web/templates/signup.html", "web/templates/index.html")
-			if err != nil {
-				return err
-			}
-			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
-				return err
-			}
-			return nil
-		})
-		e.Router.GET("/login", func(c echo.Context) error {
-			if c.Request().Header.Get("HX-Request") == "true" {
-				tmpl := template.Must(template.ParseFiles("web/templates/login.html"))
-				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
-					return err
-				}
-				return nil
-			}
-			tmpl, err := template.New("").ParseFiles("web/templates/login.html", "web/templates/index.html")
-			if err != nil {
-				return err
-			}
-			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
-				return err
-			}
-			return nil
+		e.Router.GET("/login.json", func(c echo.Context) error {
+			return apis.NewNotFoundError("hi there ugly", nil)
 		})
 		e.Router.GET("/api/hello", func(c echo.Context) error {
 			return c.String(200, "Hello whirled!")
