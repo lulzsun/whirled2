@@ -68,15 +68,44 @@ func main() {
 				return apis.NewBadRequestError("JSON endpoint not yet implemented", nil)
 			}
 			if c.Request().Header.Get("HX-Request") == "true" {
-				tmpl := template.Must(template.ParseFiles("web/templates/" + path + ".html"))
-				if err := tmpl.ExecuteTemplate(c.Response().Writer, "content", nil); err != nil {
+				tmpl, err := template.ParseFiles("web/templates/pages/" + path + ".html")
+				if err != nil {
+					tmpl := template.Must(template.ParseFiles("web/templates/pages/error.html"))
+					formatErr := map[string]string{
+						"Error": err.Error(),
+					}
+					if err := tmpl.ExecuteTemplate(c.Response().Writer, "page", formatErr); err != nil {
+						return err
+					}
+					return nil
+				}
+				if err := tmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
 					return err
 				}
 				return nil
 			}
-			tmpl, err := template.ParseFiles("web/templates/"+path+".html", "web/templates/index.html")
+
+			tmpl, err := template.ParseFiles(
+				"web/templates/pages/"+path+".html",
+				"web/templates/pages/index.html",
+				"web/templates/components/header.html",
+				"web/templates/components/profileHeader.html",
+			)
 			if err != nil {
-				return apis.NewNotFoundError("Page not found", err)
+				tmpl := template.Must(template.ParseFiles(
+					"web/templates/pages/error.html",
+					"web/templates/pages/index.html",
+					"web/templates/components/header.html",
+					"web/templates/components/profileHeader.html",
+				))
+				formatErr := map[string]string{
+					"Error": err.Error(),
+				}
+				c.Response().Writer.WriteHeader(404)
+				if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", formatErr); err != nil {
+					return err
+				}
+				return nil
 			}
 			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
 				return err
@@ -90,7 +119,7 @@ func main() {
 			return c.String(200, "Hello whirled!")
 		})
 		e.Router.GET("/test", func(c echo.Context) error {
-			tmpl := template.Must(template.ParseFiles("web/templates/test.html"))
+			tmpl := template.Must(template.ParseFiles("web/templates/pages/test.html"))
 			if err := tmpl.Execute(c.Response().Writer, nil); err != nil {
 				return err
 			}

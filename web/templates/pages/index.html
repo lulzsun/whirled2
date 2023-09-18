@@ -26,9 +26,7 @@
 </head>
 <body hx-boost="true">
     <div class="flex flex-col h-screen">
-        <header class="py-3 bg-gray-700 text-white">
-            Hello Whirled
-        </header>
+        {{ template "header" . }}
         <main class="flex-1 overflow-y-auto">
             <div class="split w-full h-full">
                 <div id="game" class="flex flex-col h-full items-center bg-black">
@@ -45,8 +43,8 @@
                     </div>
                 </div>
                 <div id="web" class="flex flex-col h-full">
-                    <div id="content" class='w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900'>
-                        {{ template "content" . }}
+                    <div id="page" class='w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900'>
+                        {{ template "page" . }}
                     </div>
                 </div>
             </div>
