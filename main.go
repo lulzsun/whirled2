@@ -59,57 +59,67 @@ func main() {
 			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
-		e.Router.GET("/*", func(c echo.Context) error {
-			path := strings.TrimSuffix(c.PathParam("*"), ".html")
-			if path == "" {
-				path = "login"
-			}
-			if strings.HasSuffix(path, ".json") {
-				return apis.NewBadRequestError("JSON endpoint not yet implemented", nil)
-			}
-			if c.Request().Header.Get("HX-Request") == "true" {
-				tmpl, err := template.ParseFiles("web/templates/pages/" + path + ".gohtml")
-				if err != nil {
-					tmpl := template.Must(template.ParseFiles("web/templates/pages/error.gohtml"))
-					formatErr := map[string]string{
-						"Error": err.Error(),
-					}
-					if err := tmpl.ExecuteTemplate(c.Response().Writer, "page", formatErr); err != nil {
-						return err
-					}
-					return nil
+		e.Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				log.Println(c.Path())
+				path := strings.TrimSuffix(c.Path(), ".html")
+				if strings.HasSuffix(path, ".json") {
+					return next(c)
 				}
-				if err := tmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
-					return err
+				if c.Path() == "/static/*" {
+					return next(c)
 				}
-				return nil
-			}
-
-			tmpl, err := template.ParseFiles(
-				"web/templates/pages/"+path+".gohtml",
-				"web/templates/pages/index.gohtml",
-				"web/templates/components/header.gohtml",
-				"web/templates/components/profileHeader.gohtml",
-			)
-			if err != nil {
-				tmpl := template.Must(template.ParseFiles(
+				name := "base"
+				templateFiles := []string{
 					"web/templates/pages/error.gohtml",
 					"web/templates/pages/index.gohtml",
 					"web/templates/components/header.gohtml",
 					"web/templates/components/profileHeader.gohtml",
-				))
-				formatErr := map[string]string{
-					"Error": err.Error(),
 				}
-				c.Response().Writer.WriteHeader(404)
-				if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", formatErr); err != nil {
-					return err
+				if c.Path() == "" {
+					templateFiles[0] = "web/templates/pages/error.gohtml"
+					if c.Request().Header.Get("HX-Request") == "true" {
+						name = "page"
+						templateFiles = []string{templateFiles[0]}
+					}
+					tmpl := template.Must(template.ParseFiles(templateFiles...))
+					formatErr := map[string]string{
+						"Error": "Page not found.",
+					}
+					if err := tmpl.ExecuteTemplate(c.Response().Writer, name, formatErr); err != nil {
+						return err
+					}
+					return nil
+				} else {
+					templateFiles[0] = "web/templates/pages/" + path + ".gohtml"
+					if c.Request().Header.Get("HX-Request") == "true" {
+						name = "page"
+						templateFiles = []string{templateFiles[0]}
+					}
+					tmpl, err := template.ParseFiles(templateFiles...)
+					if err != nil {
+						templateFiles[0] = "web/templates/pages/error.gohtml"
+						tmpl := template.Must(template.ParseFiles(templateFiles...))
+						formatErr := map[string]string{
+							"Error": err.Error(),
+						}
+						if err := tmpl.ExecuteTemplate(c.Response().Writer, name, formatErr); err != nil {
+							return err
+						}
+						return next(c)
+					}
+					if err := tmpl.ExecuteTemplate(c.Response().Writer, name, nil); err != nil {
+						return err
+					}
 				}
-				return nil
+				return next(c)
 			}
-			if err := tmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
-				return err
-			}
+		})
+		e.Router.GET("/", func(c echo.Context) error { return nil })
+		e.Router.GET("/login", func(c echo.Context) error { return nil })
+		e.Router.GET("/signup", func(c echo.Context) error { return nil })
+		e.Router.GET("/profile", func(c echo.Context) error {
+			log.Println("hello")
 			return nil
 		})
 		e.Router.GET("/login.json", func(c echo.Context) error {
