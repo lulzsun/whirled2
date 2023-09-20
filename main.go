@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"log"
 	"os"
-	"strings"
+
 	"whirled2/api"
 
 	"github.com/labstack/echo/v5"
@@ -47,10 +47,22 @@ func main() {
 	}()
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
-		// DefaultDebug: false,
+		HideStartBanner: true,
+		// DefaultDebug: false
 	})
-
-	api.AddAuthEventHooks(app)
+	routes := []func(*core.ServeEvent){
+		api.AddBaseRoutes,
+		api.AddAuthRoutes,
+		api.AddProfileRoutes,
+		// Add more routes here
+	}
+	customEventHooks := []func(*pocketbase.PocketBase){
+		api.AddAuthEventHooks,
+		// Add more event hooks here
+	}
+	for _, AddEventHooks := range customEventHooks {
+		AddEventHooks(app)
+	}
 
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		// serves static files from the provided public dir (if exists)
@@ -59,72 +71,10 @@ func main() {
 			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
-		e.Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				log.Println(c.Path())
-				path := strings.TrimSuffix(c.Path(), ".html")
-				if strings.HasSuffix(path, ".json") {
-					return next(c)
-				}
-				if c.Path() == "/static/*" {
-					return next(c)
-				}
-				name := "base"
-				templateFiles := []string{
-					"web/templates/pages/error.gohtml",
-					"web/templates/pages/index.gohtml",
-					"web/templates/components/header.gohtml",
-					"web/templates/components/profileHeader.gohtml",
-				}
-				if c.Path() == "" {
-					templateFiles[0] = "web/templates/pages/error.gohtml"
-					if c.Request().Header.Get("HX-Request") == "true" {
-						name = "page"
-						templateFiles = []string{templateFiles[0]}
-					}
-					tmpl := template.Must(template.ParseFiles(templateFiles...))
-					formatErr := map[string]string{
-						"Error": "Page not found.",
-					}
-					if err := tmpl.ExecuteTemplate(c.Response().Writer, name, formatErr); err != nil {
-						return err
-					}
-					return nil
-				} else {
-					templateFiles[0] = "web/templates/pages/" + path + ".gohtml"
-					if c.Request().Header.Get("HX-Request") == "true" {
-						name = "page"
-						templateFiles = []string{templateFiles[0]}
-					}
-					tmpl, err := template.ParseFiles(templateFiles...)
-					if err != nil {
-						templateFiles[0] = "web/templates/pages/error.gohtml"
-						tmpl := template.Must(template.ParseFiles(templateFiles...))
-						formatErr := map[string]string{
-							"Error": err.Error(),
-						}
-						if err := tmpl.ExecuteTemplate(c.Response().Writer, name, formatErr); err != nil {
-							return err
-						}
-						return next(c)
-					}
-					if err := tmpl.ExecuteTemplate(c.Response().Writer, name, nil); err != nil {
-						return err
-					}
-				}
-				return next(c)
-			}
-		})
-		e.Router.GET("/", func(c echo.Context) error { return nil })
-		e.Router.GET("/login", func(c echo.Context) error { return nil })
-		e.Router.GET("/signup", func(c echo.Context) error { return nil })
-		e.Router.GET("/profile", func(c echo.Context) error {
-			log.Println("hello")
-			return nil
-		})
-		e.Router.GET("/login.json", func(c echo.Context) error {
-			return apis.NewNotFoundError("hi there ugly", nil)
-		})
+		e.Router.Use(api.BaseMiddleware)
+		for _, AddRoutes := range routes {
+			AddRoutes(e)
+		}
 		e.Router.GET("/api/hello", func(c echo.Context) error {
 			return c.String(200, "Hello whirled!")
 		})
@@ -143,7 +93,7 @@ func main() {
 	}
 
 	app.Bootstrap()
-	serveCmd := cmd.NewServeCommand(app, true)
+	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:42069"})
 	serveCmd.Execute()
 }

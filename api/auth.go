@@ -4,15 +4,55 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"text/template"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 )
+
+var loginTmplFiles []string
+var signupTmplFiles []string
+var loginTmpl *template.Template
+var signupTmpl *template.Template
+
+func init() {
+	parseLoginFiles()
+	parseSignupFiles()
+}
+
+func parseLoginFiles() {
+	loginTmplFiles = AppendToBaseTmplFiles("web/templates/pages/login.gohtml")
+	loginTmpl = template.Must(template.ParseFiles(loginTmplFiles...))
+}
+
+func parseSignupFiles() {
+	signupTmplFiles = AppendToBaseTmplFiles("web/templates/pages/signup.gohtml")
+	signupTmpl = template.Must(template.ParseFiles(signupTmplFiles...))
+}
+
+func AddAuthRoutes(e *core.ServeEvent) {
+	e.Router.GET("/login", func(c echo.Context) error {
+		if err := loginTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), nil); err != nil {
+			return err
+		}
+		return nil
+	})
+	e.Router.GET("/signup", func(c echo.Context) error {
+		if err := signupTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), nil); err != nil {
+			return err
+		}
+		return nil
+	})
+	e.Router.GET("/login.json", func(c echo.Context) error {
+		return apis.NewNotFoundError("hi there ugly", nil)
+	})
+}
 
 func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/users/records

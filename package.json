@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "dev": "concurrently --kill-others \"npm run dev-server\" \"npm run dev-watch\"",
-    "dev-server": "nodemon -e go,json --exec go run . --signal SIGUSR2",
+    "dev": "concurrently --kill-other --kill-signal SIGKILL \"npm run dev-server\" \"npm run dev-watch\"",
+    "dev-server": "nodemon -e go,json,gohtml --exec go run . --signal SIGKILL",
     "dev-watch": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css --watch",
     "build": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css",
     "start": "go run ."
