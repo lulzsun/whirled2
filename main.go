@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"whirled2/api"
+	db "whirled2/utils"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -72,6 +73,7 @@ func main() {
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
 		e.Router.Use(
+			api.FormMiddleware,
 			api.AuthMiddleware(app),
 			api.BaseMiddleware,
 		)
@@ -96,6 +98,7 @@ func main() {
 	}
 
 	app.Bootstrap()
+	db.Bootstrap(app)
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:42069"})
 	serveCmd.Execute()

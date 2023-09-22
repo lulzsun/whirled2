@@ -73,11 +73,11 @@ func AddAuthRoutes(e *core.ServeEvent) {
 }
 
 // This is basically PocketBase's LoadAuthContext middleware reimplemented for cookies
+// Modify request header to include Authorization if request has a cookie
+// This should properly auth pocketbase requests using JWT
 func AuthMiddleware(app core.App) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Modify request header to include Authorization if request has a cookie
-			// This should properly auth pocketbase requests using JWT(?)
 			if cookie, err := c.Cookie("pb_auth"); err == nil {
 				decodedCookieValue, err := url.QueryUnescape(cookie.Value)
 				if err != nil {
@@ -133,6 +133,15 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	})
 
 	// POST /api/collections/users/records
+	// Send back HTML response if user signed up through HTMX or x-www-form-urlencoded
+	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
+		if e.HttpContext.Request().Header.Get("HX-Request") != "" {
+			log.Println("cool", e.HttpContext.Response().Status)
+		}
+		return nil
+	})
+
+	// POST /api/collections/users/records
 	// Creates a new profile for the new user
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
 		collection, err := app.Dao().FindCollectionByNameOrId("profiles")
@@ -143,8 +152,7 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		form := forms.NewRecordUpsert(app, record)
 
 		form.LoadData(map[string]any{
-			"id":       e.Record.Id,
-			"username": e.Record.Username(),
+			"user":     e.Record.Id,
 			"nickname": e.Record.Username(),
 		})
 
@@ -157,7 +165,8 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/users/auth-with-password
 	// Converts PocketBase's JWT auth token to a cookie if the request is called from HTMX
 	app.OnRecordAuthRequest("users").Add(func(e *core.RecordAuthEvent) error {
-		if e.HttpContext.Request().Header.Get("HX-Request") == "true" {
+		hxRequest := e.HttpContext.Request().Header.Get("HX-Request")
+		if hxRequest != "" {
 			token, _, err := new(jwt.Parser).ParseUnverified(e.Token, jwt.MapClaims{})
 			if claims, ok := token.Claims.(jwt.MapClaims); ok && err == nil {
 				if exp, exists := claims["exp"]; exists {
@@ -182,8 +191,11 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 								SameSite: http.SameSiteStrictMode,
 							}
 							e.HttpContext.SetCookie(cookie)
-							e.HttpContext.Response().Header().Set("HX-Redirect", "/")
-							return e.HttpContext.String(200, "Successful login!")
+							if hxRequest == "true" {
+								e.HttpContext.Response().Header().Set("HX-Redirect", "/")
+								return e.HttpContext.String(200, "Successful login!")
+							}
+							return e.HttpContext.Redirect(302, "/")
 						}
 					}
 				}

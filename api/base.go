@@ -1,6 +1,9 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"log"
 	"strings"
 	"text/template"
@@ -60,6 +63,44 @@ func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return err
 			}
 			return nil
+		}
+		return next(c)
+	}
+}
+
+// This is for converting form data when PocketBase is expecting json data
+// This is pretty hacky so expect to look here for debugging
+func FormMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if c.Request().Method == "POST" && c.PathParams().Get("collection", "") != "" &&
+			c.Request().Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+			if err := c.Request().ParseForm(); err != nil {
+				return nil
+			}
+			formData := make(map[string]interface{})
+			for key, values := range c.Request().Form {
+				if len(values) == 1 {
+					formData[key] = values[0]
+				} else {
+					formData[key] = values
+				}
+			}
+			jsonFormData, err := json.Marshal(formData)
+			if err != nil {
+				log.Println("Error:", err)
+				return nil
+			}
+			c.Request().Body = io.NopCloser(bytes.NewReader(jsonFormData))
+			c.Request().ContentLength = int64(len(jsonFormData))
+			c.Request().Header.Set("Content-Type", "application/json")
+			if c.Request().Header.Get("HX-Request") != "true" {
+				c.Request().Header.Set("HX-Request", "false")
+			}
+			c.Request().Form = nil
+
+			if err := c.Request().ParseForm(); err != nil {
+				return nil
+			}
 		}
 		return next(c)
 	}
