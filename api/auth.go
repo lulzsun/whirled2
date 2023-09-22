@@ -49,6 +49,19 @@ func AddAuthRoutes(e *core.ServeEvent) {
 		}
 		return nil
 	})
+	e.Router.GET("/signout", func(c echo.Context) error {
+		cookie := &http.Cookie{
+			Name:     "pb_auth",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   -1,
+			SameSite: http.SameSiteStrictMode,
+		}
+		c.SetCookie(cookie)
+		c.Redirect(302, "/")
+		return nil
+	})
 	e.Router.GET("/login.json", func(c echo.Context) error {
 		return apis.NewNotFoundError("hi there ugly", nil)
 	})
