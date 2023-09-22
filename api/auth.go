@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 	"time"
 
@@ -14,6 +16,9 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tokens"
+	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/spf13/cast"
 )
 
 var loginTmplFiles []string
@@ -65,6 +70,55 @@ func AddAuthRoutes(e *core.ServeEvent) {
 	e.Router.GET("/login.json", func(c echo.Context) error {
 		return apis.NewNotFoundError("hi there ugly", nil)
 	})
+}
+
+// This is basically PocketBase's LoadAuthContext middleware reimplemented for cookies
+func AuthMiddleware(app core.App) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Modify request header to include Authorization if request has a cookie
+			// This should properly auth pocketbase requests using JWT(?)
+			if cookie, err := c.Cookie("pb_auth"); err == nil {
+				decodedCookieValue, err := url.QueryUnescape(cookie.Value)
+				if err != nil {
+					log.Println("Error decoding cookie value:", err)
+					return nil
+				}
+				var cookieData map[string]interface{}
+				err = json.Unmarshal([]byte(decodedCookieValue), &cookieData)
+				if err != nil {
+					log.Println("Error unmarshaling JSON:", err)
+					return nil
+				}
+
+				token := strings.TrimPrefix(cookieData["token"].(string), "Bearer ")
+				// model := cookieData["model"].(map[string]interface{})
+
+				claims, _ := security.ParseUnverifiedJWT(token)
+				tokenType := cast.ToString(claims["type"])
+
+				switch tokenType {
+				case tokens.TypeAdmin:
+					admin, err := app.Dao().FindAdminByToken(
+						token,
+						app.Settings().AdminAuthToken.Secret,
+					)
+					if err == nil && admin != nil {
+						c.Set(apis.ContextAdminKey, admin)
+					}
+				case tokens.TypeAuthRecord:
+					record, err := app.Dao().FindAuthRecordByToken(
+						token,
+						app.Settings().RecordAuthToken.Secret,
+					)
+					if err == nil && record != nil {
+						c.Set(apis.ContextAuthRecordKey, record)
+					}
+				}
+			}
+			return next(c)
+		}
+	}
 }
 
 func AddAuthEventHooks(app *pocketbase.PocketBase) {

@@ -1,9 +1,7 @@
 package api
 
 import (
-	"encoding/json"
 	"log"
-	"net/url"
 	"strings"
 	"text/template"
 
@@ -35,26 +33,6 @@ func AddBaseRoutes(e *core.ServeEvent) {
 func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		log.Println(c.Request().Method, c.Path())
-
-		// Modify request header to include Authorization if request has a cookie
-		// This should properly auth pocketbase requests using JWT(?)
-		if cookie, err := c.Cookie("pb_auth"); err == nil {
-			decodedCookieValue, err := url.QueryUnescape(cookie.Value)
-			if err != nil {
-				log.Println("Error decoding cookie value:", err)
-				return nil
-			}
-			var cookieData map[string]interface{}
-			err = json.Unmarshal([]byte(decodedCookieValue), &cookieData)
-			if err != nil {
-				log.Println("Error unmarshaling JSON:", err)
-				return nil
-			}
-			token := cookieData["token"].(string)
-			// model := cookieData["model"].(map[string]interface{})
-			c.Request().Header.Add("Authorization", token)
-		}
-
 		path := strings.TrimSuffix(c.Path(), ".html")
 		if strings.HasSuffix(path, ".json") {
 			return next(c)
