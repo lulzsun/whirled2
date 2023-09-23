@@ -17,7 +17,11 @@ func init() {
 }
 
 func parseProfileFiles() {
-	profileTmplFiles = AppendToBaseTmplFiles("web/templates/pages/profile.gohtml")
+	profileTmplFiles = AppendToBaseTmplFiles(
+		"web/templates/pages/profile.gohtml",
+		"web/templates/components/profile/comment.gohtml",
+		"web/templates/components/profile/commentBox.gohtml",
+	)
 	profileTmpl = template.Must(template.ParseFiles(profileTmplFiles...))
 }
 

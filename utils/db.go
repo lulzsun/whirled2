@@ -13,8 +13,10 @@ import (
 func Bootstrap(app *pocketbase.PocketBase) {
 	usersCollection, err := app.Dao().FindCollectionByNameOrId("users")
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		return
 	}
+	// Profiles collection / table
 	if _, err := app.Dao().FindCollectionByNameOrId("profiles"); err != nil {
 		profilesCollection := &models.Collection{
 			Name:       "profiles",
