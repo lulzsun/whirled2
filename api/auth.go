@@ -157,7 +157,7 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		form := forms.NewRecordUpsert(app, record)
 
 		form.LoadData(map[string]any{
-			"user":     e.Record.Id,
+			"user_id":  e.Record.Id,
 			"nickname": e.Record.Username(),
 		})
 
