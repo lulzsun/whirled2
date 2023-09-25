@@ -97,6 +97,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	app.OnAdminAfterCreateRequest().Add(func(e *core.AdminCreateEvent) error {
+		db.Bootstrap(app)
+		return nil
+	})
 	app.Bootstrap()
 	db.Bootstrap(app)
 	serveCmd := cmd.NewServeCommand(app, false)

@@ -135,8 +135,13 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/users/records
 	// Send back HTML response if user signed up through HTMX or x-www-form-urlencoded
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
-		if e.HttpContext.Request().Header.Get("HX-Request") != "" {
-			log.Println("cool", e.HttpContext.Response().Status)
+		hxRequest := e.HttpContext.Request().Header.Get("HX-Request")
+		if hxRequest != "" {
+			if hxRequest == "true" {
+				e.HttpContext.Response().Header().Set("HX-Redirect", "/")
+				return e.HttpContext.String(200, "Successful sign up!")
+			}
+			return e.HttpContext.Redirect(302, "/")
 		}
 		return nil
 	})
