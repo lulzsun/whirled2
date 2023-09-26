@@ -46,3 +46,4 @@ pb_data/*
 go.work
 go.work.sum
 web/static/styles.css
+web/templates/pages/test.gohtml

@@ -1,4 +1,4 @@
-package db
+package utils
 
 import (
 	"log"
@@ -17,9 +17,20 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	if err == nil && usersCollection.Schema.GetFieldByName("birthday") == nil {
 		form := forms.NewCollectionUpsert(app, usersCollection)
 
+		form.Schema.RemoveField(form.Schema.GetFieldByName("name").Id)
 		form.Schema.AddField(&schema.SchemaField{
-			Name: "birthday",
-			Type: schema.FieldTypeDate,
+			Name:     "nickname",
+			Type:     schema.FieldTypeText,
+			Required: false,
+			Options: &schema.TextOptions{
+				Min: types.Pointer(3),
+				Max: types.Pointer(10),
+			},
+		})
+		form.Schema.AddField(&schema.SchemaField{
+			Name:     "birthday",
+			Type:     schema.FieldTypeDate,
+			Required: true,
 		})
 
 		if err := form.Submit(); err != nil {
@@ -51,15 +62,6 @@ func Bootstrap(app *pocketbase.PocketBase) {
 						CascadeDelete: true,
 					},
 				},
-				&schema.SchemaField{
-					Name:     "nickname",
-					Type:     schema.FieldTypeText,
-					Required: true,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(3),
-						Max: types.Pointer(10),
-					},
-				},
 			),
 			Indexes: types.JsonArray[string]{
 				"CREATE UNIQUE INDEX idx_user ON profiles (user_id)",
@@ -78,7 +80,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 			Type:       models.CollectionTypeBase,
 			ListRule:   nil,
 			ViewRule:   nil,
-			CreateRule: nil,
+			CreateRule: types.Pointer("user_id = @request.auth.id"),
 			UpdateRule: nil,
 			DeleteRule: nil,
 			Schema: schema.NewSchema(

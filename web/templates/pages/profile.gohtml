@@ -11,22 +11,22 @@
                 </div>
             </div>
             <p class="text-base font-semibold leading-none text-gray-900 dark:text-white">
-                <a href="#">Jimmy Quach</a>
+                <a href="#">{{.Nickname}}</a>
             </p>
             <p class="mb-3 text-sm font-normal">
-                <a href="#" class="hover:underline">@lulzsun</a>
+                <a href="#" class="hover:underline">@{{.Username}}</a>
             </p>
-            <p class="mb-4 text-sm">Dreamer, Builder of the new whirled.</p>
+            <p class="mb-4 text-sm">{{.Status}}</p>
             <ul class="flex text-sm">
                 <li class="mr-2">
                     <a href="#" class="hover:underline">
-                        <span class="font-semibold text-gray-900 dark:text-white">69</span>
+                        <span class="font-semibold text-gray-900 dark:text-white">{{.Following}}</span>
                         <span>Following</span>
                     </a>
                 </li>
                 <li>
                     <a href="#" class="hover:underline">
-                        <span class="font-semibold text-gray-900 dark:text-white">420</span>
+                        <span class="font-semibold text-gray-900 dark:text-white">{{.Followers}}</span>
                         <span>Followers</span>
                     </a>
                 </li>
@@ -34,7 +34,11 @@
         </div>
         <div data-popper-arrow></div>
     </div>
-    {{ template "commentBox" . }}
-    {{ template "comment" . }}
+    {{template "commentBox" .}}
+    <section>
+        {{range .Comments}}
+            {{template "comment" .}}
+        {{end}}
+    </section>
 </div>
 {{end}}

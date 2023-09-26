@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -27,7 +28,7 @@ func AppendToBaseTmplFiles(files ...string) []string {
 	}, files...)
 }
 
-func AddBaseRoutes(e *core.ServeEvent) {
+func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/", func(c echo.Context) error {
 		info := apis.RequestInfo(c)
 		if info.AuthRecord != nil {
@@ -42,7 +43,7 @@ func AddBaseRoutes(e *core.ServeEvent) {
 
 func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		log.Println(c.Request().Method, c.Path(), c.PathParams())
+		log.Println(c.Request().Method, c.Request().URL.RequestURI())
 		path := strings.TrimSuffix(c.Path(), ".html")
 		if strings.HasSuffix(path, ".json") {
 			return next(c)

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"whirled2/api"
-	db "whirled2/utils"
+	"whirled2/utils"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -51,7 +51,7 @@ func main() {
 		HideStartBanner: true,
 		// DefaultDebug: false
 	})
-	routes := []func(*core.ServeEvent){
+	routes := []func(*core.ServeEvent, *pocketbase.PocketBase){
 		api.AddBaseRoutes,
 		api.AddAuthRoutes,
 		api.AddProfileRoutes,
@@ -59,6 +59,7 @@ func main() {
 	}
 	customEventHooks := []func(*pocketbase.PocketBase){
 		api.AddAuthEventHooks,
+		api.AddProfileEventHooks,
 		// Add more event hooks here
 	}
 	for _, AddEventHooks := range customEventHooks {
@@ -78,7 +79,7 @@ func main() {
 			api.BaseMiddleware,
 		)
 		for _, AddRoutes := range routes {
-			AddRoutes(e)
+			AddRoutes(e, app)
 		}
 		e.Router.GET("/api/hello", func(c echo.Context) error {
 			return c.String(200, "Hello whirled!")
@@ -98,11 +99,11 @@ func main() {
 	}
 
 	app.OnAdminAfterCreateRequest().Add(func(e *core.AdminCreateEvent) error {
-		db.Bootstrap(app)
+		utils.Bootstrap(app)
 		return nil
 	})
 	app.Bootstrap()
-	db.Bootstrap(app)
+	utils.Bootstrap(app)
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:42069"})
 	serveCmd.Execute()

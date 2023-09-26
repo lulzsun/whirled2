@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"whirled2/utils"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v5"
@@ -41,7 +42,7 @@ func parseSignupFiles() {
 	signupTmpl = template.Must(template.ParseFiles(signupTmplFiles...))
 }
 
-func AddAuthRoutes(e *core.ServeEvent) {
+func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/login", func(c echo.Context) error {
 		if err := loginTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), nil); err != nil {
 			return err
@@ -129,21 +130,19 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		if err != nil || int(time.Since(dob).Hours()/24/365) < 13 {
 			return apis.NewBadRequestError("You must be at least 13 years or older to register.", err)
 		}
+		e.Record.Set("nickname", e.Record.GetString("username"))
 		return nil
 	})
 
 	// POST /api/collections/users/records
 	// Send back HTML response if user signed up through HTMX or x-www-form-urlencoded
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
-		hxRequest := e.HttpContext.Request().Header.Get("HX-Request")
-		if hxRequest != "" {
-			if hxRequest == "true" {
-				e.HttpContext.Response().Header().Set("HX-Redirect", "/")
-				return e.HttpContext.String(200, "Successful sign up!")
-			}
+		return utils.ProcessHXRequest(e, func() error {
+			e.HttpContext.Response().Header().Set("HX-Redirect", "/")
+			return e.HttpContext.String(200, "Successful sign up!")
+		}, func() error {
 			return e.HttpContext.Redirect(302, "/")
-		}
-		return nil
+		})
 	})
 
 	// POST /api/collections/users/records
@@ -157,8 +156,7 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		form := forms.NewRecordUpsert(app, record)
 
 		form.LoadData(map[string]any{
-			"user_id":  e.Record.Id,
-			"nickname": e.Record.Username(),
+			"user_id": e.Record.Id,
 		})
 
 		if err := form.Submit(); err != nil {
