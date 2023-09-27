@@ -31,7 +31,11 @@ type Comment struct {
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
 
-	Children []*Comment
+	Depth     int
+	Count     int
+	DepthHide bool
+	CountHide bool
+	Children  []*Comment
 }
 
 func init() {
@@ -79,13 +83,29 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		err = app.DB().
+			// i don't really know what im doing lol...
 			NewQuery(`
 			WITH RECURSIVE CommentHierarchy AS (
 				SELECT * FROM (
 					SELECT
 						c.id, c.parent_id, c.profile_id, c.user_id, c.content, c.created,
 						users.username AS username, users.nickname AS nickname,
-						1 AS depth
+						1 AS depth,
+						(
+							SELECT COUNT(*) 
+							FROM comments child
+							WHERE child.parent_id = c.id
+						) AS count,
+						(
+							SELECT GROUP_CONCAT(id, ',')
+							FROM (
+								SELECT id
+								FROM comments child
+								WHERE child.parent_id = c.id
+								ORDER BY created DESC
+								LIMIT 4 -- Limit to 4 parent comments
+							)
+						) as _path
 					FROM comments c
 					INNER JOIN users ON c.user_id = users.id
 					WHERE c.profile_id = {:profile_id} AND c.parent_id = ''
@@ -95,15 +115,30 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 				SELECT
 					child.id, child.parent_id, child.profile_id, child.user_id, child.content, child.created,
 					users.username AS username, users.nickname AS nickname,
-				  	ch.depth + 1 AS depth
+					ch.depth + 1 AS depth,
+					(
+						SELECT COUNT(*) 
+						FROM comments subchild
+						WHERE subchild.parent_id = child.id
+					) AS count,
+					(
+						SELECT GROUP_CONCAT(id, ',')
+						FROM (
+							SELECT id
+							FROM comments subchild
+							WHERE subchild.parent_id = child.id
+							ORDER BY created DESC
+							LIMIT 4 -- Limit to 4 parent comments
+						)
+					) as _path
 				FROM CommentHierarchy ch
 				JOIN comments child ON ch.id = child.parent_id
 				INNER JOIN users ON child.user_id = users.id
-				WHERE ch.depth < 4 -- Limit depth to 4 levels
+				WHERE ch.depth < 5 AND ch._path LIKE '%' || child.id || '%' -- Limit depth to 5(4) levels
 			)
 			SELECT
 				ch.id, ch.parent_id, ch.profile_id, ch.user_id, ch.content, ch.created,
-				ch.username, ch.nickname
+				ch.username, ch.nickname, ch.depth, ch.count
 			FROM CommentHierarchy ch
 			ORDER BY ch.depth, ch.created DESC -- Order by depth and created date
 			`).
@@ -178,8 +213,13 @@ func list2tree(flatComments []Comment) []Comment {
 	// Step 2: Attach child comments to their parent comments
 	for i := range flatComments {
 		parent := flatComments[i].ParentId
-		if parent != "" {
+		if flatComments[i].Count >= 5 {
+			commentMap[parent].CountHide = true
+		}
+		if parent != "" && flatComments[i].Depth < 5 {
 			commentMap[parent].Children = append(commentMap[parent].Children, &flatComments[i])
+		} else if flatComments[i].Depth >= 5 {
+			commentMap[parent].DepthHide = true
 		}
 	}
 
@@ -190,6 +230,6 @@ func list2tree(flatComments []Comment) []Comment {
 			hierarchy = append(hierarchy, flatComments[i])
 		}
 	}
-
+	// log.Printf("%# v", pretty.Formatter(hierarchy))
 	return hierarchy
 }
