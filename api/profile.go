@@ -19,16 +19,19 @@ type Profile struct {
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"id" json:"id"`
 }
-type ProfileComment struct {
+type Comment struct {
 	CommentId string `db:"id" json:"id"`
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"profile_id" json:"profile_id"`
+	ParentId  string `db:"parent_id" json:"parent_id"`
 	Content   string `db:"content" json:"content"`
 	Timestamp string `db:"created" json:"created"`
 	IsDeleted bool   `db:"is_deleted" json:"is_deleted"`
 
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
+
+	Children []*Comment
 }
 
 func init() {
@@ -58,7 +61,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/profile/:username", func(c echo.Context) error {
 		username := c.PathParam("username")
 		profile := Profile{}
-		comments := []ProfileComment{}
+		comments := []Comment{}
 		err := app.DB().
 			NewQuery(`
 				SELECT profiles.id, user_id 
@@ -77,11 +80,32 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		err = app.DB().
 			NewQuery(`
-				SELECT comments.id, comments.created, content, user_id, users.username, users.nickname 
-				FROM comments 
-				INNER JOIN users ON user_id = users.id
-				WHERE profile_id = {:profile_id}
-				ORDER BY comments.created DESC
+			WITH RECURSIVE CommentHierarchy AS (
+				SELECT * FROM (
+					SELECT
+						c.id, c.parent_id, c.profile_id, c.user_id, c.content, c.created,
+						users.username AS username, users.nickname AS nickname,
+						1 AS depth
+					FROM comments c
+					INNER JOIN users ON c.user_id = users.id
+					WHERE c.profile_id = {:profile_id} AND c.parent_id = ''
+					LIMIT 4 -- Limit to 4 parent comments
+				)
+				UNION ALL
+				SELECT
+					child.id, child.parent_id, child.profile_id, child.user_id, child.content, child.created,
+					users.username AS username, users.nickname AS nickname,
+				  	ch.depth + 1 AS depth
+				FROM CommentHierarchy ch
+				JOIN comments child ON ch.id = child.parent_id
+				INNER JOIN users ON child.user_id = users.id
+				WHERE ch.depth < 4 -- Limit depth to 4 levels
+			)
+			SELECT
+				ch.id, ch.parent_id, ch.profile_id, ch.user_id, ch.content, ch.created,
+				ch.username, ch.nickname
+			FROM CommentHierarchy ch
+			ORDER BY ch.depth, ch.created DESC -- Order by depth and created date
 			`).
 			Bind(dbx.Params{
 				"profile_id": profile.ProfileId,
@@ -92,7 +116,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
 
-		// log.Printf("%# v", pretty.Formatter(comments))
+		comments = list2tree(comments)
 
 		data := struct {
 			Username  string
@@ -101,10 +125,12 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Following int
 			Followers int
 
+			CommentId string
 			UserId    string
 			ProfileId string
+			ParentId  string
 
-			Comments []ProfileComment
+			Comments []Comment
 		}{
 			Username:  username,
 			Nickname:  username,
@@ -112,8 +138,10 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Following: 69,
 			Followers: 420,
 
+			CommentId: "",
 			UserId:    profile.UserId,
 			ProfileId: profile.ProfileId,
+			ParentId:  "",
 
 			Comments: comments,
 		}
@@ -131,9 +159,37 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	// Successfully created comment for a user's profile
 	app.OnRecordAfterCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
 		return utils.ProcessHXRequest(e, func() error {
-			return e.HttpContext.String(201, "Successful comment!")
+			// e.HttpContext.Response().Header().Set("HX-Redirect", e.HttpContext.Request().Referer())
+			return e.HttpContext.String(200, "Successful comment!")
 		}, func() error {
 			return e.HttpContext.Redirect(302, e.HttpContext.Request().Referer())
 		})
 	})
+}
+
+func list2tree(flatComments []Comment) []Comment {
+	commentMap := make(map[string]*Comment)
+
+	// Step 1: Build a map of comments by their Id
+	for i := range flatComments {
+		commentMap[flatComments[i].CommentId] = &flatComments[i]
+	}
+
+	// Step 2: Attach child comments to their parent comments
+	for i := range flatComments {
+		parent := flatComments[i].ParentId
+		if parent != "" {
+			commentMap[parent].Children = append(commentMap[parent].Children, &flatComments[i])
+		}
+	}
+
+	// Step 3: Find root comments (comments with no parent)
+	var hierarchy []Comment
+	for i := range flatComments {
+		if flatComments[i].ParentId == "" {
+			hierarchy = append(hierarchy, flatComments[i])
+		}
+	}
+
+	return hierarchy
 }

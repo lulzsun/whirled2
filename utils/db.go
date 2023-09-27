@@ -13,6 +13,19 @@ import (
 // Create collections
 func Bootstrap(app *pocketbase.PocketBase) {
 	// Users collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE users (
+		id TEXT PRIMARY KEY,
+		username TEXT NOT NULL,
+		passwordHash TEXT NOT NULL,
+		email TEXT NOT NULL,
+		nickname TEXT NOT NULL,
+		birthday DATE NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL
+	);
+	CREATE UNIQUE INDEX idx_user ON profiles (user_id);
+	*/
 	usersCollection, err := app.Dao().FindCollectionByNameOrId("users")
 	if err == nil && usersCollection.Schema.GetFieldByName("birthday") == nil {
 		form := forms.NewCollectionUpsert(app, usersCollection)
@@ -41,6 +54,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	}
 
 	// Profiles collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE profiles (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_user ON profiles (user_id);
+	*/
 	profilesCollection, err := app.Dao().FindCollectionByNameOrId("profiles")
 	if err != nil {
 		profilesCollection = &models.Collection{
@@ -74,6 +97,18 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	}
 
 	// Comments collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE comments (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		profile_id TEXT NOT NULL,
+		parent_id TEXT NOT NULL,
+		content TEXT NOT NULL,
+		is_deleted BOOL,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+		FOREIGN KEY (profile_id) REFERENCES profiles (id)
+	);
+	*/
 	if _, err := app.Dao().FindCollectionByNameOrId("comments"); err != nil {
 		commentsCollection := &models.Collection{
 			Name:       "comments",
