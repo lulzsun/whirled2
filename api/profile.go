@@ -77,7 +77,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		err = app.DB().
 			NewQuery(`
-				SELECT comments.created, content, user_id, users.username, users.nickname 
+				SELECT comments.id, comments.created, content, user_id, users.username, users.nickname 
 				FROM comments 
 				INNER JOIN users ON user_id = users.id
 				WHERE profile_id = {:profile_id}
