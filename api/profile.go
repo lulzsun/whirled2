@@ -102,7 +102,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			cte AS (
 				SELECT * FROM (
 					SELECT *, 
-						0 depth, 
+						1 depth, 
 						(list_order + 1) || '' path_index,
 						(
 							SELECT COUNT(*) 
@@ -144,7 +144,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 					) as _path
 				FROM list_orders li INNER JOIN cte c
 				ON c.id = li.parent_id 
-				WHERE c.depth < 5 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 5(4) levels
+				WHERE c.depth <= 4 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 4 levels
 			)
 			SELECT *
 			FROM cte
