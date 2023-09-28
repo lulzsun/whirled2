@@ -10,7 +10,7 @@
                     <div class="text-sm font-medium dark:text-white">
                         <a href="#" class="hover:underline">{{ .Username }}</a>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom">{{ .CommentId }} | {{ .Timestamp }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom">{{ .Timestamp }}</p>
                 </footer>
             </div>
         </div>
@@ -50,7 +50,7 @@
 {{if .DepthHide}}
     <section class="ml-12 -mt-2 mb-4">
         <span class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
-            → More replies
+            + More replies
         </span>
     </section>
 {{else}}
@@ -61,7 +61,7 @@
         {{if .CountHide}}
             <section class="ml-12 -mt-2 mb-4">
                 <span class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
-                    → More replies
+                    + More replies
                 </span>
             </section>
         {{end}}

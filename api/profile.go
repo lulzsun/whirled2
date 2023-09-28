@@ -45,8 +45,9 @@ func init() {
 func parseProfileFiles() {
 	profileTmplFiles = AppendToBaseTmplFiles(
 		"web/templates/pages/profile.gohtml",
-		"web/templates/components/profile/comment.gohtml",
-		"web/templates/components/profile/commentBox.gohtml",
+		"web/templates/components/pagination.gohtml",
+		"web/templates/components/comment.gohtml",
+		"web/templates/components/commentBox.gohtml",
 	)
 	profileTmpl = template.Must(template.ParseFiles(profileTmplFiles...))
 }
@@ -85,62 +86,71 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		err = app.DB().
 			// i don't really know what im doing lol...
 			NewQuery(`
-			WITH RECURSIVE CommentHierarchy AS (
+			WITH list_orders AS (
+				SELECT i1.*, 
+				users.username AS username, users.nickname AS nickname,
+				(SELECT COUNT(i2.id)
+					FROM comments i2
+					WHERE i2.parent_id = i1.parent_id
+						AND (i2.created > i1.created 
+							OR (i2.created = i1.created AND i2.id > i1.id))
+				) list_order
+				FROM comments i1
+				INNER JOIN users ON i1.user_id = users.id
+				WHERE i1.profile_id = {:profile_id}
+			),
+			cte AS (
 				SELECT * FROM (
-					SELECT
-						c.id, c.parent_id, c.profile_id, c.user_id, c.content, c.created,
-						users.username AS username, users.nickname AS nickname,
-						1 AS depth,
+					SELECT *, 
+						0 depth, 
+						(list_order + 1) || '' path_index,
 						(
 							SELECT COUNT(*) 
-							FROM comments child
-							WHERE child.parent_id = c.id
+							FROM comments subchild
+							WHERE subchild.parent_id = li.id
 						) AS count,
 						(
 							SELECT GROUP_CONCAT(id, ',')
 							FROM (
-								SELECT id
-								FROM comments child
-								WHERE child.parent_id = c.id
+								SELECT subchild.id
+								FROM comments subchild
+								WHERE subchild.parent_id = li.id
 								ORDER BY created DESC
-								LIMIT 4 -- Limit to 4 parent comments
+								LIMIT 4 -- Limit to 4 subcomments
 							)
 						) as _path
-					FROM comments c
-					INNER JOIN users ON c.user_id = users.id
-					WHERE c.profile_id = {:profile_id} AND c.parent_id = ''
-					LIMIT 4 -- Limit to 4 parent comments
+					FROM list_orders li
+					WHERE parent_id = ''
+					ORDER BY created DESC
 				)
 				UNION ALL
-				SELECT
-					child.id, child.parent_id, child.profile_id, child.user_id, child.content, child.created,
-					users.username AS username, users.nickname AS nickname,
-					ch.depth + 1 AS depth,
+				SELECT li.*, 
+					c.depth + 1, 
+					c.path_index || '.' || (li.list_order + 1),
 					(
 						SELECT COUNT(*) 
 						FROM comments subchild
-						WHERE subchild.parent_id = child.id
+						WHERE subchild.parent_id = li.id
 					) AS count,
 					(
 						SELECT GROUP_CONCAT(id, ',')
 						FROM (
-							SELECT id
+							SELECT subchild.id
 							FROM comments subchild
-							WHERE subchild.parent_id = child.id
+							WHERE subchild.parent_id = li.id
 							ORDER BY created DESC
-							LIMIT 4 -- Limit to 4 parent comments
+							LIMIT 4 -- Limit to 4 subcomments
 						)
 					) as _path
-				FROM CommentHierarchy ch
-				JOIN comments child ON ch.id = child.parent_id
-				INNER JOIN users ON child.user_id = users.id
-				WHERE ch.depth < 5 AND ch._path LIKE '%' || child.id || '%' -- Limit depth to 5(4) levels
+				FROM list_orders li INNER JOIN cte c
+				ON c.id = li.parent_id 
+				WHERE c.depth < 5 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 5(4) levels
 			)
-			SELECT
-				ch.id, ch.parent_id, ch.profile_id, ch.user_id, ch.content, ch.created,
-				ch.username, ch.nickname, ch.depth, ch.count
-			FROM CommentHierarchy ch
-			ORDER BY ch.depth, ch.created DESC -- Order by depth and created date
+			SELECT *
+			FROM cte
+			WHERE CAST(SUBSTR(path_index, 1, 1) AS INTEGER) >= 1 -- Start range (offset)
+			AND CAST(SUBSTR(path_index, 1, 1) AS INTEGER) <= 4 -- End range
+			ORDER BY path_index
 			`).
 			Bind(dbx.Params{
 				"profile_id": profile.ProfileId,
