@@ -2,15 +2,20 @@ package api
 
 import (
 	"log"
+	"strconv"
 	"text/template"
 	"whirled2/utils"
 
+	"github.com/kr/pretty"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var commentTmplFiles []string
+var commentTmpl *template.Template
 
 var profileTmplFiles []string
 var profileTmpl *template.Template
@@ -33,11 +38,11 @@ type Comment struct {
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
 
-	Depth     int
-	Count     int
-	DepthHide bool
-	CountHide bool
-	Children  []*Comment
+	Depth       int
+	Count       int
+	DepthHideId string
+	CountHideId string
+	Children    []*Comment
 }
 
 func init() {
@@ -46,12 +51,29 @@ func init() {
 }
 
 func parseProfileFiles() {
-	profileTmplFiles = AppendToBaseTmplFiles(
-		"web/templates/pages/profile.gohtml",
-		"web/templates/components/pagination.gohtml",
+	commentTmplFiles = []string{
 		"web/templates/components/comment.gohtml",
 		"web/templates/components/commentBox.gohtml",
-	)
+	}
+	commentBaseTmpl := `
+	{{define "base"}}
+		{{range .Comments}}
+			{{template "comment" .}}
+		{{end}}
+	{{end}}
+	`
+	var err error
+	err = nil
+	commentTmpl, err = template.New("").Parse(commentBaseTmpl)
+	if err != nil {
+		log.Fatalln("Something went wrong when parsing commentTmpl:", err)
+	}
+	commentTmpl = template.Must(commentTmpl.ParseFiles(commentTmplFiles...))
+
+	profileTmplFiles = append(append(profileTmplFiles, AppendToBaseTmplFiles(
+		"web/templates/pages/profile.gohtml",
+		"web/templates/components/pagination.gohtml",
+	)...), commentTmplFiles...)
 	profileTmpl = template.Must(template.ParseFiles(profileTmplFiles...))
 }
 
@@ -67,9 +89,21 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		return nil
 	})
 	e.Router.GET("/profile/:username", func(c echo.Context) error {
+		htmxEnabled := false
 		username := c.PathParam("username")
+		parentCommentId := c.QueryParam("viewReplies")
+		commentOffset, _ := strconv.Atoi(c.QueryParam("replyOffset"))
+
 		profile := Profile{}
 		comments := []Comment{}
+
+		utils.ProcessHXRequest(c, func() error {
+			htmxEnabled = true
+			return nil
+		}, func() error { return nil })
+
+		log.Println(htmxEnabled)
+
 		err := app.DB().
 			NewQuery(`
 				SELECT profiles.id, user_id 
@@ -89,7 +123,9 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		err = app.DB().
 			NewQuery(queryGetProfileComments).
 			Bind(dbx.Params{
-				"profile_id": profile.ProfileId,
+				"profile_id":     profile.ProfileId,
+				"parent_id":      parentCommentId,
+				"comment_offset": commentOffset,
 			}).All(&comments)
 
 		if err != nil {
@@ -97,7 +133,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
 
-		comments = list2tree(comments)
+		comments = list2tree(comments, parentCommentId, htmxEnabled)
 
 		data := struct {
 			Username  string
@@ -127,6 +163,14 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Comments: comments,
 		}
 
+		if htmxEnabled {
+			log.Printf("%# v", pretty.Formatter(comments))
+			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", data); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
 		if err := profileTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
@@ -148,7 +192,8 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	})
 }
 
-func list2tree(flatComments []Comment) []Comment {
+func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool) []Comment {
+	// log.Printf("%# v", pretty.Formatter(flatComments))
 	commentMap := make(map[string]*Comment)
 
 	// Step 1: Build a map of comments by their Id
@@ -158,24 +203,32 @@ func list2tree(flatComments []Comment) []Comment {
 
 	// Step 2: Attach child comments to their parent comments
 	for i := range flatComments {
+		if flatComments[i].CommentId == parentCommentId {
+			continue
+		}
 		parent := flatComments[i].ParentId
 		if flatComments[i].Count >= 5 {
-			commentMap[parent].CountHide = true
+			commentMap[parent].CountHideId = flatComments[i].CommentId
 		}
 		if parent != "" && flatComments[i].Depth < 5 {
 			commentMap[parent].Children = append(commentMap[parent].Children, &flatComments[i])
 		} else if flatComments[i].Depth >= 5 {
-			commentMap[parent].DepthHide = true
+			commentMap[parent].DepthHideId = flatComments[i].ParentId
 		}
 	}
 
 	// Step 3: Find root comments (comments with no parent)
 	var hierarchy []Comment
 	for i := range flatComments {
-		if flatComments[i].ParentId == "" {
+		if flatComments[i].CommentId == parentCommentId && !isHTMX {
+			hierarchy = append(hierarchy, flatComments[i])
+			break
+		}
+		if flatComments[i].ParentId == parentCommentId {
 			hierarchy = append(hierarchy, flatComments[i])
 		}
 	}
+
 	// log.Printf("%# v", pretty.Formatter(hierarchy))
 	return hierarchy
 }

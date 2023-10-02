@@ -1,4 +1,3 @@
--- {:profile_id} is a parameter
 WITH list_orders AS (
     SELECT i1.*, 
     users.username AS username, users.nickname AS nickname,
@@ -33,7 +32,13 @@ cte AS (
                 )
             ) as _path
         FROM list_orders li
-        WHERE parent_id = ''
+        WHERE CASE
+            WHEN {:parent_id} = '' THEN parent_id = ''
+            ELSE CASE
+                WHEN {:comment_offset} != 0 THEN li.parent_id = {:parent_id} OR li.id = {:parent_id}
+                ELSE li.id = {:parent_id}
+            END
+        END
         ORDER BY created DESC
     )
     UNION ALL
@@ -61,6 +66,7 @@ cte AS (
 )
 SELECT *
 FROM cte
-WHERE CAST(SUBSTR(path_index, 1, 1) AS INTEGER) >= 1 -- Start range (offset)
-AND CAST(SUBSTR(path_index, 1, 1) AS INTEGER) <= 4 -- End range
+WHERE id = {:parent_id}
+OR (CAST(SUBSTR(path_index, 1, 1) AS INTEGER) >= 1 + {:comment_offset} -- Start range (offset)
+AND CAST(SUBSTR(path_index, 1, 1) AS INTEGER) <= 4 + {:comment_offset}) -- End range
 ORDER BY path_index

@@ -10,6 +10,7 @@
                     <div class="text-sm font-medium dark:text-white">
                         <a href="#" class="hover:underline">{{ .Username }}</a>
                     </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom">{{ .CommentId }}</p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom">{{ .Timestamp }}</p>
                 </footer>
             </div>
@@ -47,22 +48,29 @@
         </aside>
     </div>
 </section>
-{{if .DepthHide}}
-    <section class="ml-12 -mt-2 mb-4">
-        <span class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
-            + More replies
-        </span>
+{{if .DepthHideId}}
+    <section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
+        <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/lulzsun" method="get">
+            <input type="hidden" name="viewReplies" value="{{ .DepthHideId }}">
+            <button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
+                + More replies
+            </button>
+        </form>
     </section>
 {{else}}
     <section class="ml-12">
         {{range .Children}}
             {{template "comment" .}}
         {{end}}
-        {{if .CountHide}}
-            <section class="ml-12 -mt-2 mb-4">
-                <span class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
-                    + More replies
-                </span>
+        {{if .CountHideId}}
+            <section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
+                <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/lulzsun" method="get">
+                    <input type="hidden" name="viewReplies" value="{{ .CountHideId }}">
+                    <input type="hidden" name="replyOffset" value="4">
+                    <button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
+                        + More replies
+                    </button>
+                </form>
             </section>
         {{end}}
     </section>
