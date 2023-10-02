@@ -30,11 +30,12 @@
         function checkWindowSize() {
             if (window.innerWidth < 640) {
                 instance.collapse(0);
+                document.getElementById("web").removeAttribute("style");
                 document.getElementById("game").style.display = 'none';
-                document.getElementsByClassName("gutter")[0].style.width = '0px';
+                document.getElementsByClassName("gutter")[0].style.display = 'none';
             } else {
                 document.getElementById("game").removeAttribute("style");
-                document.getElementsByClassName("gutter")[0].style.width = '10px';
+                document.getElementsByClassName("gutter")[0].style.display = 'block';
             }
         }
         checkWindowSize();
