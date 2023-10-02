@@ -22,10 +22,24 @@
     <script src="/static/htmx.min.js"></script>
     <script src="/static/split.min.js"></script>
     <script type="text/javascript">
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById("game").removeAttribute("style");
-            Split(['#game', '#web'])
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById("game").removeAttribute("style");
+        var instance = Split(['#game', '#web'], {
+            minSize: [0, 640]
         });
+        function checkWindowSize() {
+            if (window.innerWidth < 640) {
+                instance.collapse(0);
+                document.getElementById("game").style.display = 'none';
+                document.getElementsByClassName("gutter")[0].style.display = 'none';
+            } else {
+                document.getElementById("game").removeAttribute("style");
+                document.getElementsByClassName("gutter")[0].style.display = 'block';
+            }
+        }
+        checkWindowSize();
+        window.addEventListener('resize', checkWindowSize);
+    });
     </script>
     <title>Whirled</title>
 </head>
