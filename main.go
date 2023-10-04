@@ -12,7 +12,6 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
-	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
@@ -24,6 +23,7 @@ type Film struct {
 }
 
 func main() {
+	os.Args = append(os.Args, "--http=0.0.0.0:42069")
 	go func() {
 		server := gecgosio.Gecgos(nil)
 
@@ -67,6 +67,8 @@ func main() {
 	}
 
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		utils.Bootstrap(app)
+
 		// serves static files from the provided public dir (if exists)
 		e.Router.GET("/static/*", func(c echo.Context) error {
 			// Disable client-side caching for development
@@ -91,20 +93,12 @@ func main() {
 			}
 			return nil
 		})
+
+		log.Println("Server started at http://0.0.0.0:42069")
 		return nil
 	})
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
-
-	app.OnAdminAfterCreateRequest().Add(func(e *core.AdminCreateEvent) error {
-		utils.Bootstrap(app)
-		return nil
-	})
-	app.Bootstrap()
-	utils.Bootstrap(app)
-	serveCmd := cmd.NewServeCommand(app, false)
-	serveCmd.SetArgs([]string{"--http=0.0.0.0:42069"})
-	serveCmd.Execute()
 }
