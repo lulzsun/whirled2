@@ -6,7 +6,6 @@ import (
 	"text/template"
 	"whirled2/utils"
 
-	"github.com/kr/pretty"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -102,8 +101,6 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		}, func() error { return nil })
 
-		log.Println(htmxEnabled)
-
 		err := app.DB().
 			NewQuery(`
 				SELECT profiles.id, user_id 
@@ -163,8 +160,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Comments: comments,
 		}
 
-		if htmxEnabled {
-			log.Printf("%# v", pretty.Formatter(comments))
+		if htmxEnabled && parentCommentId != "" {
 			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", data); err != nil {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
