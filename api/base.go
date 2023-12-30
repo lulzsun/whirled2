@@ -23,6 +23,7 @@ func init() {
 func AppendToBaseTmplFiles(files ...string) []string {
 	return append([]string{
 		"web/templates/pages/index.gohtml",
+		"web/templates/pages/game.gohtml",
 		"web/templates/components/header.gohtml",
 		"web/templates/components/profileHeader.gohtml",
 	}, files...)
@@ -43,7 +44,9 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		log.Println(c.Request().Method, c.Request().URL.RequestURI())
+		c.Response().After(func() {
+			log.Println(c.Response().Status, c.Request().Method, c.Request().URL.RequestURI())
+		})
 		path := strings.TrimSuffix(c.Path(), ".html")
 		if strings.HasSuffix(path, ".json") {
 			return next(c)

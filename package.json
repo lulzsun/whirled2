@@ -1,14 +1,24 @@
 {
+  "name": "whirled2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-other --kill-signal SIGKILL \"npm run dev-server\" \"npm run dev-watch\"",
+    "dev": "concurrently --kill-other --kill-signal SIGKILL \"npm:dev-watch\" \"npm:dev-server\" \"npm:dev-game\"",
+    "dev-game": "vite serve ./game",
     "dev-server": "nodemon -e go,json,gohtml,sql --exec go run . serve --signal SIGKILL",
     "dev-watch": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css --watch",
-    "build": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css",
-    "start": "go run ."
+    "build": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css"
   },
   "devDependencies": {
+    "@types/three": "^0.160.0",
     "concurrently": "^8.2.1",
     "nodemon": "^3.0.1",
-    "tailwindcss": "^3.3.3"
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
   }
 }

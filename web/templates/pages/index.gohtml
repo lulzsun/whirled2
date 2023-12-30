@@ -50,17 +50,7 @@
         <main class="flex-1 overflow-y-auto">
             <div class="split w-full h-full">
                 <div id="game" class="flex flex-col h-full items-center bg-black" style="display:none">
-                    <div class="flex-initial">
-                        <b>top</b>
-                    </div>
-                    <div class="flex-auto overflow-hidden w-full">
-                    <div class="items-center justify-center flex flex-col w-full h-full" mx="auto">
-                        <span class="text-5xl">🔧🐒</span>
-                    </div>
-                    </div>
-                    <div class="flex-initial">
-                        <b>bottom</b>
-                    </div>
+                    {{ template "game" . }}
                 </div>
                 <div id="web" class="flex flex-col h-full w-full">
                     <div id="page" class='w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900'>
