@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-other --kill-signal SIGKILL \"npm:dev-watch\" \"npm:dev-server\" \"npm:dev-game\"",
-    "dev-game": "vite serve ./game",
+    "dev": "concurrently --kill-other --kill-signal SIGKILL -n dev: npm:dev-*",
+    "dev-client": "vite serve ./game",
     "dev-server": "nodemon -e go,json,gohtml,sql --exec go run . serve --signal SIGKILL",
     "dev-watch": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css --watch",
     "build": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css"
