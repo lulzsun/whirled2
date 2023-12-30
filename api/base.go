@@ -45,7 +45,9 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().After(func() {
-			log.Println(c.Response().Status, c.Request().Method, c.Request().URL.RequestURI())
+			if !strings.HasPrefix(c.Request().URL.RequestURI(), "/static/") {
+				log.Println(c.Response().Status, c.Request().Method, c.Request().URL.RequestURI())
+			}
 		})
 		path := strings.TrimSuffix(c.Path(), ".html")
 		if strings.HasSuffix(path, ".json") {
