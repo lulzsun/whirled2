@@ -10,7 +10,12 @@ WITH list_orders AS (
         WHERE i2.parent_id = i1.parent_id
             AND (i2.created > i1.created 
                 OR (i2.created = i1.created AND i2.id > i1.id))
-    ) list_order
+    ) AS list_order,
+    (SELECT COUNT(*)
+        FROM comments i2
+        WHERE i2.profile_id = {:profile_id}
+            AND i2.parent_id = ''
+    ) AS total
     FROM comments i1
     INNER JOIN users ON i1.user_id = users.id
     WHERE i1.profile_id = {:profile_id}
@@ -34,7 +39,7 @@ cte AS (
                     ORDER BY created DESC
                     LIMIT 4 -- Limit to 4 subcomments
                 )
-            ) as _path
+            ) AS _path
         FROM list_orders li
         WHERE CASE
             WHEN {:parent_id} = '' THEN parent_id = ''
@@ -63,7 +68,7 @@ cte AS (
                 ORDER BY created DESC
                 LIMIT 4 -- Limit to 4 subcomments
             )
-        ) as _path
+        ) AS _path
     FROM list_orders li INNER JOIN cte c
     ON c.id = li.parent_id 
     WHERE c.depth <= 4 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 4 levels

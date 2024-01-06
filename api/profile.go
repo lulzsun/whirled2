@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"math"
 	"strconv"
 	"text/template"
 	"whirled2/utils"
@@ -37,6 +38,7 @@ type Comment struct {
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
 
+	Total       int
 	Depth       int
 	Count       int
 	DepthHideId string
@@ -135,6 +137,11 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		comments = list2tree(comments, parentCommentId, htmxEnabled)
+		// each page has a max of 4 parent comments, divide total by 4 and round up
+		commentPageLength := make([]int, int(math.Ceil(float64(comments[0].Total)/4)))
+		for i := 0; i < len(commentPageLength); i++ {
+			commentPageLength[i] = i + 1
+		}
 
 		data := struct {
 			Username  string
@@ -168,7 +175,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Comments: comments,
 
 			CommentPageCurrent: commentsPage + 1,
-			CommentPageLength:  []int{1, 2, 3},
+			CommentPageLength:  commentPageLength,
 		}
 
 		if htmxEnabled && parentCommentId != "" {
