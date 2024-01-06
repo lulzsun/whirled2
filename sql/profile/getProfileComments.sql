@@ -1,3 +1,7 @@
+-- This sql query gets 4 parent comments with a max of 4 depth (children). 
+-- Passing in a parent_id will only return the parent and the children of that parent comment.
+-- In the future, look into writing the query that lets us get a number of comments
+-- counting both parent and children.
 WITH list_orders AS (
     SELECT i1.*, 
     users.username AS username, users.nickname AS nickname,

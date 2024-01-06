@@ -49,7 +49,7 @@
 </section>
 {{if .DepthHideId}}
     <section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
-        <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/lulzsun" method="get">
+        <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
             <input type="hidden" name="viewReplies" value="{{ .DepthHideId }}">
             <button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
                 + More replies
@@ -63,7 +63,7 @@
         {{end}}
         {{if .CountHideId}}
             <section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
-                <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/lulzsun" method="get">
+                <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
                     <input type="hidden" name="viewReplies" value="{{ .CountHideId }}">
                     <input type="hidden" name="replyOffset" value="4">
                     <button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">

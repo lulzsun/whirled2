@@ -46,7 +46,7 @@ type Comment struct {
 
 func init() {
 	parseProfileFiles()
-	queryGetProfileComments = utils.ReadSqlQuery("sql/getProfileComments.sql")
+	queryGetProfileComments = utils.ReadSqlQuery("sql/profile/getProfileComments.sql")
 }
 
 func parseProfileFiles() {
@@ -92,6 +92,10 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		username := c.PathParam("username")
 		parentCommentId := c.QueryParam("viewReplies")
 		commentOffset, _ := strconv.Atoi(c.QueryParam("replyOffset"))
+		commentsPage, err := strconv.Atoi(c.QueryParam("commentsPage")) // each page has 4 comments
+		if err == nil {
+			commentsPage = commentsPage - 1
+		}
 
 		profile := Profile{}
 		comments := []Comment{}
@@ -101,7 +105,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		}, func() error { return nil })
 
-		err := app.DB().
+		err = app.DB().
 			NewQuery(`
 				SELECT profiles.id, user_id 
 				FROM profiles 
@@ -122,7 +126,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Bind(dbx.Params{
 				"profile_id":     profile.ProfileId,
 				"parent_id":      parentCommentId,
-				"comment_offset": commentOffset,
+				"comment_offset": commentOffset + (commentsPage * 4),
 			}).All(&comments)
 
 		if err != nil {
@@ -145,6 +149,10 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			ParentId  string
 
 			Comments []Comment
+
+			// pagination component values
+			CommentPageCurrent int
+			CommentPageLength  []int
 		}{
 			Username:  username,
 			Nickname:  username,
@@ -158,6 +166,9 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			ParentId:  "",
 
 			Comments: comments,
+
+			CommentPageCurrent: commentsPage + 1,
+			CommentPageLength:  []int{1, 2, 3},
 		}
 
 		if htmxEnabled && parentCommentId != "" {
