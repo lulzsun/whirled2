@@ -1,5 +1,5 @@
 {{define "comment"}}
-<section class="flex">
+<section id="_{{ .CommentId }}_parent" class="flex">
     <div class="mr-2 flex-shrink-0">
         <img class="w-10 h-10 rounded-full" src="/static/profile_picture.png" alt="">
     </div>
@@ -34,7 +34,7 @@
                     display: block;
                 }
             </style>
-            <input type="checkbox" id="_{{ .CommentId }}_reply" class="hidden absolute">
+            <input type="checkbox" id="_{{ .CommentId }}_reply" autocomplete="off" class="hidden absolute">
             <label for="_{{ .CommentId }}_reply" class="flex items-center space-x-1 cursor-pointer">
                 <span class="pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">Reply</span>
             </label>
@@ -57,13 +57,13 @@
         </form>
     </section>
 {{else}}
-    <section class="ml-12">
+    <section id="_{{ .CommentId }}_children" class="ml-12">
         {{range .Children}}
             {{template "comment" .}}
         {{end}}
         {{if .CountHideId}}
-            <section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
-                <form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
+            <section id="_{{ .CountHideId }}_more_replies" {{if eq .CountHideId .CommentId}} class="mb-4" {{else}} class="ml-12 mb-4" {{end}} >
+                <form class="-mt-2" hx-target="#_{{ .CountHideId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
                     <input type="hidden" name="viewReplies" value="{{ .CountHideId }}">
                     <input type="hidden" name="replyOffset" value="4">
                     <button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">

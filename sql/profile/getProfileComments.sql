@@ -76,6 +76,8 @@ cte AS (
 SELECT *
 FROM cte
 WHERE id = {:parent_id}
-OR (CAST(SUBSTR(path_index, 1, 1) AS INTEGER) >= 1 + {:comment_offset} -- Start range (offset)
-AND CAST(SUBSTR(path_index, 1, 1) AS INTEGER) <= 4 + {:comment_offset}) -- End range
-ORDER BY path_index
+OR (CAST(SUBSTR(path_index, 1, INSTR(path_index || '.', '.') - 1) AS INTEGER) >= 1 + {:comment_offset} -- Start range (offset)
+AND CAST(SUBSTR(path_index, 1, INSTR(path_index || '.', '.') - 1) AS INTEGER) <= 4 + {:comment_offset}) -- End range
+ORDER BY 
+    CAST(SUBSTR(path_index, 1, INSTR(path_index || '.', '.') - 1) AS INTEGER),
+    path_index;

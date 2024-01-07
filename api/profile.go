@@ -222,7 +222,12 @@ func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool) []Co
 		}
 		parent := flatComments[i].ParentId
 		if flatComments[i].Count >= 5 {
-			commentMap[parent].CountHideId = flatComments[i].CommentId
+			c, exists := commentMap[parent]
+			if exists {
+				c.CountHideId = flatComments[i].CommentId
+			} else {
+				flatComments[i].CountHideId = flatComments[i].CommentId
+			}
 		}
 		if parent != "" && flatComments[i].Depth < 5 {
 			commentMap[parent].Children = append(commentMap[parent].Children, &flatComments[i])
