@@ -34,14 +34,14 @@
         </div>
         <div data-popper-arrow></div>
     </div>
+    <section class="w-full grid place-items-center">
+        {{template "pagination" .}}
+    </section>
     {{template "commentBox" .}}
-    <section>
+    <section id="_profile_comments">
         {{range .Comments}}
             {{template "comment" .}}
         {{end}}
     </section>
-    <footer class="w-full grid place-items-center">
-        {{template "pagination" .}}
-    </footer>
 </div>
 {{end}}

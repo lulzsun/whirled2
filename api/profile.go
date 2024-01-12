@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"log"
 	"math"
 	"strconv"
@@ -196,10 +197,41 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/comments/records
 	// Successfully created comment for a user's profile
+	//
+	// If HTMX enabled, we will return html for the newly created comment
+	// elif HTMX disabled, we will just refresh the page (redirect=refresh)
+	// else, do normal pocketbase things (return Record json)
 	app.OnRecordAfterCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
 		return utils.ProcessHXRequest(e, func() error {
-			// e.HttpContext.Response().Header().Set("HX-Redirect", e.HttpContext.Request().Referer())
-			return e.HttpContext.String(200, "Successful comment!")
+			user, err := app.Dao().FindRecordById("users", e.Record.GetString("user_id"))
+			username, nickname := "undefined", "undefined"
+			if err == nil {
+				username = user.GetString("username")
+				nickname = user.GetString("nickname")
+			}
+			data := struct {
+				Comments []Comment
+			}{
+				Comments: []Comment{
+					{
+						CommentId: e.Record.Id,
+						UserId:    e.Record.GetString("user_id"),
+						ProfileId: e.Record.GetString("profile_id"),
+						ParentId:  e.Record.GetString("parent_id"),
+						Content:   e.Record.GetString("content"),
+						Timestamp: e.Record.GetString("created"),
+						IsDeleted: e.Record.GetBool("is_deleted"),
+						Username:  username,
+						Nickname:  nickname,
+					},
+				},
+			}
+			var htmlBuffer bytes.Buffer
+			if err := commentTmpl.ExecuteTemplate(&htmlBuffer, "base", data); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return e.HttpContext.HTML(200, htmlBuffer.String())
 		}, func() error {
 			return e.HttpContext.Redirect(302, e.HttpContext.Request().Referer())
 		})
