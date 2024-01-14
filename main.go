@@ -17,15 +17,12 @@ import (
 	gecgosio "github.com/lulzsun/gecgos.io"
 )
 
-type Film struct {
-	Title    string
-	Director string
-}
-
 func main() {
 	os.Args = append(os.Args, "--http=0.0.0.0:42069")
 	go func() {
-		server := gecgosio.Gecgos(nil)
+		server := gecgosio.Gecgos(&gecgosio.Options{
+			Cors: gecgosio.Cors{Origin: "*"},
+		})
 
 		server.OnConnection(func(peer gecgosio.Peer) {
 			log.Printf("Client %s has connected!\n", peer.Id)
@@ -44,7 +41,7 @@ func main() {
 			log.Printf("Client %s has disconnected!\n", peer.Id)
 		})
 
-		// server.Listen(420)
+		server.Listen(9696)
 	}()
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
@@ -94,7 +91,7 @@ func main() {
 			return nil
 		})
 
-		log.Println("Server started at http://0.0.0.0:42069")
+		log.Println("Server started at http://localhost:42069")
 		return nil
 	})
 

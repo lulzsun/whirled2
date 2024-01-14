@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"text/template"
+	"whirled2/utils"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -14,9 +15,13 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+var partialIndexTmpl *template.Template
+var fullIndexTmpl *template.Template
 var errorTmpl *template.Template
 
 func init() {
+	partialIndexTmpl, _ = template.ParseFiles("web/templates/pages/world.gohtml")
+	fullIndexTmpl = template.Must(partialIndexTmpl.ParseFiles(AppendToBaseTmplFiles()...))
 	errorTmpl = template.Must(template.ParseFiles(AppendToBaseTmplFiles("web/templates/pages/error.gohtml")...))
 }
 
@@ -31,10 +36,36 @@ func AppendToBaseTmplFiles(files ...string) []string {
 
 func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/", func(c echo.Context) error {
+		htmxEnabled := false
 		info := apis.RequestInfo(c)
+
+		utils.ProcessHXRequest(c, func() error {
+			htmxEnabled = true
+			return nil
+		}, func() error {
+			return nil
+		})
+
 		if info.AuthRecord != nil {
-			username := info.AuthRecord.GetString("username")
-			c.Redirect(302, "/profile/"+username)
+			// if the user is auth'd, we will return an "empty page",
+			// the client should handle this by hiding the "empty page" side panel
+			if htmxEnabled {
+				if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
+					return err
+				}
+				return nil
+			}
+			if err := fullIndexTmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		// if the user is not auth'd, we will give them the initial load a redirect
+		if htmxEnabled {
+			if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
+				return err
+			}
 			return nil
 		}
 		c.Redirect(302, "/login")

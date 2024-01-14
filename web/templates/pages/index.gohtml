@@ -24,12 +24,14 @@
     <script type="text/javascript">
     window.addEventListener('DOMContentLoaded', () => {
         document.getElementById("game").removeAttribute("style");
-        var instance = Split(['#game', '#web'], {
-            minSize: [0, 640]
+        window._split_instance = Split(['#game', '#web'], {
+            minSize: [0, 640],
+            expandToMin: true
         });
-        function checkWindowSize() {
+        window._checkWindowSize = () => {
+            if (!window._split_instance) return;
             if (window.innerWidth < 640) {
-                instance.collapse(0);
+                window._split_instance.collapse(0);
                 document.getElementById("web").removeAttribute("style");
                 document.getElementById("game").style.display = 'none';
                 document.getElementsByClassName("gutter")[0].style.display = 'none';
@@ -38,8 +40,24 @@
                 document.getElementsByClassName("gutter")[0].style.display = 'block';
             }
         }
-        checkWindowSize();
-        window.addEventListener('resize', checkWindowSize);
+        window._closeWebPanel = () => {
+            window._split_instance.destroy();
+            window._split_instance = undefined;
+            document.getElementById("web").style.display = 'none';
+            document.getElementById("game").style.display = 'flex';
+        }
+        window._openWebPanel = () => {
+            if(window._split_instance) return;
+            window._split_instance = Split(['#game', '#web'], {
+                minSize: [0, 640],
+                expandToMin: true
+            });
+            document.getElementById("web").style.display = 'flex';
+            window._checkWindowSize();
+        }
+        window._checkWindowSize();
+        if (document.getElementById("focusGame")) window._closeWebPanel();
+        window.addEventListener('resize', window._checkWindowSize);
     });
     </script>
     <title>Whirled</title>
@@ -49,7 +67,7 @@
         {{ template "header" . }}
         <main class="flex-1 overflow-y-auto">
             <div class="split w-full h-full">
-                <div id="game" class="flex flex-col h-full items-center bg-black" style="display:none">
+                <div id="game" class="flex flex-col w-full h-full items-center bg-black" style="display:none">
                     {{ template "game" . }}
                 </div>
                 <div id="web" class="flex flex-col h-full w-full" hx-history-elt>

@@ -3,7 +3,7 @@ import type { Config } from "tailwindcss"
 export default {
     content: [
         './web/**/*.{html,gohtml}',
-        "./game/**/*.{html,ts}",
+        "./game/client/**/*.{html,ts}",
     ],
     theme: {
         extend: {},
