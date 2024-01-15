@@ -1,8 +1,10 @@
 {{ define "page" }}
-	<noscript>
-		<meta http-equiv="refresh" content="0.0;url=profile" />
-	</noscript>
 	<script id="focusGame">
 		if (window._closeWebPanel) window._closeWebPanel();
 	</script>
+	{{ if .NoJs }}
+		<noscript>
+			<meta http-equiv="refresh" content="0.0;url=profile" />
+		</noscript>
+	{{ end }}
 {{ end }}

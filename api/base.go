@@ -55,7 +55,7 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 				}
 				return nil
 			}
-			if err := fullIndexTmpl.ExecuteTemplate(c.Response().Writer, "base", nil); err != nil {
+			if err := fullIndexTmpl.ExecuteTemplate(c.Response().Writer, "base", struct{ NoJs bool }{true}); err != nil {
 				return err
 			}
 			return nil
