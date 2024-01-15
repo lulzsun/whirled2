@@ -1,7 +1,9 @@
-{{define "page"}}
-<script>if (window._openWebPanel) window._openWebPanel();</script>
-<div class="flex flex-col p-3 items-center space-y-3">
-    <span>Error, the monkies broke something...</span>
-    <span>{{ .Error }}</span>
-</div>
-{{end}}
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div class="flex flex-col p-3 items-center space-y-3">
+		<span>Error, the monkies broke something...</span>
+		<span>{{ .Error }}</span>
+	</div>
+{{ end }}

@@ -1,0 +1,9 @@
+# Ignore static files
+web/static/*
+
+# Ignore package manager files
+package.json
+package-lock.json
+
+# Ignore submodules
+gecgos/*

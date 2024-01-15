@@ -1,0 +1,11 @@
+{
+	"semi": true,
+	"tabWidth": 4,
+	"useTabs": true,
+	"printWidth": 200,
+	"singleQuote": false,
+	"trailingComma": "all",
+	"bracketSpacing": true,
+	"htmlWhitespaceSensitivity": "ignore",
+	"plugins": ["prettier-plugin-go-template"]
+}
