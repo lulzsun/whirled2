@@ -1,4 +1,3 @@
-import "../../web/static/styles.css";
 import { addComponent, pipe } from "bitecs";
 import * as THREE from "three";
 import { TransformComponent } from "./components";
