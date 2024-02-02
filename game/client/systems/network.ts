@@ -1,8 +1,14 @@
 import { geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
-import { defineSystem } from "bitecs";
+import { addComponent, defineSystem } from "bitecs";
+import { createEntity } from "../factory/entity";
+import { TransformComponent } from "../components";
+import * as THREE from "three";
 
 export function createNetworkSystem() {
+	let events: {
+		type: string;
+	}[] = [];
 	const network = geckos({ port: 9696 });
 
 	network.onConnect((error) => {
@@ -18,6 +24,7 @@ export function createNetworkSystem() {
 		// Client will recieve the event 'pong' with data 'world'
 		network.on("pong", (data) => {
 			console.log(`Server sent event 'pong' with data '${data}'`);
+			events.push({ type: "createEntity" });
 		});
 
 		network.emit("ping", "hello", {
@@ -56,7 +63,24 @@ export function createNetworkSystem() {
 	})();
 
 	return defineSystem((world: World) => {
-		// handle movement of networked entities
+		for (let i = events.length - 1; i >= 0; i--) {
+			let event = events[i];
+			switch (event.type) {
+				case "createEntity":
+					const parent = createEntity(
+						world,
+						new THREE.BoxGeometry(100, 100, 100),
+					);
+					addComponent(world, TransformComponent, parent.eid);
+					world.objects.set(parent.eid, parent);
+					world.scene.add(parent);
+					break;
+				default:
+					console.error("Unknown event type:", event.type);
+					break;
+			}
+			events.splice(i, 1);
+		}
 		return world;
 	});
 }
