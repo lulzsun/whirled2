@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { addComponent, pipe } from "bitecs";
-import { TransformComponent } from "./components";
+import { SpineAvatarComponent, TransformComponent } from "./components";
 import { createEntity } from "./factory/entity";
 import { createWorld } from "./factory/world";
 import {
@@ -14,6 +14,8 @@ const world = createWorld();
 
 const parent = await createEntity(world, new THREE.BoxGeometry(100, 100, 100));
 addComponent(world, TransformComponent, parent.eid);
+addComponent(world, SpineAvatarComponent, parent.eid);
+SpineAvatarComponent.timeScale[parent.eid] = 1000;
 world.objects.set(parent.eid, parent);
 world.scene.add(parent);
 
@@ -38,7 +40,7 @@ const update = () => {
 	pipe(
 		//
 		timeSystem,
-		movementSystem,
+		//movementSystem,
 		renderSystem,
 		networkSystem,
 	)(world);
