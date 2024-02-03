@@ -12,10 +12,10 @@ import {
 
 const world = createWorld();
 
-// const parent = createEntity(world, new THREE.BoxGeometry(100, 100, 100));
-// addComponent(world, TransformComponent, parent.eid);
-// world.objects.set(parent.eid, parent);
-// world.scene.add(parent);
+const parent = await createEntity(world, new THREE.BoxGeometry(100, 100, 100));
+addComponent(world, TransformComponent, parent.eid);
+world.objects.set(parent.eid, parent);
+world.scene.add(parent);
 
 // create a bunch of entities and attach the transform component
 // for (let i = 1; i <= 10; i++) {

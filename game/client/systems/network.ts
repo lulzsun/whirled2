@@ -24,7 +24,7 @@ export function createNetworkSystem() {
 		// Client will recieve the event 'pong' with data 'world'
 		network.on("pong", (data) => {
 			console.log(`Server sent event 'pong' with data '${data}'`);
-			events.push({ type: "createEntity" });
+			// events.push({ type: "createEntity" });
 		});
 
 		network.emit("ping", "hello", {
