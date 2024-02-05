@@ -13,12 +13,13 @@ export function createRenderSystem() {
 		} = world;
 		const ents = spineAvatarQuery(world);
 		for (let x = 0; x < ents.length; x++) {
-			const e = ents[x];
-			const obj3d = world.objects.get(e);
-			for (let y = 0; y < obj3d!.children.length; y++) {
-				//@ts-ignore
-				let skeletonMesh: spine.SkeletonMesh = obj3d!.children[y];
-				skeletonMesh.update(delta / SpineAvatarComponent.timeScale[e]);
+			const eid = ents[x];
+			const entity = world.objects.get(eid);
+			for (let y = 0; y < entity!.children.length; y++) {
+				let obj3d = entity!.children[y];
+				if (obj3d instanceof spine.SkeletonMesh) {
+					obj3d.update(delta / SpineAvatarComponent.timeScale[eid]);
+				}
 			}
 		}
 		world.renderer.render(world.scene, world.camera);
