@@ -7,42 +7,20 @@ import (
 	"os"
 
 	"whirled2/api"
+	"whirled2/game/server"
 	"whirled2/utils"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-
-	gecgosio "github.com/lulzsun/gecgos.io"
 )
 
 func main() {
-	os.Args = append(os.Args, "--http=0.0.0.0:42069")
-	go func() {
-		server := gecgosio.Gecgos(&gecgosio.Options{
-			Cors: gecgosio.Cors{Origin: "*"},
-		})
+	os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
 
-		server.OnConnection(func(peer gecgosio.Peer) {
-			log.Printf("Client %s has connected!\n", peer.Id)
-
-			// Example of sending and recieving from client(s)
-			// Server will recieve the event 'ping' with data 'hello'
-			// Server will send the event 'pong' with data 'world'
-			peer.On("ping", func(msg string) {
-				log.Printf("Client %s sent event 'ping' with data '%s', emitting back 'pong'\n", peer.Id, msg)
-				// peer.Reliable(150, 10).Emit("pong", "world")
-				peer.Emit("pong", "world")
-			})
-		})
-
-		server.OnDisconnect(func(peer gecgosio.Peer) {
-			log.Printf("Client %s has disconnected!\n", peer.Id)
-		})
-
-		server.Listen(9696)
-	}()
+	// start gecgos.io game server
+	server.Start(42069)
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,
@@ -52,6 +30,7 @@ func main() {
 		api.AddBaseRoutes,
 		api.AddAuthRoutes,
 		api.AddProfileRoutes,
+		server.AddAuthRoutes,
 		// Add more routes here
 	}
 	customEventHooks := []func(*pocketbase.PocketBase){
