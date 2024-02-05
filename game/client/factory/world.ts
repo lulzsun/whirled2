@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import * as bitECS from "bitecs";
+import * as spine from "@esotericsoftware/spine-threejs";
+
 import { Entity } from "./entity";
 
 export type World = {
@@ -12,6 +14,7 @@ export type World = {
 		delta: number;
 		elapsed: number;
 	};
+	spineAssetManager: spine.AssetManager;
 };
 
 export const createWorld = (): World => {
@@ -43,6 +46,10 @@ export const createWorld = (): World => {
 	world.objects = new Map();
 
 	world.time = { last: 0, delta: 0, elapsed: 0 };
+
+	world.spineAssetManager = new spine.AssetManager(
+		"http://127.0.0.1:42069/static/assets/",
+	);
 
 	return world;
 };

@@ -1,53 +1,52 @@
-import { IWorld, addEntity } from "bitecs";
+import { addEntity } from "bitecs";
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 import { TransformComponent } from "../components";
+import { World } from "./world";
 
 export type Entity = THREE.Mesh & { eid: number };
 
-export const createEntity = async (
-	world: IWorld,
-	geometry = new THREE.BoxGeometry(200, 200, 200),
+export const createEntity = (
+	world: World,
+	geometry = new THREE.BoxGeometry(0, 0, 0),
 	material = new THREE.MeshBasicMaterial({ wireframe: true }),
-): Promise<Entity> => {
+): Entity => {
 	const eid = addEntity(world);
 	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });
+	const fileName = "spineboy";
 
-	const assetManager = new spine.AssetManager(
-		"http://127.0.0.1:42069/static/assets/",
-	);
+	console.log(world.spineAssetManager);
+	world.spineAssetManager.loadText(`${fileName}.json`);
+	world.spineAssetManager.loadTextureAtlas(`${fileName}.atlas`, () => {
+		// Load the texture atlas using name.atlas and name.png from the AssetManager.
+		// The function passed to TextureAtlas is used to resolve relative paths.
+		let atlas = world.spineAssetManager.require(`${fileName}.atlas`);
 
-	assetManager.loadText("raptor-pro.json");
-	assetManager.loadTextureAtlas("raptor.atlas");
-	await assetManager.loadAll();
+		// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
+		let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
 
-	console.log(assetManager.isLoadingComplete());
+		// Create a SkeletonJson instance for parsing the .json file.
+		let skeletonJson = new spine.SkeletonJson(atlasLoader);
 
-	// Load the texture atlas using name.atlas and name.png from the AssetManager.
-	// The function passed to TextureAtlas is used to resolve relative paths.
-	let atlas = assetManager.require("raptor.atlas");
+		// Set the scale to apply during parsing, parse the file, and create a new skeleton.
+		skeletonJson.scale = 0.3;
+		let skeletonData = skeletonJson.readSkeletonData(
+			world.spineAssetManager.require(`${fileName}.json`),
+		);
 
-	// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
-	let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
-
-	// Create a SkeletonJson instance for parsing the .json file.
-	let skeletonJson = new spine.SkeletonJson(atlasLoader);
-
-	// Set the scale to apply during parsing, parse the file, and create a new skeleton.
-	skeletonJson.scale = 0.4;
-	let skeletonData = skeletonJson.readSkeletonData(
-		assetManager.require("raptor-pro.json"),
-	);
-
-	// Create a SkeletonMesh from the data and attach it to the scene
-	let skeletonMesh = new spine.SkeletonMesh(skeletonData, (parameters) => {
-		parameters.depthTest = true;
-		parameters.depthWrite = true;
-		parameters.alphaTest = 0.001;
+		// Create a SkeletonMesh from the data and attach it to the scene
+		let skeletonMesh = new spine.SkeletonMesh(
+			skeletonData,
+			(parameters) => {
+				parameters.depthTest = true;
+				parameters.depthWrite = true;
+				parameters.alphaTest = 0.001;
+			},
+		);
+		skeletonMesh.state.setAnimation(0, "idle", true);
+		console.log(skeletonMesh.state.data.skeletonData.animations);
+		entity.add(skeletonMesh);
 	});
-	skeletonMesh.state.setAnimation(0, "walk", true);
-	entity.add(skeletonMesh);
-	skeletonMesh.update(12);
 
 	// position
 	Object.defineProperty(entity.position, "eid", { get: () => eid });
