@@ -1,37 +1,84 @@
 package server
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"log"
+	"math/rand"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/spf13/cast"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
 )
 
 var server *gecgosio.Server
+var clients = make(map[string]Client)
+
+type Client struct {
+    Peer *gecgosio.Peer
+	Auth string
+	Username string
+	Nickname string
+}
 
 func Start(port int) {
 	server = gecgosio.Gecgos(&gecgosio.Options{
-		Cors: gecgosio.Cors{Origin: "*"},
-		CustomHttpHandler: true,
+		DisableHttpServer: true,
 	})
 
 	server.OnConnection(func(peer gecgosio.Peer) {
 		log.Printf("Client %s has connected!\n", peer.Id)
 
-		peer.On("Auth", func(msg string) {
-			log.Printf("Client %s sent event 'Auth' with data '%s'", peer.Id, msg)
+		clients[peer.Id] = Client{
+			Peer: &peer,
+		}
+
+		peer.On("Auth", func(j string) {
+			client := clients[peer.Id]
+
+			if client.Auth == "" {
+				// user is already authorized at this point
+				return
+			}
+
+			var msg map[string]interface{}
+			err := json.Unmarshal([]byte(j), &msg)
+			if err != nil {
+				return
+			}
+			
+			if msg["code"] != nil && client.Auth == msg["code"] {
+				log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
+				if room, ok := msg["room"].(string); ok {
+					peer.Join(room)
+					peer.Room(room).Emit("Join", client.Username)
+				} else {
+					peer.Join("bravenewwhirled")
+					peer.Room(room).Emit("Join", client.Username)
+				}
+				client.Auth = ""
+			} else {
+				log.Printf("Failed to authorize '%s', provided wrong auth code?", peer.Id)
+			}
+			
+			clients[peer.Id] = client
 		})
 
 		peer.On("Join", func(msg string) {
-			peer.Emit("Auth", "")
+			peer.Emit("Auth", peer.Id)
 		})
 	})
 
 	server.OnDisconnect(func(peer gecgosio.Peer) {
 		log.Printf("Client %s has disconnected!\n", peer.Id)
+		delete(clients, peer.Id)
 	})
 
 	if err := server.Listen(port); err != nil {
@@ -54,8 +101,76 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		server.SendAdditionalCandidates(c.Response().Writer, c.Request())
 		return nil
 	})
-	e.Router.GET("/game/auth", func(c echo.Context) error {
+	e.Router.GET("/game/:id/auth", func(c echo.Context) error {
+		code, err := generateAuthCode()
+		if err != nil {
+			return c.String(500, "Could not generate auth code")
+		}
+
+		id := c.PathParam("id")
+
+		// allows passing cookie from subdomain(?) or different localhost:port
 		c.Response().Header().Set("Access-Control-Allow-Credentials", "true")
-		return c.String(200, "Hello whirled!")
+
+		client, exists := clients[id]
+		if !exists || client.Username != "" {
+			return c.String(400, "ID does not exist")
+		}
+
+		client.Auth = code
+		client.Username = "Guest"
+		client.Nickname = "Guest"
+		clients[id] = client
+
+		if cookie, err := c.Cookie("pb_auth"); err == nil {
+			decodedCookieValue, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				log.Println("Error decoding cookie value:", err)
+				return c.String(200, code)
+			}
+			var cookieData map[string]interface{}
+			err = json.Unmarshal([]byte(decodedCookieValue), &cookieData)
+			if err != nil {
+				log.Println("Error unmarshaling JSON:", err)
+				return c.String(200, code)
+			}
+
+			token := strings.TrimPrefix(cookieData["token"].(string), "Bearer ")
+
+			// we assume that our middleware has already verified this JWT/cookie as legitimate
+			claims, _ := security.ParseUnverifiedJWT(token)
+			pbUserId := cast.ToString(claims["id"])
+			user, err := app.Dao().FindRecordById("users", pbUserId)
+			if err != nil {
+				log.Println("Error finding user by id:", err)
+				return c.String(200, code)
+			}
+
+			client.Username = user.GetString("username")
+			client.Nickname = user.GetString("nickname")
+			clients[id] = client
+		}
+
+		return c.String(200, code)
 	})
+}
+
+func generateAuthCode() (string, error) {
+    // Generate a random seed based on current time
+    seed := time.Now().UnixNano()
+
+    // Create a new random number generator with the seed
+    rng := rand.New(rand.NewSource(seed))
+
+    // Generate a random byte slice (16 bytes long for a 128-bit string)
+    randomBytes := make([]byte, 16)
+    _, err := rng.Read(randomBytes)
+    if err != nil {
+        return "", err
+    }
+
+    // Encode the random bytes to a hexadecimal string
+    randomString := hex.EncodeToString(randomBytes)
+
+    return randomString, nil
 }

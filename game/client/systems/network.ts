@@ -2,14 +2,20 @@ import { geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
 import { addComponent, defineSystem } from "bitecs";
 import { createEntity } from "../factory/entity";
-import { TransformComponent } from "../components";
-import * as THREE from "three";
+import { SpineAvatarComponent, TransformComponent } from "../components";
+
+export enum NetworkEvent {
+	Auth,
+	Join,
+	Leave,
+}
 
 export function createNetworkSystem() {
 	let events: {
-		type: string;
+		type: NetworkEvent;
+		data: string | number | Object;
 	}[] = [];
-	const network = geckos({ port: 9696 });
+	const network = geckos({ port: 42069 });
 
 	network.onConnect((error) => {
 		if (error) {
@@ -19,23 +25,30 @@ export function createNetworkSystem() {
 
 		console.log("connected");
 
-		// Example of sending and recieving from server
-		// Client will send the event 'ping' with data 'hello'
-		// Client will recieve the event 'pong' with data 'world'
-		network.on("pong", (data) => {
-			console.log(`Server sent event 'pong' with data '${data}'`);
-			// events.push({ type: "createEntity" });
-		});
+		Object.keys(NetworkEvent)
+			.filter((v) => isNaN(Number(v)))
+			.forEach((event, i) => {
+				network.on(event, (data) => {
+					console.log(
+						`Server sent event '${event}' ` +
+							(typeof data === "string" && data.length === 0
+								? ""
+								: `with data '${data}'`),
+					);
+					events.push({ type: i, data });
+				});
+			});
 
-		network.emit("ping", "hello", {
-			reliable: false,
-			interval: 150,
-			runs: 10,
-		});
+		network.emit("Join");
 	});
 
-	network.onDisconnect((cb) => {
-		console.log(cb);
+	network.onDisconnect((error) => {
+		if (error === undefined) {
+			console.log("Lost connection to gecgos.io server");
+			return;
+		}
+
+		console.log("Disconnected from gecgos.io server:", error);
 	});
 
 	// @ts-ignore
@@ -50,7 +63,7 @@ export function createNetworkSystem() {
 			const peerConnection: RTCPeerConnection =
 				connectionsManager.localPeerConnection;
 
-			console.log(peerConnection.connectionState);
+			// console.log(peerConnection.connectionState);
 			switch (peerConnection.connectionState) {
 				case "failed":
 				case "connected":
@@ -63,23 +76,53 @@ export function createNetworkSystem() {
 	})();
 
 	return defineSystem((world: World) => {
-		for (let i = events.length - 1; i >= 0; i--) {
+		for (let i = 0; i < events.length; i++) {
 			let event = events[i];
 			switch (event.type) {
-				case "createEntity":
-					const parent = createEntity(
-						world,
-						new THREE.BoxGeometry(100, 100, 100),
-					);
+				case NetworkEvent.Auth:
+					const id = event.data;
+					// Make a request to get auth code
+					fetch(`http://127.0.0.1:42069/game/${id}/auth`, {
+						method: "GET",
+						mode: "cors",
+						credentials: "include",
+					})
+						.then((response) => {
+							if (response.ok) {
+								return response.text();
+							}
+							throw new Error("Something went wrong");
+						})
+						.then((code: string) => {
+							const room = "bravenewwhirled";
+							network.emit(
+								"Auth",
+								{ code, room },
+								{
+									reliable: false,
+									interval: 150,
+									runs: 10,
+								},
+							);
+						})
+						.catch((e) => {
+							console.error(e);
+						});
+					break;
+				case NetworkEvent.Join:
+					const parent = createEntity(world);
 					addComponent(world, TransformComponent, parent.eid);
+					addComponent(world, SpineAvatarComponent, parent.eid);
+					SpineAvatarComponent.timeScale[parent.eid] = 1000;
 					world.objects.set(parent.eid, parent);
 					world.scene.add(parent);
 					break;
 				default:
-					console.error("Unknown event type:", event.type);
+					console.error("Unhandled event:", event.type, event.data);
 					break;
 			}
 			events.splice(i, 1);
+			i--;
 		}
 		return world;
 	});

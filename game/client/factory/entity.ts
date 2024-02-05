@@ -15,7 +15,6 @@ export const createEntity = (
 	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });
 	const fileName = "spineboy";
 
-	console.log(world.spineAssetManager);
 	world.spineAssetManager.loadText(`${fileName}.json`);
 	world.spineAssetManager.loadTextureAtlas(`${fileName}.atlas`, () => {
 		// Load the texture atlas using name.atlas and name.png from the AssetManager.
@@ -44,7 +43,8 @@ export const createEntity = (
 			},
 		);
 		skeletonMesh.state.setAnimation(0, "idle", true);
-		console.log(skeletonMesh.state.data.skeletonData.animations);
+		console.log("Created Spine skeleton mesh", skeletonMesh);
+		// console.log(skeletonMesh.state.data.skeletonData.animations);
 		entity.add(skeletonMesh);
 	});
 
