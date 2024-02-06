@@ -1,8 +1,12 @@
 import { geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
-import { addComponent, defineSystem } from "bitecs";
+import { addComponent, defineQuery, defineSystem, removeEntity } from "bitecs";
 import { createEntity } from "../factory/entity";
-import { SpineAvatarComponent, TransformComponent } from "../components";
+import {
+	PlayerComponent,
+	SpineComponent,
+	TransformComponent,
+} from "../components";
 
 export enum NetworkEvent {
 	Auth,
@@ -10,7 +14,14 @@ export enum NetworkEvent {
 	Leave,
 }
 
+export const playersQuery = defineQuery([PlayerComponent]);
+
 export function createNetworkSystem() {
+	const playersByUsername = new Map<
+		string,
+		{ eid: number; nickname: string }
+	>();
+
 	let events: {
 		type: NetworkEvent;
 		data: string | number | Object;
@@ -29,11 +40,11 @@ export function createNetworkSystem() {
 			.filter((v) => isNaN(Number(v)))
 			.forEach((event, i) => {
 				network.on(event, (data) => {
+					const isEmpty =
+						typeof data === "string" && data.length === 0;
 					console.log(
-						`Server sent event '${event}' ` +
-							(typeof data === "string" && data.length === 0
-								? ""
-								: `with data '${data}'`),
+						`Server sent event '${event}' ${isEmpty ? "" : "with data:"}`,
+						data,
 					);
 					events.push({ type: i, data });
 				});
@@ -99,7 +110,7 @@ export function createNetworkSystem() {
 								"Auth",
 								{ code, room },
 								{
-									reliable: false,
+									reliable: true,
 									interval: 150,
 									runs: 10,
 								},
@@ -109,17 +120,41 @@ export function createNetworkSystem() {
 							console.error(e);
 						});
 					break;
-				case NetworkEvent.Join:
-					const parent = createEntity(world);
-					addComponent(world, TransformComponent, parent.eid);
-					addComponent(world, SpineAvatarComponent, parent.eid);
-					SpineAvatarComponent.timeScale[parent.eid] = 1000;
-					world.objects.set(parent.eid, parent);
-					world.scene.add(parent);
+				case NetworkEvent.Join: {
+					const ent = createEntity(world);
+					const player: {
+						username: string;
+						nickname: string;
+					} = event.data as any;
+
+					playersByUsername.set(player.username, {
+						eid: ent.eid,
+						nickname: player.nickname,
+					});
+					addComponent(world, TransformComponent, ent.eid);
+					addComponent(world, PlayerComponent, ent.eid);
+					addComponent(world, SpineComponent, ent.eid);
+					SpineComponent.timeScale[ent.eid] = 1000;
+					world.objects.set(ent.eid, ent);
+					world.scene.add(ent);
 					break;
-				default:
+				}
+				case NetworkEvent.Leave: {
+					const username = event.data as string;
+					const player = playersByUsername.get(username);
+
+					if (player === undefined) {
+						break;
+					}
+
+					removeEntity(world, playersByUsername.get(username)!.eid);
+					playersByUsername.delete(username);
+					break;
+				}
+				default: {
 					console.error("Unhandled event:", event.type, event.data);
 					break;
+				}
 			}
 			events.splice(i, 1);
 			i--;

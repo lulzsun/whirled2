@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 
 var server *gecgosio.Server
 var clients = make(map[string]Client)
+var numOfGuests = 0;
+var usernameToPeer = make(map[string]string)
 
 type Client struct {
     Peer *gecgosio.Peer
@@ -56,13 +59,48 @@ func Start(port int) {
 			
 			if msg["code"] != nil && client.Auth == msg["code"] {
 				log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
-				if room, ok := msg["room"].(string); ok {
-					peer.Join(room)
-					peer.Room(room).Emit("Join", client.Username)
-				} else {
-					peer.Join("bravenewwhirled")
-					peer.Room(room).Emit("Join", client.Username)
+
+				// check if peer already auth'd, if so we perform a "reconnect"
+				if peerId, ok := usernameToPeer[client.Username]; ok {
+					log.Printf("Disconnecting client '%s' authorized as '%s'", peerId, client.Username)
+					clients[peerId].Peer.Disconnect()
 				}
+				usernameToPeer[client.Username] = peer.Id
+
+				data, err := json.Marshal(map[string]interface{}{
+					"username": client.Username,
+				})
+				if err != nil {
+					log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+					return
+				}
+
+				defaultRoom := "bravenewwhirled"
+				room, ok := msg["room"].(string)
+				if !ok {
+					room = defaultRoom
+				}
+
+				// join our client to a room, and announce it to all clients in the room
+				peer.Join(room)
+				peers := peer.Room(room)
+				peers.Emit("Join", string(data))
+
+				// let our client know about existing clients in the room
+				for _, p := range peers {
+					if clients[p.Id].Username == client.Username {
+						continue
+					}
+					data, err := json.Marshal(map[string]interface{}{
+						"username": clients[p.Id].Username,
+					})
+					if err != nil {
+						log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+						continue
+					}
+					peer.Emit("Join", string(data))
+				}
+				
 				client.Auth = ""
 			} else {
 				log.Printf("Failed to authorize '%s', provided wrong auth code?", peer.Id)
@@ -78,7 +116,12 @@ func Start(port int) {
 
 	server.OnDisconnect(func(peer gecgosio.Peer) {
 		log.Printf("Client %s has disconnected!\n", peer.Id)
-		delete(clients, peer.Id)
+		client, ok := clients[peer.Id]
+		if ok {
+			peer.Room().Emit("Leave", client.Username)
+			delete(usernameToPeer, client.Username)
+			delete(clients, peer.Id)
+		}
 	})
 
 	if err := server.Listen(port); err != nil {
@@ -118,9 +161,10 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		client.Auth = code
-		client.Username = "Guest"
-		client.Nickname = "Guest"
+		client.Username = "Guest" + strconv.Itoa(numOfGuests+1)
+		client.Nickname = "Guest" + strconv.Itoa(numOfGuests+1)
 		clients[id] = client
+		numOfGuests++
 
 		if cookie, err := c.Cookie("pb_auth"); err == nil {
 			decodedCookieValue, err := url.QueryUnescape(cookie.Value)
@@ -149,6 +193,7 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			client.Username = user.GetString("username")
 			client.Nickname = user.GetString("nickname")
 			clients[id] = client
+			numOfGuests--
 		}
 
 		return c.String(200, code)

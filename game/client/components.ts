@@ -33,4 +33,6 @@ export type TransformComponentType = {
 export const TransformComponent =
 	defineComponent<TransformComponentType>(TransformSchema);
 
-export const SpineAvatarComponent = defineComponent({ timeScale: f32 });
+export const SpineComponent = defineComponent({ timeScale: f32 });
+
+export const PlayerComponent = defineComponent();
