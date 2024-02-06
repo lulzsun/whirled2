@@ -43,75 +43,8 @@ func Start(port int) {
 			Peer: &peer,
 		}
 
-		peer.On("Auth", func(j string) {
-			client := clients[peer.Id]
-
-			if client.Auth == "" {
-				// user is already authorized at this point
-				return
-			}
-
-			var msg map[string]interface{}
-			err := json.Unmarshal([]byte(j), &msg)
-			if err != nil {
-				return
-			}
-			
-			if msg["code"] != nil && client.Auth == msg["code"] {
-				log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
-
-				// check if peer already auth'd, if so we perform a "reconnect"
-				if peerId, ok := usernameToPeer[client.Username]; ok {
-					log.Printf("Disconnecting client '%s' authorized as '%s'", peerId, client.Username)
-					clients[peerId].Peer.Disconnect()
-				}
-				usernameToPeer[client.Username] = peer.Id
-
-				data, err := json.Marshal(map[string]interface{}{
-					"username": client.Username,
-				})
-				if err != nil {
-					log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
-					return
-				}
-
-				defaultRoom := "bravenewwhirled"
-				room, ok := msg["room"].(string)
-				if !ok {
-					room = defaultRoom
-				}
-
-				// join our client to a room, and announce it to all clients in the room
-				peer.Join(room)
-				peers := peer.Room(room)
-				peers.Emit("Join", string(data))
-
-				// let our client know about existing clients in the room
-				for _, p := range peers {
-					if clients[p.Id].Username == client.Username {
-						continue
-					}
-					data, err := json.Marshal(map[string]interface{}{
-						"username": clients[p.Id].Username,
-					})
-					if err != nil {
-						log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
-						continue
-					}
-					peer.Emit("Join", string(data))
-				}
-				
-				client.Auth = ""
-			} else {
-				log.Printf("Failed to authorize '%s', provided wrong auth code?", peer.Id)
-			}
-			
-			clients[peer.Id] = client
-		})
-
-		peer.On("Join", func(msg string) {
-			peer.Emit("Auth", peer.Id)
-		})
+		peer.On("Join", func(msg string) { peer.Emit("Auth", peer.Id) })
+		peer.On("Auth", func(msg string) { onAuth(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer gecgosio.Peer) {
