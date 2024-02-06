@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode/utf8"
 	"whirled2/utils"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -126,6 +127,10 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/users/records
 	// Verify new user's age on signup
 	app.OnRecordBeforeCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
+		username := e.Record.GetString("username")
+		if !(utf8.RuneCountInString(username) >= 3 && utf8.RuneCountInString(username) <= 30) {
+			return apis.NewBadRequestError("Your username must be between 3-30 characters.", nil)
+		}
 		dob, err := time.Parse("2006-01-02 15:04:05.000Z", e.Record.GetDateTime("birthday").String())
 		if err != nil || int(time.Since(dob).Hours()/24/365) < 13 {
 			return apis.NewBadRequestError("You must be at least 13 years or older to register.", err)

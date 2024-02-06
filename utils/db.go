@@ -37,7 +37,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 			Required: false,
 			Options: &schema.TextOptions{
 				Min: types.Pointer(3),
-				Max: types.Pointer(10),
+				Max: types.Pointer(30),
 			},
 		})
 		form.Schema.AddField(&schema.SchemaField{
