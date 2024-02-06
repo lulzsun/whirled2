@@ -5,48 +5,29 @@ import { TransformComponent } from "../components";
 import { World } from "./world";
 
 export type Entity = THREE.Mesh & { eid: number };
+export enum Avatar {
+	GLTF,
+	Spine,
+}
 
 export const createEntity = (
 	world: World,
+	avatar: Avatar = Avatar.Spine,
+	avatarName: string = "",
 	geometry = new THREE.BoxGeometry(0, 0, 0),
 	material = new THREE.MeshBasicMaterial({ wireframe: true }),
 ): Entity => {
 	const eid = addEntity(world);
 	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });
-	const fileName = "spineboy";
 
-	world.spineAssetManager.loadText(`${fileName}.json`);
-	world.spineAssetManager.loadTextureAtlas(`${fileName}.atlas`, () => {
-		// Load the texture atlas using name.atlas and name.png from the AssetManager.
-		// The function passed to TextureAtlas is used to resolve relative paths.
-		let atlas = world.spineAssetManager.require(`${fileName}.atlas`);
+	if (avatar === Avatar.Spine) {
+		if (avatarName === "") avatarName = "spineboy";
 
-		// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
-		let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
-
-		// Create a SkeletonJson instance for parsing the .json file.
-		let skeletonJson = new spine.SkeletonJson(atlasLoader);
-
-		// Set the scale to apply during parsing, parse the file, and create a new skeleton.
-		skeletonJson.scale = 0.3;
-		let skeletonData = skeletonJson.readSkeletonData(
-			world.spineAssetManager.require(`${fileName}.json`),
-		);
-
-		// Create a SkeletonMesh from the data and attach it to the scene
-		let skeletonMesh = new spine.SkeletonMesh(
-			skeletonData,
-			(parameters) => {
-				parameters.depthTest = true;
-				parameters.depthWrite = true;
-				parameters.alphaTest = 0.001;
-			},
-		);
-		skeletonMesh.state.setAnimation(0, "idle", true);
-		console.log("Created Spine skeleton mesh", skeletonMesh);
-		// console.log(skeletonMesh.state.data.skeletonData.animations);
-		entity.add(skeletonMesh);
-	});
+		world.spineAssetManager.loadText(`${avatarName}.json`);
+		world.spineAssetManager.loadTextureAtlas(`${avatarName}.atlas`, () => {
+			entity.add(createSpineMesh(world.spineAssetManager, avatarName));
+		});
+	}
 
 	// position
 	Object.defineProperty(entity.position, "eid", { get: () => eid });
@@ -129,4 +110,36 @@ export const createEntity = (
 
 	// console.log(entity);
 	return entity;
+};
+
+const createSpineMesh = (
+	assetManager: spine.AssetManager,
+	avatarName: string,
+) => {
+	// Load the texture atlas using name.atlas and name.png from the AssetManager.
+	// The function passed to TextureAtlas is used to resolve relative paths.
+	let atlas = assetManager.require(`${avatarName}.atlas`);
+
+	// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
+	let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+
+	// Create a SkeletonJson instance for parsing the .json file.
+	let skeletonJson = new spine.SkeletonJson(atlasLoader);
+
+	// Set the scale to apply during parsing, parse the file, and create a new skeleton.
+	skeletonJson.scale = 0.3;
+	let skeletonData = skeletonJson.readSkeletonData(
+		assetManager.require(`${avatarName}.json`),
+	);
+
+	// Create a SkeletonMesh from the data and attach it to the scene
+	let skeletonMesh = new spine.SkeletonMesh(skeletonData, (parameters) => {
+		parameters.depthTest = true;
+		parameters.depthWrite = true;
+		parameters.alphaTest = 0.001;
+	});
+	skeletonMesh.state.setAnimation(0, "idle", true);
+	console.log("Created Spine skeleton mesh", skeletonMesh);
+	// console.log(skeletonMesh.state.data.skeletonData.animations);
+	return skeletonMesh;
 };
