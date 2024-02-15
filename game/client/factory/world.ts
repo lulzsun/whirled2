@@ -20,24 +20,66 @@ export type World = {
 export const createWorld = (): World => {
 	const world: World = bitECS.createWorld();
 	const canvas = document.querySelector<HTMLDivElement>("#app")!;
-
-	const light = new THREE.DirectionalLight(0xffffff, 3);
 	const aspect = window.innerWidth / window.innerHeight;
 	const fov = 1000;
 
-	// world.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 1000);
-	world.camera = new THREE.OrthographicCamera(
-		(-fov * aspect) / 2,
-		(fov * aspect) / 2,
-		fov / 2,
-		-fov / 2,
-		0.1,
-		1000,
-	);
-	world.camera.position.z = 400;
-
+	// create a scene
 	world.scene = new THREE.Scene();
+
+	// add a camera
+	world.camera = new THREE.PerspectiveCamera(fov / 10, aspect, 0.1, 1000);
+	// world.camera = new THREE.OrthographicCamera(
+	// 	(-fov * aspect) / 2,
+	// 	(fov * aspect) / 2,
+	// 	fov / 2,
+	// 	-fov / 2,
+	// 	0.1,
+	// 	1000,
+	// );
+	world.camera.position.set(0, 200, 400);
+
+	// add a light
+	const light = new THREE.DirectionalLight(0xffffff, 3);
 	world.scene.add(light);
+
+	// add a floor
+	const plane = new THREE.Mesh(
+		new THREE.PlaneGeometry(800, 500),
+		new THREE.MeshBasicMaterial({
+			color: 0xffffff,
+			side: THREE.DoubleSide,
+		}),
+	);
+	plane.position.z = 0;
+	plane.rotation.x = (Math.PI / 180) * -90;
+
+	world.scene.add(plane);
+
+	// add "stars" to the background
+	var stars = new Array(0);
+	for (var i = 0; i < 1000; i++) {
+		let x = THREE.MathUtils.randFloatSpread(2000);
+		let y = THREE.MathUtils.randFloatSpread(2000);
+		let z = THREE.MathUtils.randFloatSpread(2000);
+		stars.push(x, y, z);
+	}
+	var starsGeometry = new THREE.BufferGeometry();
+	starsGeometry.setAttribute(
+		"position",
+		new THREE.Float32BufferAttribute(stars, 3),
+	);
+	const loader = new THREE.TextureLoader();
+	var starsMaterial = new THREE.PointsMaterial({
+		size: 5,
+		map: loader.load(
+			"https://raw.githubusercontent.com/Kuntal-Das/textures/main/sp2.png",
+		),
+		transparent: true,
+		color: 0xffffff,
+	});
+	var starField = new THREE.Points(starsGeometry, starsMaterial);
+	world.scene.add(starField);
+
 	world.renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 	world.renderer.setPixelRatio(window.devicePixelRatio);
 	world.renderer.setSize(window.innerWidth, window.innerHeight);
