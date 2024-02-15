@@ -9,20 +9,16 @@ import {
 
 const world = createWorld();
 
-const timeSystem = createTimeSystem();
-const movementSystem = createMovementSystem();
-const renderSystem = createRenderSystem();
-const networkSystem = createNetworkSystem();
+const systems = [
+	createTimeSystem,
+	createMovementSystem,
+	createRenderSystem,
+	createNetworkSystem,
+].map((createSystem) => createSystem(world));
 
 const update = () => {
 	requestAnimationFrame(update);
-	pipe(
-		//
-		timeSystem,
-		//movementSystem,
-		renderSystem,
-		networkSystem,
-	)(world);
+	pipe(...systems)(world);
 };
 
 update();
