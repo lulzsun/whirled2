@@ -36,3 +36,8 @@ export const TransformComponent =
 export const SpineComponent = defineComponent({ timeScale: f32 });
 
 export const PlayerComponent = defineComponent();
+
+export const LocalPlayerComponent = defineComponent();
+
+export const MoveTowardsComponent =
+	defineComponent<Vector3Component>(Vector3Schema);

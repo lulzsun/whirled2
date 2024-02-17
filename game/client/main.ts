@@ -1,5 +1,5 @@
 import { pipe } from "bitecs";
-import { createWorld } from "./factory/world";
+import { World, createWorld } from "./factory/world";
 import {
 	createTimeSystem,
 	createRenderSystem,
@@ -8,6 +8,12 @@ import {
 } from "./factory/systems";
 
 const world = createWorld();
+declare global {
+	interface Window {
+		world: World;
+	}
+}
+window.world = world;
 
 const systems = [
 	createTimeSystem,

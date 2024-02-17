@@ -20,16 +20,9 @@ import (
 )
 
 var server *gecgosio.Server
-var clients = make(map[string]Client)
+var clients = make(map[string]*Client)
 var numOfGuests = 0;
 var usernameToPeer = make(map[string]string)
-
-type Client struct {
-    Peer *gecgosio.Peer
-	Auth string
-	Username string
-	Nickname string
-}
 
 func Start(port int) {
 	server = gecgosio.Gecgos(&gecgosio.Options{
@@ -39,12 +32,13 @@ func Start(port int) {
 	server.OnConnection(func(peer gecgosio.Peer) {
 		log.Printf("Client %s has connected!\n", peer.Id)
 
-		clients[peer.Id] = Client{
+		clients[peer.Id] = &Client{
 			Peer: &peer,
 		}
 
 		peer.On("Join", func(msg string) { peer.Emit("Auth", peer.Id) })
 		peer.On("Auth", func(msg string) { onAuth(peer, msg) })
+		peer.On("Move", func(msg string) { onMove(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer gecgosio.Peer) {

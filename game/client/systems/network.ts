@@ -1,22 +1,35 @@
 import { geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
-import { addComponent, defineQuery, defineSystem, removeEntity } from "bitecs";
+import {
+	addComponent,
+	defineQuery,
+	defineSystem,
+	hasComponent,
+	removeComponent,
+	removeEntity,
+} from "bitecs";
 import { createEntity } from "../factory/entity";
 import {
 	PlayerComponent,
+	LocalPlayerComponent,
 	SpineComponent,
 	TransformComponent,
+	MoveTowardsComponent,
 } from "../components";
 
 export enum NetworkEvent {
 	Auth,
 	Join,
 	Leave,
+	Move,
 }
 
-export const playersQuery = defineQuery([PlayerComponent]);
+export const playersQuery = defineQuery([
+	LocalPlayerComponent,
+	PlayerComponent,
+]);
 
-export function createNetworkSystem() {
+export function createNetworkSystem(world: World) {
 	const playersByUsername = new Map<
 		string,
 		{ eid: number; nickname: string }
@@ -27,6 +40,7 @@ export function createNetworkSystem() {
 		data: string | number | Object;
 	}[] = [];
 	const network = geckos({ port: 42069 });
+	world.network = network;
 
 	network.onConnect((error) => {
 		if (error) {
@@ -125,6 +139,12 @@ export function createNetworkSystem() {
 					const player: {
 						username: string;
 						nickname: string;
+						local: boolean;
+						position: {
+							x: number;
+							y: number;
+							z: number;
+						};
 					} = event.data as any;
 
 					playersByUsername.set(player.username, {
@@ -132,6 +152,12 @@ export function createNetworkSystem() {
 						nickname: player.nickname,
 					});
 					addComponent(world, TransformComponent, ent.eid);
+					TransformComponent.position.x[ent.eid] = player.position.x;
+					TransformComponent.position.y[ent.eid] = player.position.y;
+					TransformComponent.position.z[ent.eid] = player.position.z;
+					if (player.local) {
+						addComponent(world, LocalPlayerComponent, ent.eid);
+					}
 					addComponent(world, PlayerComponent, ent.eid);
 					addComponent(world, SpineComponent, ent.eid);
 					SpineComponent.timeScale[ent.eid] = 1000;
@@ -149,6 +175,32 @@ export function createNetworkSystem() {
 
 					removeEntity(world, playersByUsername.get(username)!.eid);
 					playersByUsername.delete(username);
+					break;
+				}
+				case NetworkEvent.Move: {
+					const data: {
+						username: string;
+						x: number;
+						y: number;
+						z: number;
+					} = event.data as any;
+					const player = playersByUsername.get(data.username);
+
+					if (player === undefined) {
+						console.error("Could not find player:", data.username);
+						break;
+					}
+					if (hasComponent(world, MoveTowardsComponent, player.eid)) {
+						removeComponent(
+							world,
+							MoveTowardsComponent,
+							player.eid,
+						);
+					}
+					addComponent(world, MoveTowardsComponent, player.eid);
+					MoveTowardsComponent.x[player.eid] = data.x;
+					MoveTowardsComponent.y[player.eid] = data.y;
+					MoveTowardsComponent.z[player.eid] = data.z;
 					break;
 				}
 				default: {

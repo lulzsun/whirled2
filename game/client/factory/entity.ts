@@ -14,8 +14,12 @@ export const createEntity = (
 	world: World,
 	avatar: Avatar = Avatar.Spine,
 	avatarName: string = "",
-	geometry = new THREE.BoxGeometry(0, 0, 0),
-	material = new THREE.MeshBasicMaterial({ wireframe: true }),
+	geometry = new THREE.BoxGeometry(1, 1, 1),
+	material = new THREE.MeshBasicMaterial({
+		// wireframe: true,
+		opacity: 1,
+		transparent: true,
+	}),
 ): Entity => {
 	const eid = addEntity(world);
 	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });

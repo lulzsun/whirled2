@@ -70,7 +70,7 @@ func main() {
 			return nil
 		})
 
-		log.Println("Server started at http://localhost:42069")
+		log.Println("Server started at http://127.0.0.1:42069")
 		return nil
 	})
 

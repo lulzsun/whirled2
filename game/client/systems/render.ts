@@ -18,7 +18,12 @@ export function createRenderSystem() {
 			const eid = spineAvatars[x];
 			const entity = world.objects.get(eid);
 			// always facing camera (billboard effect)
-			entity!.quaternion.copy(world.camera.quaternion);
+			entity!.quaternion.set(
+				entity!.quaternion.x,
+				world.camera.quaternion.y,
+				entity!.quaternion.z,
+				world.camera.quaternion.w,
+			);
 			for (let y = 0; y < entity!.children.length; y++) {
 				let obj3d = entity!.children[y];
 				if (obj3d instanceof spine.SkeletonMesh) {

@@ -3,6 +3,7 @@ import * as bitECS from "bitecs";
 import * as spine from "@esotericsoftware/spine-threejs";
 
 import { Entity } from "./entity";
+import { ClientChannel } from "@geckos.io/client";
 
 export type World = {
 	objects: Map<number, Entity>;
@@ -14,6 +15,7 @@ export type World = {
 		delta: number;
 		elapsed: number;
 	};
+	network: ClientChannel;
 	spineAssetManager: spine.AssetManager;
 };
 
@@ -27,14 +29,14 @@ export const createWorld = (): World => {
 	world.scene = new THREE.Scene();
 
 	// add a camera
-	world.camera = new THREE.PerspectiveCamera(fov / 10, aspect, 0.1, 1000);
+	world.camera = new THREE.PerspectiveCamera(fov / 10, aspect, 0.1, 4000);
 	// world.camera = new THREE.OrthographicCamera(
 	// 	(-fov * aspect) / 2,
 	// 	(fov * aspect) / 2,
 	// 	fov / 2,
 	// 	-fov / 2,
 	// 	0.1,
-	// 	1000,
+	// 	4000,
 	// );
 	world.camera.position.set(0, 200, 400);
 

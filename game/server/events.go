@@ -39,6 +39,12 @@ func onAuth(peer gecgosio.Peer, msg string) {
 
 		data, err := json.Marshal(map[string]interface{}{
 			"username": client.Username,
+			"local": true,
+			"position": map[string]interface{}{
+				"x": client.Position.X,
+				"y": client.Position.Y,
+				"z": client.Position.Z,
+			},
 		})
 		if err != nil {
 			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
@@ -63,6 +69,12 @@ func onAuth(peer gecgosio.Peer, msg string) {
 			}
 			data, err := json.Marshal(map[string]interface{}{
 				"username": clients[p.Id].Username,
+				"local": false,
+				"position": map[string]interface{}{
+					"x": clients[p.Id].Position.X,
+					"y": clients[p.Id].Position.Y,
+					"z": clients[p.Id].Position.Z,
+				},
 			})
 			if err != nil {
 				log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
@@ -77,4 +89,33 @@ func onAuth(peer gecgosio.Peer, msg string) {
 	}
 	
 	clients[peer.Id] = client
+}
+
+func onMove(peer gecgosio.Peer, msg string) {
+	client := clients[peer.Id]
+
+	// Parse the JSON string into a map
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(msg), &data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	// Add the username property to the map
+	data["username"] = client.Username
+
+	// Save position on the server
+	client.Position.X = data["x"].(float64)
+	client.Position.Y = data["y"].(float64)
+	client.Position.Z = data["z"].(float64)
+
+	// Marshal the map back into a JSON string
+	updatedMsg, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	peer.Room().Emit("Move", string(updatedMsg));
 }
