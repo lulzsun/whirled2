@@ -26,6 +26,7 @@ var queryGetProfileComments string
 type Profile struct {
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"id" json:"id"`
+	Nickname  string `db:"nickname" json:"nickname"`
 }
 type Comment struct {
 	CommentId string `db:"id" json:"id"`
@@ -110,7 +111,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		err = app.DB().
 			NewQuery(`
-				SELECT profiles.id, user_id 
+				SELECT profiles.id, user_id, users.nickname
 				FROM profiles 
 				INNER JOIN users ON profiles.user_id = users.id
 				WHERE users.username = {:username}
@@ -163,8 +164,8 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			CommentPageLength  []int
 		}{
 			Username:  username,
-			Nickname:  username,
-			Status:    "Dreamer, Builder of the new whirled.",
+			Nickname:  profile.Nickname,
+			Status:    "Building the new whirled.",
 			Following: 69,
 			Followers: 420,
 
