@@ -8,7 +8,7 @@ import {
 	removeComponent,
 	removeEntity,
 } from "bitecs";
-import { createEntity } from "../factory/entity";
+import { Entity, createEntity } from "../factory/entity";
 import {
 	PlayerComponent,
 	LocalPlayerComponent,
@@ -140,7 +140,7 @@ export function createNetworkSystem(world: World) {
 						});
 					break;
 				case NetworkEvent.Join: {
-					const ent = createEntity(world);
+					const entity = createEntity(world);
 					const player: {
 						username: string;
 						nickname: string;
@@ -150,24 +150,29 @@ export function createNetworkSystem(world: World) {
 							y: number;
 							z: number;
 						};
+						eid: number;
 					} = event.data as any;
+					player.eid = entity.eid;
 
 					playersByUsername.set(player.username, {
-						eid: ent.eid,
+						eid: player.eid,
 						nickname: player.nickname,
 					});
-					addComponent(world, TransformComponent, ent.eid);
-					TransformComponent.position.x[ent.eid] = player.position.x;
-					TransformComponent.position.y[ent.eid] = player.position.y;
-					TransformComponent.position.z[ent.eid] = player.position.z;
+					addComponent(world, TransformComponent, player.eid);
+					TransformComponent.position.x[player.eid] =
+						player.position.x;
+					TransformComponent.position.y[player.eid] =
+						player.position.y;
+					TransformComponent.position.z[player.eid] =
+						player.position.z;
 					if (player.local) {
-						addComponent(world, LocalPlayerComponent, ent.eid);
+						addComponent(world, LocalPlayerComponent, player.eid);
 					}
-					addComponent(world, PlayerComponent, ent.eid);
-					addComponent(world, SpineComponent, ent.eid);
-					SpineComponent.timeScale[ent.eid] = 1000;
-					world.objects.set(ent.eid, ent);
-					world.scene.add(ent);
+					addComponent(world, PlayerComponent, player.eid);
+					addComponent(world, SpineComponent, player.eid);
+					SpineComponent.timeScale[player.eid] = 1000;
+					world.objects.set(player.eid, entity);
+					world.scene.add(entity);
 					break;
 				}
 				case NetworkEvent.Leave: {
@@ -183,16 +188,24 @@ export function createNetworkSystem(world: World) {
 					break;
 				}
 				case NetworkEvent.Move: {
-					const data: {
-						username: string;
-						x: number;
-						y: number;
-						z: number;
-					} = event.data as any;
-					const player = playersByUsername.get(data.username);
+					const player = Object.assign(
+						playersByUsername.get((event.data as any).username) as {
+							eid: number;
+							nickname: string;
+						},
+						event.data as any as {
+							username: string;
+							x: number;
+							y: number;
+							z: number;
+						},
+					);
 
 					if (player === undefined) {
-						console.error("Could not find player:", data.username);
+						console.error(
+							"Could not find player:",
+							(event.data as any).username,
+						);
 						break;
 					}
 					if (hasComponent(world, MoveTowardsComponent, player.eid)) {
@@ -203,9 +216,9 @@ export function createNetworkSystem(world: World) {
 						);
 					}
 					addComponent(world, MoveTowardsComponent, player.eid);
-					MoveTowardsComponent.x[player.eid] = data.x;
-					MoveTowardsComponent.y[player.eid] = data.y;
-					MoveTowardsComponent.z[player.eid] = data.z;
+					MoveTowardsComponent.x[player.eid] = player.x;
+					MoveTowardsComponent.y[player.eid] = player.y;
+					MoveTowardsComponent.z[player.eid] = player.z;
 					break;
 				}
 				default: {
