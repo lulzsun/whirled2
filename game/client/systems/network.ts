@@ -16,6 +16,7 @@ import {
 	TransformComponent,
 	MoveTowardsComponent,
 } from "../components";
+import { createDisconnectUI } from "../ui/disconnect";
 
 export enum NetworkEvent {
 	Auth,
@@ -68,11 +69,14 @@ export function createNetworkSystem(world: World) {
 	});
 
 	network.onDisconnect((error) => {
+		world.canvas.parentElement?.appendChild(
+			createDisconnectUI("Lost connection to server"),
+		);
+
 		if (error === undefined) {
-			console.log("Lost connection to gecgos.io server");
+			console.log("Disconnected from gecgos.io server");
 			return;
 		}
-
 		console.log("Disconnected from gecgos.io server:", error);
 	});
 

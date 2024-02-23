@@ -1,15 +1,18 @@
 {{ define "game" }}
 	<div class="flex-initial">
-		<b>top</b>
+		<!-- <b>top</b> -->
 	</div>
 	<div class="flex-auto overflow-hidden w-full">
-		<div class="items-center justify-center flex flex-col w-full h-full" mx="auto">
+		<div
+			class="relative items-center justify-center flex flex-col w-full h-full"
+			mx="auto"
+		>
 			<!-- <span class="text-5xl">🔧🐒</span> -->
 			<canvas id="app" class="w-full h-full"></canvas>
 			<script type="module" src="http://localhost:6969/main.ts"></script>
 		</div>
 	</div>
 	<div class="flex-initial">
-		<b>bottom</b>
+		<!-- <b>bottom</b> -->
 	</div>
 {{ end }}
