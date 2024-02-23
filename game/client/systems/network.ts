@@ -8,7 +8,7 @@ import {
 	removeComponent,
 	removeEntity,
 } from "bitecs";
-import { Entity, createEntity } from "../factory/entity";
+import { createEntity } from "../factory/entity";
 import {
 	PlayerComponent,
 	LocalPlayerComponent,
@@ -45,7 +45,7 @@ export function createNetworkSystem(world: World) {
 
 	network.onConnect((error) => {
 		if (error) {
-			world.canvas.parentElement?.appendChild(
+			world.html.appendChild(
 				createDisconnectUI("Something went wrong connecting to server"),
 			);
 			console.error(error.message);
@@ -71,9 +71,7 @@ export function createNetworkSystem(world: World) {
 	});
 
 	network.onDisconnect((error) => {
-		world.canvas.parentElement?.appendChild(
-			createDisconnectUI("Lost connection to server"),
-		);
+		world.html.appendChild(createDisconnectUI("Lost connection to server"));
 
 		if (error === undefined) {
 			console.log("Disconnected from gecgos.io server");

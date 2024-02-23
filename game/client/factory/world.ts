@@ -8,7 +8,7 @@ import { ClientChannel } from "@geckos.io/client";
 export type World = {
 	objects: Map<number, Entity>;
 	camera: THREE.Camera;
-	canvas: HTMLCanvasElement;
+	html: HTMLElement;
 	scene: THREE.Scene;
 	renderer: THREE.WebGLRenderer;
 	time: {
@@ -26,8 +26,8 @@ export const createWorld = (): World => {
 	const aspect = window.innerWidth / window.innerHeight;
 	const fov = 1000;
 
-	// set the HTML canvas
-	world.canvas = canvas;
+	// set the HTML parent element
+	world.html = canvas.parentElement!;
 
 	// create a scene
 	world.scene = new THREE.Scene();
