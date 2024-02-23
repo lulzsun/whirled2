@@ -1,11 +1,4 @@
-import { createTimeSystem } from "../systems/time";
-import { createRenderSystem } from "../systems/render";
-import { createNetworkSystem } from "../systems/network";
-import { createMovementSystem } from "../systems/movement";
-
-export {
-	createTimeSystem,
-	createRenderSystem,
-	createNetworkSystem,
-	createMovementSystem,
-};
+export { createTimeSystem } from "../systems/time";
+export { createRenderSystem } from "../systems/render";
+export { createNetworkSystem } from "../systems/network";
+export { createMovementSystem } from "../systems/movement";

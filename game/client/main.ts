@@ -1,11 +1,6 @@
 import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
-import {
-	createTimeSystem,
-	createRenderSystem,
-	createMovementSystem,
-	createNetworkSystem,
-} from "./factory/systems";
+import * as createSystems from "./factory/systems";
 
 const world = createWorld();
 declare global {
@@ -15,12 +10,9 @@ declare global {
 }
 window.world = world;
 
-const systems = [
-	createTimeSystem,
-	createMovementSystem,
-	createRenderSystem,
-	createNetworkSystem,
-].map((createSystem) => createSystem(world));
+const systems = Object.values(createSystems).map((createSystem) =>
+	createSystem(world),
+);
 
 const update = () => {
 	requestAnimationFrame(update);
