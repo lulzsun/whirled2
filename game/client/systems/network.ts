@@ -45,7 +45,9 @@ export function createNetworkSystem(world: World) {
 
 	network.onConnect((error) => {
 		if (error) {
-			console.log("oh noes");
+			world.canvas.parentElement?.appendChild(
+				createDisconnectUI("Something went wrong connecting to server"),
+			);
 			console.error(error.message);
 		}
 
@@ -82,7 +84,6 @@ export function createNetworkSystem(world: World) {
 
 	// @ts-ignore
 	const connectionsManager: ClientChannel = network.connectionsManager;
-	console.log(connectionsManager);
 
 	// we can handle websocket fallback here?
 	(function repeatUntilCondition() {
