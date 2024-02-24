@@ -4,7 +4,7 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 	const chatInput = createRef<HTMLInputElement>();
 
 	return (
-		<div className="absolute left-1 bottom-1 w-64 text-white">
+		<div className="absolute left-1 bottom-1 w-64 text-white z-10">
 			<div id="chatbox" class="pb-2" />
 			<div class="relative">
 				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
