@@ -12,6 +12,8 @@ export function createMovementSystem(world: World) {
 	const pointerMesh = new THREE.Group();
 	const raycaster = new THREE.Raycaster();
 
+	const canvas = document.querySelector<HTMLDivElement>("#app")!;
+
 	let INTERSECTED: THREE.Intersection | null;
 
 	// create a "cursor" for user to click on floor to move
@@ -83,14 +85,13 @@ export function createMovementSystem(world: World) {
 
 	const controls = new OrbitControls(world.camera, world.renderer.domElement);
 
-	document.addEventListener("pointermove", (event) => {
-		const canvas = document.querySelector<HTMLDivElement>("#app")!;
+	canvas.addEventListener("pointermove", (event) => {
 		var rect = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 	});
 
-	document.addEventListener("pointerdown", (event) => {
+	canvas.addEventListener("pointerdown", (event) => {
 		if (INTERSECTED && event.button === 0) {
 			world.network.emit("Move", {
 				x: INTERSECTED.point.x,
@@ -132,10 +133,9 @@ export function createMovementSystem(world: World) {
 		const ents = movementQuery(world);
 		for (let i = 0; i < ents.length; i++) {
 			const e = ents[i];
-			const obj3d = world.objects.get(e);
 			const speed = 1;
 
-			const playerPosition = new THREE.Vector3(
+			const initialPosition = new THREE.Vector3(
 				TransformComponent.position.x[e],
 				TransformComponent.position.y[e],
 				TransformComponent.position.z[e],
@@ -147,14 +147,14 @@ export function createMovementSystem(world: World) {
 				MoveTowardsComponent.z[e],
 			);
 
-			var distance = playerPosition.distanceTo(targetPosition);
+			var distance = initialPosition.distanceTo(targetPosition);
 
 			var duration = distance / speed;
 
 			var progress = delta / duration;
 			if (progress < 1) {
 				var newPosition = new THREE.Vector3().lerpVectors(
-					playerPosition,
+					initialPosition,
 					targetPosition,
 					progress,
 				);

@@ -1,6 +1,6 @@
 import { defineComponent, Types } from "bitecs";
 
-const { f32 } = Types;
+const { f32, eid } = Types;
 
 export const Vector3Schema = { x: f32, y: f32, z: f32 };
 export const QuaternionSchema = { x: f32, y: f32, z: f32, w: f32 };
@@ -41,3 +41,5 @@ export const LocalPlayerComponent = defineComponent();
 
 export const MoveTowardsComponent =
 	defineComponent<Vector3Component>(Vector3Schema);
+
+export const NameplateComponent = defineComponent({ owner: eid });

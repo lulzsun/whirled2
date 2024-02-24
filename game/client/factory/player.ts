@@ -4,13 +4,13 @@ import * as spine from "@esotericsoftware/spine-threejs";
 import { TransformComponent } from "../components";
 import { World } from "./world";
 
-export type Entity = THREE.Mesh & { eid: number };
+export type Player = THREE.Mesh & { eid: number };
 export enum Avatar {
 	GLTF,
 	Spine,
 }
 
-export const createEntity = (
+export const createPlayer = (
 	world: World,
 	avatar: Avatar = Avatar.Spine,
 	avatarName: string = "",
@@ -20,7 +20,7 @@ export const createEntity = (
 		opacity: 1,
 		transparent: true,
 	}),
-): Entity => {
+): Player => {
 	const eid = addEntity(world);
 	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });
 

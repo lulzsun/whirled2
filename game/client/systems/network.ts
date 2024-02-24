@@ -8,15 +8,17 @@ import {
 	removeComponent,
 	removeEntity,
 } from "bitecs";
-import { createEntity } from "../factory/entity";
+import { createPlayer } from "../factory/player";
 import {
 	PlayerComponent,
 	LocalPlayerComponent,
 	SpineComponent,
 	TransformComponent,
 	MoveTowardsComponent,
+	NameplateComponent,
 } from "../components";
 import { createDisconnectUI } from "../ui/disconnect";
+import { createNameplate } from "../factory/nameplate";
 
 export enum NetworkEvent {
 	Auth,
@@ -138,7 +140,7 @@ export function createNetworkSystem(world: World) {
 						});
 					break;
 				case NetworkEvent.Join: {
-					const entity = createEntity(world);
+					const playerEntity = createPlayer(world);
 					const player: {
 						username: string;
 						nickname: string;
@@ -150,7 +152,18 @@ export function createNetworkSystem(world: World) {
 						};
 						eid: number;
 					} = event.data as any;
-					player.eid = entity.eid;
+					player.eid = playerEntity.eid;
+
+					const nameplateEntity = createNameplate(
+						world,
+						player.username,
+					);
+					addComponent(
+						world,
+						NameplateComponent,
+						nameplateEntity.eid,
+					);
+					NameplateComponent.owner[nameplateEntity.eid] = player.eid;
 
 					playersByUsername.set(player.username, {
 						eid: player.eid,
@@ -169,8 +182,11 @@ export function createNetworkSystem(world: World) {
 					addComponent(world, PlayerComponent, player.eid);
 					addComponent(world, SpineComponent, player.eid);
 					SpineComponent.timeScale[player.eid] = 1000;
-					world.objects.set(player.eid, entity);
-					world.scene.add(entity);
+					world.players.set(player.eid, {
+						player: playerEntity,
+						nameplate: nameplateEntity,
+					});
+					world.scene.add(playerEntity);
 					break;
 				}
 				case NetworkEvent.Leave: {

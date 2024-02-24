@@ -2,11 +2,13 @@ import * as THREE from "three";
 import * as bitECS from "bitecs";
 import * as spine from "@esotericsoftware/spine-threejs";
 
-import { Entity } from "./entity";
+import { Player } from "./player";
+import { Nameplate } from "./nameplate";
+
 import { ClientChannel } from "@geckos.io/client";
 
 export type World = {
-	objects: Map<number, Entity>;
+	players: Map<number, { player: Player; nameplate: Nameplate }>;
 	camera: THREE.Camera;
 	html: HTMLElement;
 	scene: THREE.Scene;
@@ -88,7 +90,13 @@ export const createWorld = (): World => {
 
 	world.renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 	world.renderer.setPixelRatio(window.devicePixelRatio);
+	console.log(canvas.parentElement!.getBoundingClientRect());
 	world.renderer.setSize(window.innerWidth, window.innerHeight);
+
+	setTimeout(function () {
+		const rect = canvas.parentElement!.getBoundingClientRect();
+		world.renderer.setSize(window.innerWidth, rect.height);
+	}, 1);
 
 	window.addEventListener("resize", () => {
 		const aspect = window.innerWidth / window.innerHeight;
@@ -103,10 +111,11 @@ export const createWorld = (): World => {
 			world.camera.updateProjectionMatrix();
 		}
 
-		world.renderer.setSize(window.innerWidth, window.innerHeight);
+		const rect = canvas.parentElement!.getBoundingClientRect();
+		world.renderer.setSize(window.innerWidth, rect.height);
 	});
 
-	world.objects = new Map();
+	world.players = new Map();
 
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 
