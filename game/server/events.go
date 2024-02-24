@@ -121,3 +121,22 @@ func onMove(peer gecgosio.Peer, msg string) {
 
 	peer.Room().Emit("Move", string(updatedMsg));
 }
+
+func onChat(peer gecgosio.Peer, msg string) {
+	client := clients[peer.Id]
+
+	// Create a new msg map (JSON)
+	var data map[string]interface{} = map[string]interface{}{
+		"username": client.Username,
+		"message": msg[1:len(msg)-1],
+	}
+
+	// Marshal the map back into a JSON string
+	updatedMsg, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	peer.Room().Emit("Chat", string(updatedMsg));
+}

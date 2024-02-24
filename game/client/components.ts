@@ -43,3 +43,5 @@ export const MoveTowardsComponent =
 	defineComponent<Vector3Component>(Vector3Schema);
 
 export const NameplateComponent = defineComponent({ owner: eid });
+
+export const ChatMessageComponent = defineComponent();

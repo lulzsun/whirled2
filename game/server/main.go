@@ -39,6 +39,7 @@ func Start(port int) {
 		peer.On("Join", func(msg string) { peer.Emit("Auth", peer.Id) })
 		peer.On("Auth", func(msg string) { onAuth(peer, msg) })
 		peer.On("Move", func(msg string) { onMove(peer, msg) })
+		peer.On("Chat", func(msg string) { onChat(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer gecgosio.Peer) {

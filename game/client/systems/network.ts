@@ -16,15 +16,18 @@ import {
 	TransformComponent,
 	MoveTowardsComponent,
 	NameplateComponent,
+	ChatMessageComponent,
 } from "../components";
 import { createDisconnectUI } from "../ui/disconnect";
 import { createNameplate } from "../factory/nameplate";
+import { createChatMessage } from "../factory/chatmessage";
 
 export enum NetworkEvent {
 	Auth,
 	Join,
 	Leave,
 	Move,
+	Chat,
 }
 
 export const playersQuery = defineQuery([
@@ -233,6 +236,30 @@ export function createNetworkSystem(world: World) {
 					MoveTowardsComponent.x[player.eid] = player.x;
 					MoveTowardsComponent.y[player.eid] = player.y;
 					MoveTowardsComponent.z[player.eid] = player.z;
+					break;
+				}
+				case NetworkEvent.Chat: {
+					const player = Object.assign(
+						playersByUsername.get((event.data as any).username) as {
+							eid: number;
+							nickname: string;
+						},
+						event.data as any as {
+							username: string;
+							message: string;
+						},
+					);
+					const chatMessageEntity = createChatMessage(
+						world,
+						player.username,
+						player.nickname,
+						player.message,
+					);
+					addComponent(
+						world,
+						ChatMessageComponent,
+						chatMessageEntity.eid,
+					);
 					break;
 				}
 				default: {
