@@ -3,7 +3,10 @@
 	<html lang="en">
 		<head>
 			<meta charset="UTF-8" />
-			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+			<meta
+				name="viewport"
+				content="width=device-width, initial-scale=1.0"
+			/>
 			<link href="/static/styles.css" type="text/css" rel="stylesheet" />
 			<style>
 				.split {
@@ -32,12 +35,20 @@
 						if (!window._split_instance) return;
 						if (window.innerWidth < 640) {
 							window._split_instance.collapse(0);
-							document.getElementById("web").removeAttribute("style");
-							document.getElementById("game").style.display = "none";
-							document.getElementsByClassName("gutter")[0].style.display = "none";
+							document
+								.getElementById("web")
+								.removeAttribute("style");
+							document.getElementById("game").style.display =
+								"none";
+							document.getElementsByClassName(
+								"gutter",
+							)[0].style.display = "none";
 						} else {
-							document.getElementById("game").style.display = "flex";
-							document.getElementsByClassName("gutter")[0].style.display = "block";
+							document.getElementById("game").style.display =
+								"flex";
+							document.getElementsByClassName(
+								"gutter",
+							)[0].style.display = "block";
 						}
 					};
 					window._closeWebPanel = () => {
@@ -56,22 +67,36 @@
 						window._checkWindowSize();
 					};
 					window._checkWindowSize();
-					if (document.getElementById("focusGame")) window._closeWebPanel();
+					if (document.getElementById("focusGame"))
+						window._closeWebPanel();
 					window.addEventListener("resize", window._checkWindowSize);
 				});
 			</script>
-			<title>Whirled</title>
+			<title>New Whirled</title>
 		</head>
 		<body hx-boost="true">
-			<div class="flex flex-col h-screen bg-white dark:bg-gray-800 text-black dark:text-white">
+			<div
+				class="flex flex-col h-screen bg-white dark:bg-gray-800 text-black dark:text-white"
+			>
 				{{ template "header" . }}
 				<main class="flex-1 overflow-y-auto">
 					<div class="split w-full h-full">
-						<div id="game" class="flex flex-col w-full h-full items-center bg-black" style="display: none">
+						<div
+							id="game"
+							class="flex flex-col w-full h-full items-center bg-black"
+							style="display: none"
+						>
 							{{ template "game" . }}
 						</div>
-						<div id="web" class="flex flex-col h-full w-full" hx-history-elt>
-							<div id="page" class="w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+						<div
+							id="web"
+							class="flex flex-col h-full w-full"
+							hx-history-elt
+						>
+							<div
+								id="page"
+								class="w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900"
+							>
 								{{ template "page" . }}
 							</div>
 						</div>
