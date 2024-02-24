@@ -1,4 +1,4 @@
-import { defineQuery, defineSystem, exitQuery } from "bitecs";
+import { defineQuery, defineSystem, exitQuery, removeEntity } from "bitecs";
 import { World } from "../factory/world";
 import {
 	NameplateComponent,
@@ -67,7 +67,6 @@ export function createRenderSystem() {
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
 				nameplate.style.left = `${nameplate.position.x - xOffset}px`;
-				// console.log(nameplate.style.top);
 			}
 		}
 
@@ -83,6 +82,14 @@ export function createRenderSystem() {
 				world.scene.remove(player.entity);
 			} else {
 				console.warn("Unable to cleanup player entity", player.eid);
+			}
+
+			const nameplate = world.players.get(playerLeave[x])?.nameplate;
+			if (nameplate !== undefined) {
+				removeEntity(world, nameplate.eid);
+				nameplate.remove();
+			} else {
+				console.warn("Unable to cleanup player nameplate", player.eid);
 			}
 		}
 		world.renderer.render(world.scene, world.camera);
