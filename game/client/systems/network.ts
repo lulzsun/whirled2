@@ -156,7 +156,7 @@ export function createNetworkSystem(world: World) {
 
 					const nameplateEntity = createNameplate(
 						world,
-						player.username,
+						player.nickname,
 					);
 					addComponent(
 						world,

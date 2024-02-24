@@ -39,6 +39,7 @@ func onAuth(peer gecgosio.Peer, msg string) {
 
 		data, err := json.Marshal(map[string]interface{}{
 			"username": client.Username,
+			"nickname": client.Nickname,
 			"local": true,
 			"position": map[string]interface{}{
 				"x": client.Position.X,
@@ -69,6 +70,7 @@ func onAuth(peer gecgosio.Peer, msg string) {
 			}
 			data, err := json.Marshal(map[string]interface{}{
 				"username": clients[p.Id].Username,
+				"nickname": clients[p.Id].Nickname,
 				"local": false,
 				"position": map[string]interface{}{
 					"x": clients[p.Id].Position.X,
