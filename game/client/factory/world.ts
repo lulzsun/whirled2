@@ -94,8 +94,10 @@ export const createWorld = (): World => {
 	world.renderer.setSize(window.innerWidth, window.innerHeight);
 
 	setTimeout(function () {
-		const rect = canvas.parentElement!.getBoundingClientRect();
-		world.renderer.setSize(window.innerWidth, rect.height);
+		world.renderer.setSize(
+			window.innerWidth,
+			canvas.parentElement!.clientHeight,
+		);
 	}, 1);
 
 	window.addEventListener("resize", () => {
@@ -111,8 +113,10 @@ export const createWorld = (): World => {
 			world.camera.updateProjectionMatrix();
 		}
 
-		const rect = canvas.parentElement!.getBoundingClientRect();
-		world.renderer.setSize(window.innerWidth, rect.height);
+		world.renderer.setSize(
+			window.innerWidth,
+			canvas.parentElement!.clientHeight,
+		);
 	});
 
 	world.players = new Map();
