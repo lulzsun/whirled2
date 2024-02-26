@@ -108,23 +108,31 @@ export function createMovementSystem(world: World) {
 
 		const intersects = raycaster.intersectObjects(
 			world.scene.children,
-			false,
+			true,
 		);
 
 		if (intersects.length > 0) {
-			if (!INTERSECTED || INTERSECTED.point != intersects[0].point) {
-				INTERSECTED = intersects[0];
-				pointerMesh.position.set(
-					intersects[0].point.x - 15,
-					intersects[0].point.y + 1,
-					intersects[0].point.z + 10,
-				);
+			for (let i = 0; i < intersects.length; i++) {
+				if (!INTERSECTED || INTERSECTED.point != intersects[i].point) {
+					if (intersects[i].object.parent!.id === pointerMesh.id) {
+						continue;
+					}
+					INTERSECTED = intersects[i];
+					pointerMesh.visible = true;
+					pointerMesh.position.set(
+						INTERSECTED.point.x - 15,
+						INTERSECTED.point.y + 1,
+						INTERSECTED.point.z + 10,
+					);
+					continue;
+				}
 			}
 		} else {
 			if (INTERSECTED) {
 				// console.log("leave", INTERSECTED);
 			}
 			INTERSECTED = null;
+			pointerMesh.visible = false;
 		}
 
 		const {
