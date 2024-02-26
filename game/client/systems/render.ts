@@ -10,16 +10,17 @@ import {
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 
-export const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
-export const spineAvatarQuery = defineQuery([SpineComponent]);
-export const gltfAvatarQuery = defineQuery([GltfComponent]);
-export const nameplateQuery = defineQuery([NameplateComponent]);
+const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
+const spineAvatarQuery = defineQuery([SpineComponent]);
+const gltfAvatarQuery = defineQuery([GltfComponent]);
+const nameplateQuery = defineQuery([NameplateComponent]);
 
 export function createRenderSystem() {
 	return defineSystem((world: World) => {
 		const {
 			time: { delta },
 		} = world;
+
 		// handle spine avatar rendering
 		const spineAvatars = spineAvatarQuery(world);
 		for (let x = 0; x < spineAvatars.length; x++) {

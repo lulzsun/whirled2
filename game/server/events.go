@@ -46,6 +46,12 @@ func onAuth(peer gecgosio.Peer, msg string) {
 				"y": client.Position.Y,
 				"z": client.Position.Z,
 			},
+			"rotation": map[string]interface{}{
+				"x": client.Rotation.X,
+				"y": client.Rotation.Y,
+				"z": client.Rotation.Z,
+				"w": client.Rotation.W,
+			},
 		})
 		if err != nil {
 			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
@@ -77,6 +83,12 @@ func onAuth(peer gecgosio.Peer, msg string) {
 					"y": clients[p.Id].Position.Y,
 					"z": clients[p.Id].Position.Z,
 				},
+				"rotation": map[string]interface{}{
+					"x": clients[p.Id].Rotation.X,
+					"y": clients[p.Id].Rotation.Y,
+					"z": clients[p.Id].Rotation.Z,
+					"w": clients[p.Id].Rotation.W,
+				},
 			})
 			if err != nil {
 				log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
@@ -107,10 +119,49 @@ func onMove(peer gecgosio.Peer, msg string) {
 	// Add the username property to the map
 	data["username"] = client.Username
 
+	pos, posOk := data["position"].(map[string]interface{})
+
+	if !posOk {
+        log.Println("Error: Invalid or missing type for position")
+        return
+    }
+
+    pos_x, xOk := pos["x"].(float64)
+    pos_y, yOk := pos["y"].(float64)
+    pos_z, zOk := pos["z"].(float64)
+
+    if !xOk || !yOk || !zOk {
+        log.Println("Error: Invalid type or missing type for x, y, or z")
+        return
+    }
+
 	// Save position on the server
-	client.Position.X = data["x"].(float64)
-	client.Position.Y = data["y"].(float64)
-	client.Position.Z = data["z"].(float64)
+	client.Position.X = pos_x
+	client.Position.Y = pos_y
+	client.Position.Z = pos_z
+
+	rot, rotOk := data["rotation"].(map[string]interface{})
+
+	if !rotOk {
+        log.Println("Error: Invalid or missing type for rotation")
+        return
+    }
+
+    rot_x, xOk := rot["x"].(float64)
+    rot_y, yOk := rot["y"].(float64)
+    rot_z, zOk := rot["z"].(float64)
+	rot_w, wOk := rot["w"].(float64)
+
+    if !xOk || !yOk || !zOk || !wOk {
+        log.Println("Error: Invalid type or missing type for x, y, or z")
+        return
+    }
+
+	// Save rotation on the server
+	client.Rotation.X = rot_x
+	client.Rotation.Y = rot_y
+	client.Rotation.Z = rot_z
+	client.Rotation.W = rot_w
 
 	// Marshal the map back into a JSON string
 	updatedMsg, err := json.Marshal(data)

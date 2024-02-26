@@ -2,7 +2,6 @@ import { geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
 import {
 	addComponent,
-	defineQuery,
 	defineSystem,
 	hasComponent,
 	removeComponent,
@@ -10,8 +9,6 @@ import {
 } from "bitecs";
 import { createPlayer } from "../factory/player";
 import {
-	PlayerComponent,
-	LocalPlayerComponent,
 	TransformComponent,
 	MoveTowardsComponent,
 	NameplateComponent,
@@ -28,11 +25,6 @@ export enum NetworkEvent {
 	Move,
 	Chat,
 }
-
-export const playersQuery = defineQuery([
-	LocalPlayerComponent,
-	PlayerComponent,
-]);
 
 export function createNetworkSystem(world: World) {
 	const playersByUsername = new Map<
@@ -157,6 +149,12 @@ export function createNetworkSystem(world: World) {
 							y: number;
 							z: number;
 						};
+						rotation: {
+							x: number;
+							y: number;
+							z: number;
+							w: number;
+						};
 						eid: number;
 					} = event.data as any;
 					player.eid = playerEntity.eid;
@@ -182,6 +180,17 @@ export function createNetworkSystem(world: World) {
 						player.position.y;
 					TransformComponent.position.z[player.eid] =
 						player.position.z;
+
+					TransformComponent.rotation.x[player.eid] =
+						player.rotation.x;
+					TransformComponent.rotation.y[player.eid] =
+						player.rotation.y;
+					TransformComponent.rotation.z[player.eid] =
+						player.rotation.z;
+					TransformComponent.rotation.w[player.eid] =
+						player.rotation.w;
+					playerEntity.rotation._onChangeCallback();
+
 					world.players.set(player.eid, {
 						player: playerEntity,
 						nameplate: nameplateEntity,
@@ -209,9 +218,17 @@ export function createNetworkSystem(world: World) {
 						},
 						event.data as any as {
 							username: string;
-							x: number;
-							y: number;
-							z: number;
+							position: {
+								x: number;
+								y: number;
+								z: number;
+							};
+							rotation: {
+								x: number;
+								y: number;
+								z: number;
+								w: number;
+							};
 						},
 					);
 
@@ -230,9 +247,9 @@ export function createNetworkSystem(world: World) {
 						);
 					}
 					addComponent(world, MoveTowardsComponent, player.eid);
-					MoveTowardsComponent.x[player.eid] = player.x;
-					MoveTowardsComponent.y[player.eid] = player.y;
-					MoveTowardsComponent.z[player.eid] = player.z;
+					MoveTowardsComponent.x[player.eid] = player.position.x;
+					MoveTowardsComponent.y[player.eid] = player.position.y;
+					MoveTowardsComponent.z[player.eid] = player.position.z;
 					break;
 				}
 				case NetworkEvent.Chat: {
