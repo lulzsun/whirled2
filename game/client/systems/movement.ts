@@ -103,6 +103,9 @@ export function createMovementSystem(world: World) {
 		for (let i = 0; i < ents.length; i++) {
 			const e = ents[i];
 			const player = world.players.get(e)!.player;
+			//@ts-ignore
+			const mixer: THREE.AnimationMixer = player.children[0].mixer;
+			const animations = player.children[0].animations;
 			const speed = 0.5;
 
 			const initialPosition = new THREE.Vector3(
@@ -159,8 +162,23 @@ export function createMovementSystem(world: World) {
 				TransformComponent.position.x[e] = newPosition.x;
 				TransformComponent.position.y[e] = newPosition.y;
 				TransformComponent.position.z[e] = newPosition.z;
+
+				// Play default walking animation
+				const clip =
+					animations.find((animation) =>
+						/walking$|walk$/.test(animation.name.toLowerCase()),
+					) ?? animations[0];
+				mixer.clipAction(clip).play();
 			} else {
 				removeComponent(world, MoveTowardsComponent, e);
+
+				// Play default idle animation
+				const clip =
+					animations.find((animation) =>
+						/idle$/.test(animation.name.toLowerCase()),
+					) ?? animations[0];
+				mixer.stopAllAction();
+				mixer.clipAction(clip).play();
 			}
 		}
 		return world;

@@ -75,7 +75,12 @@ export const createPlayer = (
 				//@ts-ignore: this is probably a bad idea for the future...
 				const mixer: THREE.AnimationMixer = model.mixer;
 				model.animations = gltf.animations;
-				mixer.clipAction(model.animations[0]).play();
+				const clip =
+					model.animations.find((animation) =>
+						/idle$/.test(animation.name.toLowerCase()),
+					) ?? model.animations[0];
+				const action = mixer.clipAction(clip).play();
+				action.time = Math.random() * clip.duration;
 				addComponent(world, GltfComponent, eid);
 				GltfComponent.timeScale[eid] = 1000;
 
