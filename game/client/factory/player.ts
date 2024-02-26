@@ -1,10 +1,18 @@
-import { addEntity } from "bitecs";
-import * as THREE from "three";
-import * as spine from "@esotericsoftware/spine-threejs";
-import { TransformComponent } from "../components";
+import { addComponent, addEntity } from "bitecs";
+import {
+	GltfComponent,
+	LocalPlayerComponent,
+	PlayerComponent,
+	SpineComponent,
+	TransformComponent,
+} from "../components";
 import { World } from "./world";
 
-export type Player = THREE.Mesh & { eid: number };
+import * as THREE from "three";
+import * as spine from "@esotericsoftware/spine-threejs";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+export type Player = THREE.Group & { eid: number };
 export enum Avatar {
 	GLTF,
 	Spine,
@@ -12,25 +20,72 @@ export enum Avatar {
 
 export const createPlayer = (
 	world: World,
-	avatar: Avatar = Avatar.Spine,
+	local: boolean = false,
+	avatar: Avatar = Avatar.GLTF,
 	avatarName: string = "",
-	geometry = new THREE.BoxGeometry(1, 1, 1),
-	material = new THREE.MeshBasicMaterial({
-		// wireframe: true,
-		opacity: 1,
-		transparent: true,
-	}),
 ): Player => {
 	const eid = addEntity(world);
-	const entity = Object.assign(new THREE.Mesh(geometry, material), { eid });
+	let entity = Object.assign(new THREE.Group(), { eid });
+
+	if (local) {
+		addComponent(world, LocalPlayerComponent, eid);
+	}
+	addComponent(world, PlayerComponent, eid);
+	addComponent(world, TransformComponent, eid);
 
 	if (avatar === Avatar.Spine) {
 		if (avatarName === "") avatarName = "spineboy";
 
 		world.spineAssetManager.loadText(`${avatarName}.json`);
-		world.spineAssetManager.loadTextureAtlas(`${avatarName}.atlas`, () => {
-			entity.add(createSpineMesh(world.spineAssetManager, avatarName));
-		});
+		world.spineAssetManager.loadTextureAtlas(
+			`${avatarName}.atlas`,
+			() => {
+				if (entity !== undefined)
+					entity.add(
+						createSpineMesh(world.spineAssetManager, avatarName),
+					);
+				addComponent(world, SpineComponent, eid);
+				SpineComponent.timeScale[eid] = 1000;
+			},
+			function (e) {
+				console.error(e);
+			},
+		);
+	} else if (avatar === Avatar.GLTF) {
+		if (avatarName === "") avatarName = "RobotExpressive";
+
+		const loader = new GLTFLoader();
+		loader.load(
+			`http://127.0.0.1:42069/static/assets/${avatarName}.glb`,
+			function (gltf) {
+				let model: THREE.Group | THREE.Object3D = gltf.scene;
+				model.scale.set(
+					30 * model.scale.x,
+					30 * model.scale.y,
+					30 * model.scale.z,
+				);
+
+				entity.add(
+					Object.assign(model, {
+						mixer: new THREE.AnimationMixer(model),
+					}),
+				);
+
+				model = entity.children[0];
+				//@ts-ignore: this is probably a bad idea for the future...
+				const mixer: THREE.AnimationMixer = model.mixer;
+				model.animations = gltf.animations;
+				mixer.clipAction(model.animations[0]).play();
+				addComponent(world, GltfComponent, eid);
+				GltfComponent.timeScale[eid] = 1000;
+
+				console.log("Created GLTF mesh", model);
+			},
+			undefined,
+			function (e) {
+				console.error(e);
+			},
+		);
 	}
 
 	// position
@@ -112,7 +167,6 @@ export const createPlayer = (
 	//   set (n) { this.store.z[this.eid] = n }
 	// })
 
-	// console.log(entity);
 	return entity;
 };
 

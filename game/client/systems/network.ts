@@ -12,7 +12,6 @@ import { createPlayer } from "../factory/player";
 import {
 	PlayerComponent,
 	LocalPlayerComponent,
-	SpineComponent,
 	TransformComponent,
 	MoveTowardsComponent,
 	NameplateComponent,
@@ -145,7 +144,10 @@ export function createNetworkSystem(world: World) {
 						});
 					break;
 				case NetworkEvent.Join: {
-					const playerEntity = createPlayer(world);
+					const playerEntity = createPlayer(
+						world,
+						(event.data as any).local ?? false,
+					);
 					const player: {
 						username: string;
 						nickname: string;
@@ -174,19 +176,12 @@ export function createNetworkSystem(world: World) {
 						eid: player.eid,
 						nickname: player.nickname,
 					});
-					addComponent(world, TransformComponent, player.eid);
 					TransformComponent.position.x[player.eid] =
 						player.position.x;
 					TransformComponent.position.y[player.eid] =
 						player.position.y;
 					TransformComponent.position.z[player.eid] =
 						player.position.z;
-					if (player.local) {
-						addComponent(world, LocalPlayerComponent, player.eid);
-					}
-					addComponent(world, PlayerComponent, player.eid);
-					addComponent(world, SpineComponent, player.eid);
-					SpineComponent.timeScale[player.eid] = 1000;
 					world.players.set(player.eid, {
 						player: playerEntity,
 						nameplate: nameplateEntity,

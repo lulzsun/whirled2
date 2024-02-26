@@ -1,15 +1,18 @@
 import { defineQuery, defineSystem, exitQuery, removeEntity } from "bitecs";
 import { World } from "../factory/world";
 import {
+	GltfComponent,
 	NameplateComponent,
 	PlayerComponent,
 	SpineComponent,
 } from "../components";
 
+import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 
 export const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
 export const spineAvatarQuery = defineQuery([SpineComponent]);
+export const gltfAvatarQuery = defineQuery([GltfComponent]);
 export const nameplateQuery = defineQuery([NameplateComponent]);
 
 export function createRenderSystem() {
@@ -17,7 +20,7 @@ export function createRenderSystem() {
 		const {
 			time: { delta },
 		} = world;
-		// handle specific spine avatar rendering
+		// handle spine avatar rendering
 		const spineAvatars = spineAvatarQuery(world);
 		for (let x = 0; x < spineAvatars.length; x++) {
 			const eid = spineAvatars[x];
@@ -33,9 +36,26 @@ export function createRenderSystem() {
 				world.camera.quaternion.w,
 			);
 			for (let y = 0; y < player.children.length; y++) {
-				let obj3d = player.children[y];
-				if (obj3d instanceof spine.SkeletonMesh) {
-					obj3d.update(delta / SpineComponent.timeScale[eid]);
+				let mesh = player.children[y];
+				if (mesh instanceof spine.SkeletonMesh) {
+					mesh.update(delta / SpineComponent.timeScale[eid]);
+				}
+			}
+		}
+
+		// handle gltf avatar rendering
+		const gltfAvatars = gltfAvatarQuery(world);
+		for (let x = 0; x < gltfAvatars.length; x++) {
+			const eid = gltfAvatars[x];
+			const player = world.players.get(eid)?.player;
+
+			if (!player) continue;
+
+			for (let y = 0; y < player.children.length; y++) {
+				//@ts-ignore: createPlayer() adds a mixer component to the model
+				let mixer = player.children[y].mixer;
+				if (mixer instanceof THREE.AnimationMixer) {
+					mixer.update(delta / GltfComponent.timeScale[eid]);
 				}
 			}
 		}
@@ -91,6 +111,7 @@ export function createRenderSystem() {
 				console.warn("Unable to cleanup player nameplate", player.eid);
 			}
 		}
+
 		world.renderer.render(world.scene, world.camera);
 		return world;
 	});
