@@ -14,8 +14,8 @@ export const createChatMessage = (
 ): ChatMessage => {
 	const eid = addEntity(world);
 	const entity = Object.assign(
-		world.html
-			.querySelector("#chatbox")!
+		world.renderer.domElement
+			.parentElement!.querySelector("#chatbox")!
 			.appendChild(
 				createChatMessageUI(username, nickname, message),
 			) as HTMLElement,

@@ -12,7 +12,7 @@ export function createMovementSystem(world: World) {
 	const pointerMesh = new THREE.Group();
 	const raycaster = new THREE.Raycaster();
 
-	const canvas = document.querySelector<HTMLDivElement>("#app")!;
+	const canvas = world.renderer.domElement;
 
 	let INTERSECTED: THREE.Intersection | null;
 

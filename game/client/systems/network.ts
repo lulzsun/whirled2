@@ -50,7 +50,7 @@ export function createNetworkSystem(world: World) {
 
 	network.onConnect((error) => {
 		if (error) {
-			world.html.appendChild(
+			world.renderer.domElement.parentElement!.appendChild(
 				createDisconnectUI("Something went wrong connecting to server"),
 			);
 			console.error(error.message);
@@ -76,7 +76,9 @@ export function createNetworkSystem(world: World) {
 	});
 
 	network.onDisconnect((error) => {
-		world.html.appendChild(createDisconnectUI("Lost connection to server"));
+		world.renderer.domElement.parentElement!.appendChild(
+			createDisconnectUI("Lost connection to server"),
+		);
 
 		if (error === undefined) {
 			console.log("Disconnected from gecgos.io server");

@@ -6,7 +6,7 @@ export function createChatSystem(world: World) {
 	const chatUI = createChatUI((msg) => {
 		world.network.emit("Chat", msg);
 	});
-	world.html.appendChild(chatUI);
+	world.renderer.domElement.parentElement!.appendChild(chatUI);
 
 	return defineSystem((world: World) => {
 		return world;

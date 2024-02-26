@@ -53,8 +53,7 @@ export function createRenderSystem() {
 				nameplate.position.setFromMatrixPosition(player.matrixWorld);
 				nameplate.position.project(world.camera);
 
-				const canvas =
-					world.html.querySelector<HTMLCanvasElement>("#app")!;
+				const canvas = world.renderer.domElement;
 				const rect = canvas.getBoundingClientRect();
 				const widthHalf = rect.width / 2;
 				const heightHalf = rect.height / 2;
