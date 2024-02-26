@@ -42,9 +42,14 @@ export const createWorld = (): World => {
 	// );
 	world.camera.position.set(0, 200, 400);
 
-	// add a light
-	const light = new THREE.DirectionalLight(0xffffff, 3);
-	world.scene.add(light);
+	// add lights
+	const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 2);
+	hemiLight.position.set(0, 20, 0);
+	world.scene.add(hemiLight);
+
+	const dirlight = new THREE.DirectionalLight(0xffffff, 3);
+	dirlight.position.set(0, 20, 10);
+	world.scene.add(dirlight);
 
 	// add a floor
 	const plane = new THREE.Mesh(
