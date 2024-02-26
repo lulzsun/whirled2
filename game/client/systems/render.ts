@@ -1,66 +1,12 @@
 import { defineQuery, defineSystem, exitQuery, removeEntity } from "bitecs";
 import { World } from "../factory/world";
-import {
-	GltfComponent,
-	NameplateComponent,
-	PlayerComponent,
-	SpineComponent,
-} from "../components";
-
-import * as THREE from "three";
-import * as spine from "@esotericsoftware/spine-threejs";
+import { NameplateComponent, PlayerComponent } from "../components";
 
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
-const spineAvatarQuery = defineQuery([SpineComponent]);
-const gltfAvatarQuery = defineQuery([GltfComponent]);
 const nameplateQuery = defineQuery([NameplateComponent]);
 
 export function createRenderSystem() {
 	return defineSystem((world: World) => {
-		const {
-			time: { delta },
-		} = world;
-
-		// handle spine avatar rendering
-		const spineAvatars = spineAvatarQuery(world);
-		for (let x = 0; x < spineAvatars.length; x++) {
-			const eid = spineAvatars[x];
-			const player = world.players.get(eid)?.player;
-
-			if (!player) continue;
-
-			// always facing camera (billboard effect)
-			player.quaternion.set(
-				player.quaternion.x,
-				world.camera.quaternion.y,
-				player.quaternion.z,
-				world.camera.quaternion.w,
-			);
-			for (let y = 0; y < player.children.length; y++) {
-				let mesh = player.children[y];
-				if (mesh instanceof spine.SkeletonMesh) {
-					mesh.update(delta / SpineComponent.timeScale[eid]);
-				}
-			}
-		}
-
-		// handle gltf avatar rendering
-		const gltfAvatars = gltfAvatarQuery(world);
-		for (let x = 0; x < gltfAvatars.length; x++) {
-			const eid = gltfAvatars[x];
-			const player = world.players.get(eid)?.player;
-
-			if (!player) continue;
-
-			for (let y = 0; y < player.children.length; y++) {
-				//@ts-ignore: createPlayer() adds a mixer component to the model
-				let mixer = player.children[y].mixer;
-				if (mixer instanceof THREE.AnimationMixer) {
-					mixer.update(delta / GltfComponent.timeScale[eid]);
-				}
-			}
-		}
-
 		// handle player nameplates
 		const nameplates = nameplateQuery(world);
 		for (let x = 0; x < nameplates.length; x++) {
