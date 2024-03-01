@@ -1,7 +1,7 @@
 import React, { createElement } from "jsx-dom";
 
 export type HTMLContextMenu = HTMLElement & {
-	open: (bounds: DOMRect, x: number, y: number) => void;
+	open: (canvas: HTMLCanvasElement, x: number, y: number) => void;
 	close: () => void;
 	setItem: (item: HTMLElement) => void;
 	menuItems: HTMLElement[];
@@ -11,7 +11,7 @@ export const createContextMenuUI = () => {
 	const element: HTMLContextMenu = Object.assign(
 		createElement("contextmenu", {}, <></>) as HTMLElement,
 		{
-			open: function (bounds: DOMRect, x: number, y: number) {
+			open: function (canvas: HTMLCanvasElement, x: number, y: number) {
 				element.style.display = "block";
 				element.innerHTML = "";
 				element.appendChild(
@@ -21,6 +21,7 @@ export const createContextMenuUI = () => {
 					/>,
 				);
 
+				const bounds = canvas.parentElement!.getBoundingClientRect();
 				x -= bounds.width - bounds.right - bounds.left;
 				y -= bounds.top;
 

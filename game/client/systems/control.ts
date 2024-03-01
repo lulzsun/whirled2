@@ -78,9 +78,8 @@ export function createControlSystem(world: World) {
 			//@ts-ignore
 			const eid = currIntersect.root.eid ?? -1;
 			// open up right click context menu (player)
-			const bounds = canvas.getBoundingClientRect();
 			contextMenu.setItem(createPlayerContextMenuUI(world, eid));
-			contextMenu.open(bounds, event.clientX, event.clientY);
+			contextMenu.open(canvas, event.clientX, event.clientY);
 		} else {
 			contextMenu.close();
 		}
