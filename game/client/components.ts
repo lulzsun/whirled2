@@ -37,6 +37,8 @@ export const SpineComponent = defineComponent({ timeScale: f32 });
 
 export const GltfComponent = defineComponent({ timeScale: f32 });
 
+export const ObjectOutlineComponent = defineComponent();
+
 export const PlayerComponent = defineComponent();
 
 export const LocalPlayerComponent = defineComponent();

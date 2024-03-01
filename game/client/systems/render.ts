@@ -1,11 +1,87 @@
-import { defineQuery, defineSystem, exitQuery, removeEntity } from "bitecs";
+import {
+	defineQuery,
+	defineSystem,
+	enterQuery,
+	exitQuery,
+	removeEntity,
+} from "bitecs";
 import { World } from "../factory/world";
-import { NameplateComponent, PlayerComponent } from "../components";
+import {
+	NameplateComponent,
+	ObjectOutlineComponent,
+	PlayerComponent,
+} from "../components";
+
+import * as THREE from "three";
+import { CopyShader } from "three/examples/jsm/shaders/CopyShader.js";
+import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
 const nameplateQuery = defineQuery([NameplateComponent]);
 
-export function createRenderSystem() {
+const enterOutlinePlayerQuery = enterQuery(
+	defineQuery([PlayerComponent, ObjectOutlineComponent]),
+);
+const exitOutlinePlayerQuery = exitQuery(
+	defineQuery([PlayerComponent, ObjectOutlineComponent]),
+);
+
+export function createRenderSystem(world: World) {
+	world.renderer.setPixelRatio(window.devicePixelRatio);
+	world.renderer.setSize(window.innerWidth, window.innerHeight);
+	setTimeout(function () {
+		world.renderer.setSize(
+			window.innerWidth,
+			world.renderer.domElement.parentElement!.clientHeight,
+		);
+	}, 1);
+
+	const composer = new EffectComposer(world.renderer);
+
+	const renderPass = new RenderPass(world.scene, world.camera);
+	composer.addPass(renderPass);
+
+	const outlinePass = new OutlinePass(
+		new THREE.Vector2(window.innerWidth, window.innerHeight),
+		world.scene,
+		world.camera,
+	);
+	outlinePass.visibleEdgeColor.set(0x57aed1);
+	outlinePass.hiddenEdgeColor.set(0x57aed1);
+	outlinePass.overlayMaterial.blending = THREE.CustomBlending;
+	composer.addPass(outlinePass);
+
+	world.composer = composer;
+
+	window.addEventListener("resize", () => {
+		const aspect = window.innerWidth / window.innerHeight;
+		if (world.camera instanceof THREE.PerspectiveCamera) {
+			world.camera.aspect = aspect;
+			world.camera.updateProjectionMatrix();
+		} else if (world.camera instanceof THREE.OrthographicCamera) {
+			//@ts-ignore
+			const fov = world.camera.fov ?? 1000;
+			world.camera.left = (-fov * aspect) / 2;
+			world.camera.right = (fov * aspect) / 2;
+			world.camera.top = fov / 2;
+			world.camera.bottom = -fov / 2;
+			world.camera.updateProjectionMatrix();
+		}
+
+		world.renderer.setSize(
+			window.innerWidth,
+			world.renderer.domElement.parentElement!.clientHeight,
+		);
+		world.composer?.setSize(
+			window.innerWidth,
+			world.renderer.domElement.parentElement!.clientHeight,
+		);
+	});
+
 	return defineSystem((world: World) => {
 		// handle player nameplates
 		const nameplates = nameplateQuery(world);
@@ -59,7 +135,31 @@ export function createRenderSystem() {
 			}
 		}
 
-		world.renderer.render(world.scene, world.camera);
+		if (!world.composer) {
+			world.renderer.render(world.scene, world.camera);
+			return world;
+		}
+
+		// handle postprocessing
+		const enterOutlines = enterOutlinePlayerQuery(world);
+		for (let i = 0; i < enterOutlines.length; i++) {
+			// handle adding player outlines (on mouse hover)
+			const object = outlinePass.selectedObjects.indexOf(
+				world.players.get(i)!.player,
+			);
+			if (object === -1)
+				outlinePass.selectedObjects.push(world.players.get(i)!.player);
+		}
+		const exitOutlines = exitOutlinePlayerQuery(world);
+		for (let i = 0; i < exitOutlines.length; i++) {
+			// handle adding player outlines (on mouse hover)
+			const object = outlinePass.selectedObjects.indexOf(
+				world.players.get(i)!.player,
+			);
+			if (object !== -1) outlinePass.selectedObjects.splice(object, 1);
+		}
+
+		world.composer.render();
 		return world;
 	});
 }

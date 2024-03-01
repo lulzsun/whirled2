@@ -1,10 +1,18 @@
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { defineQuery, defineSystem, removeComponent } from "bitecs";
+
+import {
+	addComponent,
+	defineQuery,
+	defineSystem,
+	hasComponent,
+	removeComponent,
+} from "bitecs";
 import {
 	LocalPlayerComponent,
 	MoveTowardsComponent,
+	ObjectOutlineComponent,
 	TransformComponent,
 } from "../components";
 import { World } from "../factory/world";
@@ -19,7 +27,7 @@ export function createMovementSystem(world: World) {
 
 	const canvas = world.renderer.domElement;
 
-	let INTERSECTED: THREE.Intersection | null;
+	let currIntersect: { point: THREE.Vector3; root: THREE.Object3D } | null;
 
 	// create a "cursor" for user to click on floor to move
 	createPointer(world, pointerMesh);
@@ -33,24 +41,24 @@ export function createMovementSystem(world: World) {
 	});
 
 	canvas.addEventListener("pointerdown", (event) => {
-		if (INTERSECTED && event.button === 0) {
+		if (currIntersect && pointerMesh.visible && event.button === 0) {
 			const localPlayer = world.players.get(
 				localPlayerQuery(world)[0],
 			)!.player;
 			localPlayer.lookAt(
 				new THREE.Vector3(
-					INTERSECTED.point.x,
+					currIntersect.point.x,
 					localPlayer.position.y,
-					INTERSECTED.point.z,
+					currIntersect.point.z,
 				),
 			);
 			const rotation = localPlayer.rotation;
 
 			world.network.emit("Move", {
 				position: {
-					x: INTERSECTED.point.x,
-					y: INTERSECTED.point.y,
-					z: INTERSECTED.point.z,
+					x: currIntersect.point.x,
+					y: currIntersect.point.y,
+					z: currIntersect.point.z,
 				},
 				rotation: {
 					x: rotation.x,
@@ -71,31 +79,63 @@ export function createMovementSystem(world: World) {
 		raycaster.setFromCamera(pointer, world.camera);
 
 		const intersects = raycaster.intersectObjects(
-			world.scene.children,
+			world.scene.children.filter((x) => {
+				//@ts-ignore: ignore player objects
+				// const eid = x.eid;
+				// if (eid !== undefined) {
+				// 	return !world.players.has(eid);
+				// }
+				return true;
+			}),
 			true,
 		);
 
-		if (intersects.length > 0) {
-			for (let i = 0; i < intersects.length; i++) {
-				if (!INTERSECTED || INTERSECTED.point != intersects[i].point) {
-					if (intersects[i].object.parent!.id === pointerMesh.id) {
-						continue;
-					}
-					INTERSECTED = intersects[i];
-					pointerMesh.visible = true;
-					pointerMesh.position.set(
-						INTERSECTED.point.x - 15,
-						INTERSECTED.point.y + 1,
-						INTERSECTED.point.z + 10,
-					);
-					continue;
+		const cleanupIntersect = (
+			intersect: { point: THREE.Vector3; root: THREE.Object3D } | null,
+		) => {
+			if (intersect) {
+				//@ts-ignore
+				const eid = intersect.root.eid;
+				if (eid !== undefined) {
+					removeComponent(world, ObjectOutlineComponent, eid);
 				}
 			}
-		} else {
-			if (INTERSECTED) {
-				// console.log("leave", INTERSECTED);
+		};
+
+		if (intersects.length > 0) {
+			for (let i = 0; i < intersects.length; i++) {
+				let root = intersects[i].object;
+				while (root.parent != null && root.parent.type !== "Scene") {
+					root = root.parent;
+				}
+				if (root.id === pointerMesh.id) {
+					continue;
+				}
+				//@ts-ignore
+				const eid = root.eid;
+				if (eid !== undefined) {
+					// intersecting an ecs entity, probably a player
+					currIntersect = { point: intersects[i].point, root };
+					if (!hasComponent(world, ObjectOutlineComponent, eid))
+						addComponent(world, ObjectOutlineComponent, eid);
+					pointerMesh.visible = false;
+					break;
+				}
+				cleanupIntersect(currIntersect);
+				currIntersect = { point: intersects[i].point, root };
+				pointerMesh.visible = true;
+				pointerMesh.position.set(
+					currIntersect.point.x - 15,
+					currIntersect.point.y + 1,
+					currIntersect.point.z + 10,
+				);
 			}
-			INTERSECTED = null;
+		} else {
+			if (currIntersect) {
+				console.log("leave", currIntersect.root);
+				cleanupIntersect(currIntersect);
+			}
+			currIntersect = null;
 			pointerMesh.visible = false;
 		}
 
@@ -106,7 +146,7 @@ export function createMovementSystem(world: World) {
 			//@ts-ignore
 			const mixer: THREE.AnimationMixer = player.children[0].mixer;
 			const animations = player.children[0].animations;
-			const speed = 0.5;
+			const speed = 0.35;
 
 			const initialPosition = new THREE.Vector3(
 				TransformComponent.position.x[e],
