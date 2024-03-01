@@ -74,7 +74,6 @@ export function createControlSystem(world: World) {
 		) {
 			// open up right click context menu (player)
 			const rect = canvas.getBoundingClientRect();
-			console.log(rect);
 			contextMenu.open(
 				world,
 				currIntersect.root as THREE.Object3D & { eid: number },
