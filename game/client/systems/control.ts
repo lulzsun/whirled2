@@ -11,6 +11,7 @@ import {
 } from "bitecs";
 import { LocalPlayerComponent, ObjectOutlineComponent } from "../components";
 import { World } from "../factory/world";
+import { createContextMenuUI } from "../ui/contextmenu";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -25,6 +26,8 @@ export function createControlSystem(world: World) {
 
 	// create a "cursor" for user to click on floor to move
 	createPointer(world, pointerMesh);
+	const contextMenu = createContextMenuUI();
+	world.renderer.domElement.parentElement!.appendChild(contextMenu);
 
 	const controls = new OrbitControls(world.camera, world.renderer.domElement);
 
@@ -36,6 +39,8 @@ export function createControlSystem(world: World) {
 
 	canvas.addEventListener("pointerdown", (event) => {
 		if (currIntersect && pointerMesh.visible && event.button === 0) {
+			contextMenu.close();
+
 			const localPlayer = world.players.get(
 				localPlayerQuery(world)[0],
 			)!.player;
@@ -61,6 +66,16 @@ export function createControlSystem(world: World) {
 					w: 0,
 				},
 			});
+		} else if (
+			currIntersect &&
+			!pointerMesh.visible &&
+			event.button !== 0
+		) {
+			// open up right click context menu (player)
+			contextMenu.open(event.clientX, event.clientY);
+			console.log(currIntersect);
+		} else {
+			contextMenu.close();
 		}
 	});
 
