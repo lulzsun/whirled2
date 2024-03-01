@@ -2,6 +2,7 @@ import React from "jsx-dom";
 import { World } from "../factory/world";
 import { getActionNames, getStateNames } from "../systems/animation";
 import { entityExists } from "bitecs";
+import { API_URL } from "../constants";
 
 export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	if (!entityExists(world, eid)) throw `Could not find eid: ${eid}`;
@@ -11,6 +12,10 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	return (
 		<>
 			<li class="px-4 py-2 text-sm text-gray-900 dark:text-white border-b border-white">
+				<img
+					class="w-10 h-10 rounded-full"
+					src={`${API_URL}/static/profile_picture.png`}
+				/>
 				<div>{player.nickname}</div>
 				<div class="font-medium truncate">@{player.username}</div>
 			</li>

@@ -15,6 +15,7 @@ import { World } from "../factory/world";
 
 import { createContextMenuUI } from "../ui/contextmenu";
 import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
+import { API_URL } from "../constants";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -154,68 +155,65 @@ export function createControlSystem(world: World) {
 
 const createPointer = (world: World, pointerMesh: THREE.Group) => {
 	const fileLoader = new SVGLoader();
-	fileLoader.load(
-		`http://${window.location.hostname}:42069/static/assets/walkable.svg`,
-		function (data) {
-			pointerMesh.scale.multiplyScalar(1);
-			pointerMesh.position.set(0, 1, 0);
-			pointerMesh.rotation.x = (Math.PI / 180) * -90;
+	fileLoader.load(`${API_URL}/static/assets/walkable.svg`, function (data) {
+		pointerMesh.scale.multiplyScalar(1);
+		pointerMesh.position.set(0, 1, 0);
+		pointerMesh.rotation.x = (Math.PI / 180) * -90;
 
-			let renderOrder = 0;
+		let renderOrder = 0;
 
-			for (const path of data.paths) {
-				const fillColor = path.userData!.style.fill;
+		for (const path of data.paths) {
+			const fillColor = path.userData!.style.fill;
 
-				if (fillColor !== undefined && fillColor !== "none") {
-					const material = new THREE.MeshBasicMaterial({
-						color: new THREE.Color().setStyle(fillColor),
-						opacity: path.userData!.style.fillOpacity,
-						transparent: true,
-						side: THREE.DoubleSide,
-						depthWrite: false,
-						wireframe: false,
-					});
+			if (fillColor !== undefined && fillColor !== "none") {
+				const material = new THREE.MeshBasicMaterial({
+					color: new THREE.Color().setStyle(fillColor),
+					opacity: path.userData!.style.fillOpacity,
+					transparent: true,
+					side: THREE.DoubleSide,
+					depthWrite: false,
+					wireframe: false,
+				});
 
-					const shapes = SVGLoader.createShapes(path);
+				const shapes = SVGLoader.createShapes(path);
 
-					for (const shape of shapes) {
-						const geometry = new THREE.ShapeGeometry(shape);
+				for (const shape of shapes) {
+					const geometry = new THREE.ShapeGeometry(shape);
+					const mesh = new THREE.Mesh(geometry, material);
+					mesh.renderOrder = renderOrder++;
+
+					pointerMesh.add(mesh);
+				}
+			}
+
+			const strokeColor = path.userData!.style.stroke;
+
+			if (strokeColor !== undefined && strokeColor !== "none") {
+				const material = new THREE.MeshBasicMaterial({
+					color: new THREE.Color().setStyle(strokeColor),
+					opacity: path.userData!.style.strokeOpacity,
+					transparent: true,
+					side: THREE.DoubleSide,
+					depthWrite: false,
+					wireframe: false,
+				});
+
+				for (const subPath of path.subPaths) {
+					const geometry = SVGLoader.pointsToStroke(
+						subPath.getPoints(),
+						path.userData!.style,
+					);
+
+					if (geometry) {
 						const mesh = new THREE.Mesh(geometry, material);
 						mesh.renderOrder = renderOrder++;
 
 						pointerMesh.add(mesh);
 					}
 				}
-
-				const strokeColor = path.userData!.style.stroke;
-
-				if (strokeColor !== undefined && strokeColor !== "none") {
-					const material = new THREE.MeshBasicMaterial({
-						color: new THREE.Color().setStyle(strokeColor),
-						opacity: path.userData!.style.strokeOpacity,
-						transparent: true,
-						side: THREE.DoubleSide,
-						depthWrite: false,
-						wireframe: false,
-					});
-
-					for (const subPath of path.subPaths) {
-						const geometry = SVGLoader.pointsToStroke(
-							subPath.getPoints(),
-							path.userData!.style,
-						);
-
-						if (geometry) {
-							const mesh = new THREE.Mesh(geometry, material);
-							mesh.renderOrder = renderOrder++;
-
-							pointerMesh.add(mesh);
-						}
-					}
-				}
 			}
+		}
 
-			world.scene.add(pointerMesh);
-		},
-	);
+		world.scene.add(pointerMesh);
+	});
 };

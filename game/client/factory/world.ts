@@ -7,6 +7,7 @@ import { Nameplate } from "./nameplate";
 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { Network } from "../systems/network";
+import { API_URL } from "../constants";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -93,7 +94,7 @@ export const createWorld = (): World => {
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 
 	world.spineAssetManager = new spine.AssetManager(
-		`http://${window.location.hostname}:42069/static/assets/`,
+		`${API_URL}/static/assets/`,
 	);
 
 	return world;

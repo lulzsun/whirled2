@@ -11,6 +11,7 @@ import { World } from "./world";
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { API_URL } from "../constants";
 
 export type Player = THREE.Group & { eid: number };
 export enum Avatar {
@@ -56,7 +57,7 @@ export const createPlayer = (
 
 		const loader = new GLTFLoader();
 		loader.load(
-			`http://${window.location.hostname}:42069/static/assets/${avatarName}.glb`,
+			`${API_URL}/static/assets/${avatarName}.glb`,
 			function (gltf) {
 				let model: THREE.Group | THREE.Object3D = gltf.scene;
 				model.scale.set(

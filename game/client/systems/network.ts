@@ -17,6 +17,7 @@ import {
 import { createDisconnectUI } from "../ui/disconnect";
 import { createNameplate } from "../factory/nameplate";
 import { createChatMessage } from "../factory/chatmessage";
+import { API_URL } from "../constants";
 
 export enum NetworkEvent {
 	Auth,
@@ -142,14 +143,11 @@ export function createNetworkSystem(world: World) {
 				case NetworkEvent.Auth:
 					const id = event.data;
 					// Make a request to get auth code
-					fetch(
-						`http://${window.location.hostname}:42069/game/${id}/auth`,
-						{
-							method: "GET",
-							mode: "cors",
-							credentials: "include",
-						},
-					)
+					fetch(`${API_URL}/game/${id}/auth`, {
+						method: "GET",
+						mode: "cors",
+						credentials: "include",
+					})
 						.then((response) => {
 							if (response.ok) {
 								return response.text();
