@@ -6,6 +6,7 @@ import {
 	addComponent,
 	defineQuery,
 	defineSystem,
+	entityExists,
 	hasComponent,
 	removeComponent,
 } from "bitecs";
@@ -32,7 +33,7 @@ export function createControlSystem(world: World) {
 	const controls = new OrbitControls(world.camera, world.renderer.domElement);
 
 	canvas.addEventListener("pointermove", (event) => {
-		var rect = canvas.getBoundingClientRect();
+		const rect = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 	});
@@ -72,8 +73,14 @@ export function createControlSystem(world: World) {
 			event.button !== 0
 		) {
 			// open up right click context menu (player)
-			contextMenu.open(event.clientX, event.clientY);
-			console.log(currIntersect);
+			const rect = canvas.getBoundingClientRect();
+			console.log(rect);
+			contextMenu.open(
+				world,
+				currIntersect.root as THREE.Object3D & { eid: number },
+				event.clientX - (rect.width - rect.right),
+				event.clientY,
+			);
 		} else {
 			contextMenu.close();
 		}
@@ -101,7 +108,7 @@ export function createControlSystem(world: World) {
 			if (intersect) {
 				//@ts-ignore
 				const eid = intersect.root.eid;
-				if (eid !== undefined) {
+				if (eid !== undefined && entityExists(world, eid)) {
 					removeComponent(world, ObjectOutlineComponent, eid);
 				}
 			}
@@ -137,7 +144,6 @@ export function createControlSystem(world: World) {
 			}
 		} else {
 			if (currIntersect) {
-				console.log("leave", currIntersect.root);
 				cleanupIntersect(currIntersect);
 			}
 			currIntersect = null;
