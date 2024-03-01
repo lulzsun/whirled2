@@ -9,7 +9,16 @@
 		>
 			<!-- <span class="text-5xl">🔧🐒</span> -->
 			<canvas id="app" class="w-full h-full"></canvas>
-			<script type="module" src="http://localhost:6969/main.ts"></script>
+			<script id="app_js">
+				var script = document.createElement("script");
+				script.type = "module";
+				script.src = `http://${window.location.hostname}:6969/main.ts`;
+				document
+					.getElementById("app_js")
+					.insertAdjacentElement("afterend", script);
+				document.getElementById("app_js").remove();
+				script.id = "app_js";
+			</script>
 		</div>
 	</div>
 	<div class="flex-initial">

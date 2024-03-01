@@ -94,7 +94,7 @@ export const createWorld = (): World => {
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 
 	world.spineAssetManager = new spine.AssetManager(
-		"http://127.0.0.1:42069/static/assets/",
+		`http://${window.location.hostname}:42069/static/assets/`,
 	);
 
 	return world;

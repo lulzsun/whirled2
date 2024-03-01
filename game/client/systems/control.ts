@@ -150,7 +150,7 @@ export function createControlSystem(world: World) {
 const createPointer = (world: World, pointerMesh: THREE.Group) => {
 	const fileLoader = new SVGLoader();
 	fileLoader.load(
-		"http://127.0.0.1:42069/static/assets/walkable.svg",
+		`http://${window.location.hostname}:42069/static/assets/walkable.svg`,
 		function (data) {
 			pointerMesh.scale.multiplyScalar(1);
 			pointerMesh.position.set(0, 1, 0);

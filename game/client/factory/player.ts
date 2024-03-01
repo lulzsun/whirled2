@@ -56,7 +56,7 @@ export const createPlayer = (
 
 		const loader = new GLTFLoader();
 		loader.load(
-			`http://127.0.0.1:42069/static/assets/${avatarName}.glb`,
+			`http://${window.location.hostname}:42069/static/assets/${avatarName}.glb`,
 			function (gltf) {
 				let model: THREE.Group | THREE.Object3D = gltf.scene;
 				model.scale.set(

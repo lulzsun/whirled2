@@ -17,7 +17,14 @@ import (
 )
 
 func main() {
-	os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
+	localIPs, err := utils.GetLocalIP()
+	if err == nil {
+		os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://" + localIPs[0] + ":6969")
+	} else {
+		os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
+	}
+
+	log.Println("Local IPs:", localIPs)
 
 	// start gecgos.io game server
 	server.Start(42069)

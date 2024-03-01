@@ -108,11 +108,14 @@ export function createNetworkSystem(world: World) {
 				case NetworkEvent.Auth:
 					const id = event.data;
 					// Make a request to get auth code
-					fetch(`http://127.0.0.1:42069/game/${id}/auth`, {
-						method: "GET",
-						mode: "cors",
-						credentials: "include",
-					})
+					fetch(
+						`http://${window.location.hostname}:42069/game/${id}/auth`,
+						{
+							method: "GET",
+							mode: "cors",
+							credentials: "include",
+						},
+					)
 						.then((response) => {
 							if (response.ok) {
 								return response.text();
