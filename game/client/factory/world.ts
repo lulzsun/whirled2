@@ -34,7 +34,7 @@ export const createWorld = (): World => {
 
 	// add a camera
 	world.camera = new THREE.PerspectiveCamera(100, aspect, 0.1, 4000);
-	world.camera.position.set(0, 200, 400);
+	world.camera.position.set(0, 400, 800);
 
 	// add lights
 	const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 2);
@@ -46,16 +46,19 @@ export const createWorld = (): World => {
 	world.scene.add(dirlight);
 
 	// add a floor
+	const gridHelper = new THREE.GridHelper(800, 10, 0xffffff, 0xffffff);
+	gridHelper.position.y = 1;
 	const plane = new THREE.Mesh(
-		new THREE.PlaneGeometry(800, 500),
+		new THREE.PlaneGeometry(800, 800),
 		new THREE.MeshBasicMaterial({
-			color: 0xffffff,
+			color: 0x0,
 			side: THREE.DoubleSide,
 		}),
 	);
 	plane.position.z = 0;
 	plane.rotation.x = (Math.PI / 180) * -90;
 
+	world.scene.add(gridHelper);
 	world.scene.add(plane);
 
 	// add "stars" to the background
