@@ -4,5 +4,5 @@ export const createNameplateUI = (name: string) => {
 	const element = createElement("nameplate", {}, <>{name}</>);
 	element.className =
 		"absolute text-white font-outline drop-shadow-lg font-black text-xs select-none pointer-events-none";
-	return element as Node;
+	return element as HTMLElement;
 };

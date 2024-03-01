@@ -14,5 +14,5 @@ export const createChatMessageUI = (
 	);
 	element.className =
 		"block text-white font-outline drop-shadow-lg font-black text-xs";
-	return element as Node;
+	return element as HTMLElement;
 };

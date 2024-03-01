@@ -17,5 +17,5 @@ export const createDisconnectUI = (reason: string) => {
 				</div>
 			</div>
 		</div>
-	) as Node;
+	) as HTMLElement;
 };

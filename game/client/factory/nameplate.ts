@@ -13,7 +13,7 @@ export const createNameplate = (
 	const entity = Object.assign(
 		world.renderer.domElement.parentElement!.appendChild(
 			createNameplateUI(name),
-		) as HTMLElement,
+		),
 		{ eid, position: new THREE.Vector3() },
 	);
 	return entity;
