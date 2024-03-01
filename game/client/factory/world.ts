@@ -5,9 +5,8 @@ import * as spine from "@esotericsoftware/spine-threejs";
 import { Player } from "./player";
 import { Nameplate } from "./nameplate";
 
-import { ClientChannel } from "@geckos.io/client";
-
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { Network } from "../systems/network";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -20,7 +19,7 @@ export type World = {
 		delta: number;
 		elapsed: number;
 	};
-	network: ClientChannel;
+	network: Network;
 	spineAssetManager: spine.AssetManager;
 };
 

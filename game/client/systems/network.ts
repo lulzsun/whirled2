@@ -1,4 +1,4 @@
-import { geckos } from "@geckos.io/client";
+import { ClientChannel, geckos } from "@geckos.io/client";
 import { World } from "../factory/world";
 import {
 	addComponent,
@@ -26,17 +26,51 @@ export enum NetworkEvent {
 	Chat,
 }
 
+export type NetworkPlayer = {
+	eid: number;
+	username: string;
+	nickname: string;
+	isLocal: boolean;
+};
+
+export type Network = ClientChannel & {
+	getPlayer: {
+		(eid: number): NetworkPlayer;
+		(username: string): NetworkPlayer;
+	};
+};
+
 export function createNetworkSystem(world: World) {
-	const playersByUsername = new Map<
-		string,
-		{ eid: number; nickname: string }
-	>();
+	const playersByUsername = new Map<string, NetworkPlayer>();
+	const playersByEid = new Map<number, NetworkPlayer>();
 
 	let events: {
 		type: NetworkEvent;
 		data: string | number | Object;
 	}[] = [];
-	const network = geckos({ port: 42069 });
+	const network: Network = Object.assign(geckos({ port: 42069 }), {
+		getPlayer: (arg: number | string) => {
+			if (typeof arg === "number") {
+				const player = playersByEid.get(arg);
+				if (!player) throw `Issue finding player by eid: ${arg}`;
+				return {
+					eid: arg,
+					username: player.username,
+					nickname: player.nickname,
+					isLocal: player.isLocal,
+				} as NetworkPlayer;
+			} else {
+				const player = playersByUsername.get(arg);
+				if (!player) throw `Issue finding player by username: ${arg}`;
+				return {
+					eid: player.eid,
+					username: arg,
+					nickname: player.nickname,
+					isLocal: player.isLocal,
+				} as NetworkPlayer;
+			}
+		},
+	});
 	world.network = network;
 
 	network.onConnect((error) => {
@@ -79,7 +113,7 @@ export function createNetworkSystem(world: World) {
 	});
 
 	// @ts-ignore
-	const connectionsManager: ClientChannel = network.connectionsManager;
+	const connectionsManager: any = network.connectionsManager;
 
 	// we can handle websocket fallback here?
 	(function repeatUntilCondition() {
@@ -173,10 +207,16 @@ export function createNetworkSystem(world: World) {
 					);
 					NameplateComponent.owner[nameplateEntity.eid] = player.eid;
 
-					playersByUsername.set(player.username, {
+					const networkPlayer: NetworkPlayer = {
 						eid: player.eid,
+						username: player.username,
 						nickname: player.nickname,
-					});
+						isLocal: false,
+					};
+
+					playersByUsername.set(player.username, networkPlayer);
+					playersByEid.set(player.eid, networkPlayer);
+
 					TransformComponent.position.x[player.eid] =
 						player.position.x;
 					TransformComponent.position.y[player.eid] =
@@ -209,8 +249,9 @@ export function createNetworkSystem(world: World) {
 						break;
 					}
 
-					removeEntity(world, playersByUsername.get(username)!.eid);
+					removeEntity(world, player.eid);
 					playersByUsername.delete(username);
+					playersByEid.delete(player.eid);
 					break;
 				}
 				case NetworkEvent.Move: {

@@ -12,7 +12,9 @@ import {
 } from "bitecs";
 import { LocalPlayerComponent, ObjectOutlineComponent } from "../components";
 import { World } from "../factory/world";
+
 import { createContextMenuUI } from "../ui/contextmenu";
+import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -72,14 +74,12 @@ export function createControlSystem(world: World) {
 			!pointerMesh.visible &&
 			event.button !== 0
 		) {
+			//@ts-ignore
+			const eid = currIntersect.root.eid ?? -1;
 			// open up right click context menu (player)
-			const rect = canvas.getBoundingClientRect();
-			contextMenu.open(
-				world,
-				currIntersect.root as THREE.Object3D & { eid: number },
-				event.clientX - (rect.width - rect.right),
-				event.clientY,
-			);
+			const bounds = canvas.getBoundingClientRect();
+			contextMenu.setItem(createPlayerContextMenuUI(world, eid));
+			contextMenu.open(bounds, event.clientX, event.clientY);
 		} else {
 			contextMenu.close();
 		}
