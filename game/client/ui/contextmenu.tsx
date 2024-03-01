@@ -13,14 +13,6 @@ export const createContextMenuUI = () => {
 		{
 			open: function (bounds: DOMRect, x: number, y: number) {
 				element.style.display = "block";
-
-				x = x - (bounds.width - bounds.right) - bounds.left;
-				y = y - bounds.top;
-
-				let menuRect = element.getBoundingClientRect();
-				element.style.top = `${Math.max(0, Math.min(y, bounds.height - menuRect.height))}px`;
-				element.style.left = `${Math.max(0, Math.min(x, bounds.right + bounds.left - menuRect.width))}px`;
-
 				element.innerHTML = "";
 				element.appendChild(
 					<ContextMenuUI
@@ -28,6 +20,13 @@ export const createContextMenuUI = () => {
 						menuItems={element.menuItems}
 					/>,
 				);
+
+				x -= bounds.width - bounds.right - bounds.left;
+				y -= bounds.top;
+
+				let menuRect = element.getBoundingClientRect();
+				element.style.top = `${Math.max(0, Math.min(y, bounds.height - menuRect.height))}px`;
+				element.style.left = `${Math.max(0, Math.min(x, bounds.right + bounds.left - menuRect.width))}px`;
 			},
 			close: function () {
 				element.style.display = "none";
