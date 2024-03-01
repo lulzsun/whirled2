@@ -144,18 +144,15 @@ export function createRenderSystem(world: World) {
 		const enterOutlines = enterOutlinePlayerQuery(world);
 		for (let i = 0; i < enterOutlines.length; i++) {
 			// handle adding player outlines (on mouse hover)
-			const object = outlinePass.selectedObjects.indexOf(
-				world.players.get(i)!.player,
-			);
-			if (object === -1)
-				outlinePass.selectedObjects.push(world.players.get(i)!.player);
+			const player = world.players.get(enterOutlines[i])!.player;
+			const object = outlinePass.selectedObjects.indexOf(player);
+			if (object === -1) outlinePass.selectedObjects.push(player);
 		}
 		const exitOutlines = exitOutlinePlayerQuery(world);
 		for (let i = 0; i < exitOutlines.length; i++) {
 			// handle adding player outlines (on mouse hover)
-			const object = outlinePass.selectedObjects.indexOf(
-				world.players.get(i)!.player,
-			);
+			const player = world.players.get(exitOutlines[i])!.player;
+			const object = outlinePass.selectedObjects.indexOf(player);
 			if (object !== -1) outlinePass.selectedObjects.splice(object, 1);
 		}
 

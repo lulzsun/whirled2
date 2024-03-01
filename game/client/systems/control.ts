@@ -101,6 +101,7 @@ export function createControlSystem(world: World) {
 				if (root.id === pointerMesh.id) {
 					continue;
 				}
+				cleanupIntersect(currIntersect);
 				//@ts-ignore
 				const eid = root.eid;
 				if (eid !== undefined) {
@@ -111,7 +112,6 @@ export function createControlSystem(world: World) {
 					pointerMesh.visible = false;
 					break;
 				}
-				cleanupIntersect(currIntersect);
 				currIntersect = { point: intersects[i].point, root };
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
