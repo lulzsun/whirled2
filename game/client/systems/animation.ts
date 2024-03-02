@@ -171,6 +171,5 @@ export function playAnimation(
 			world.network.emit("Anim", { state: animIndex });
 	}
 
-	console.log(defineQuery([LocalPlayerComponent])(world).length);
 	console.log("Playing animation:", eid, animName, anims[animIndex], anims);
 }
