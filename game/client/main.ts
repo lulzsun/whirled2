@@ -6,7 +6,12 @@ const world = createWorld();
 declare global {
 	interface Window {
 		world: World;
+		htmx: any;
 	}
+}
+if (window.htmx === undefined) {
+	window.htmx = {};
+	window.htmx.process = () => {};
 }
 window.world = world;
 
