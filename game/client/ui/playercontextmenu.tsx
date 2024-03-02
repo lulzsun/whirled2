@@ -17,8 +17,6 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 		actions: getActionNames(firstModelAnims),
 	};
 
-	console.log(animations);
-
 	const statesAnimMenu = createContextMenuUI(true);
 	const onStatesMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
 		event,
@@ -41,7 +39,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 
 	return (
 		<>
-			<li class="flex space-x-2 px-4 py-2 text-sm text-gray-900 dark:text-white border-b border-white">
+			<li class="flex space-x-2 px-4 py-2 text-sm text-gray-900 dark:text-white">
 				<img
 					class="w-10 h-10 rounded-full"
 					src={`${API_URL}/static/profile_picture.png`}
@@ -51,60 +49,64 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 					<div class="font-medium">@{player.username}</div>
 				</div>
 			</li>
-			<li>
-				<button
-					type="button"
-					class="relative flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-					onClick={onStatesMenuOpen}
-				>
-					States
-					<svg
-						class="w-2.5 h-2.5 ms-3 rtl:rotate-180"
-						aria-hidden="true"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 6 10"
-					>
-						<path
-							stroke="currentColor"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="m1 9 4-4-4-4"
-						/>
-					</svg>
-				</button>
-			</li>
-			<li>
-				<button
-					type="button"
-					class="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-					onClick={onActionsMenuOpen}
-				>
-					Actions
-					<svg
-						class="w-2.5 h-2.5 ms-3 rtl:rotate-180"
-						aria-hidden="true"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 6 10"
-					>
-						<path
-							stroke="currentColor"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="m1 9 4-4-4-4"
-						/>
-					</svg>
-				</button>
-			</li>
+			{player.isLocal && (
+				<>
+					<li>
+						<button
+							type="button"
+							class="border-t border-white flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+							onClick={onStatesMenuOpen}
+						>
+							States
+							<svg
+								class="w-2.5 h-2.5 ms-3 rtl:rotate-180"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 6 10"
+							>
+								<path
+									stroke="currentColor"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="m1 9 4-4-4-4"
+								/>
+							</svg>
+						</button>
+					</li>
+					<li>
+						<button
+							type="button"
+							class="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+							onClick={onActionsMenuOpen}
+						>
+							Actions
+							<svg
+								class="w-2.5 h-2.5 ms-3 rtl:rotate-180"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 6 10"
+							>
+								<path
+									stroke="currentColor"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="m1 9 4-4-4-4"
+								/>
+							</svg>
+						</button>
+					</li>
+				</>
+			)}
 			<li class="border-t border-white">
 				<a
 					href="#"
 					class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white "
 				>
-					View Avatar in Stuff
+					View Profile
 				</a>
 			</li>
 		</>
@@ -126,6 +128,9 @@ export const createAnimationMenu = (names: string[]) => {
 									key={i}
 									type="button"
 									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+									onClick={(_) => {
+										console.log("Play animation:", name);
+									}}
 								>
 									{name.replace(/_(action|state)$/i, "")}
 								</button>

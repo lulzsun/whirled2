@@ -209,7 +209,7 @@ export function createNetworkSystem(world: World) {
 						eid: player.eid,
 						username: player.username,
 						nickname: player.nickname,
-						isLocal: false,
+						isLocal: player.local,
 					};
 
 					playersByUsername.set(player.username, networkPlayer);
