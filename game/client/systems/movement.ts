@@ -20,6 +20,9 @@ export function createMovementSystem() {
 		for (let i = 0; i < ents.length; i++) {
 			const e = ents[i];
 			const player = world.players.get(e)!.player;
+
+			if (player === undefined) continue;
+
 			//@ts-ignore
 			const mixer: THREE.AnimationMixer = player.children[0].mixer;
 			const animations = player.children[0].animations;

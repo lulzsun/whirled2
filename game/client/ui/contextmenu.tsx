@@ -2,7 +2,7 @@ import React, { createElement } from "jsx-dom";
 
 export type HTMLContextMenu = HTMLElement & {
 	open: (event: MouseEvent | PointerEvent) => void;
-	close: () => void;
+	close: (all?: boolean) => void;
 	setItem: (item: HTMLElement) => void;
 	menuItems: HTMLElement[];
 	hasParentMenu: boolean;
@@ -90,7 +90,22 @@ export const createContextMenuUI = (hasParentMenu?: boolean) => {
 					}
 				}
 			},
-			close: function () {
+			close: function (all: boolean = false) {
+				if (all) {
+					var parent = element.parentElement;
+					while (parent) {
+						if (parent.tagName.toLowerCase() === "contextmenu") {
+							break;
+						}
+						parent = parent.parentElement;
+					}
+					if (
+						parent !== null &&
+						parent.tagName.toLowerCase() === "contextmenu"
+					) {
+						parent.style.display = "none";
+					}
+				}
 				element.style.display = "none";
 			},
 			setItem: function (item: HTMLElement) {

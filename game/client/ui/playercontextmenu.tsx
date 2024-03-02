@@ -34,6 +34,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 				player.eid,
 				animations.states,
 				firstModelAnims,
+				statesAnimMenu.close,
 			),
 		);
 		statesAnimMenu.open(event);
@@ -51,6 +52,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 				player.eid,
 				animations.actions,
 				firstModelAnims,
+				actionsAnimMenu.close,
 			),
 		);
 		actionsAnimMenu.open(event);
@@ -142,6 +144,7 @@ export const createAnimationMenu = (
 	eid: number,
 	names: string[],
 	anims: THREE.AnimationClip[],
+	close: (all?: boolean) => void,
 ) => {
 	return (
 		<>
@@ -154,9 +157,10 @@ export const createAnimationMenu = (
 									key={i}
 									type="button"
 									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-									onClick={(_) =>
-										playAnimation(world, eid, name, anims)
-									}
+									onClick={(_) => {
+										playAnimation(world, eid, name, anims);
+										close(true);
+									}}
 								>
 									{name.replace(/_(action|state)$/i, "")}
 								</button>
