@@ -37,7 +37,7 @@ func onAuth(peer gecgosio.Peer, msg string) {
 		}
 		usernameToPeer[client.Username] = peer.Id
 
-		data, err := json.Marshal(map[string]interface{}{
+		player := map[string]interface{}{
 			"username": client.Username,
 			"nickname": client.Nickname,
 			"local": true,
@@ -52,10 +52,6 @@ func onAuth(peer gecgosio.Peer, msg string) {
 				"z": client.Rotation.Z,
 				"w": client.Rotation.W,
 			},
-		})
-		if err != nil {
-			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
-			return
 		}
 
 		defaultRoom := "bravenewwhirled"
@@ -64,9 +60,19 @@ func onAuth(peer gecgosio.Peer, msg string) {
 			room = defaultRoom
 		}
 
-		// join our client to a room, and announce it to all clients in the room
+		// join our client to a room
+		data, err := json.Marshal(player)
+		if err != nil {
+			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+			return
+		}
 		peer.Join(room)
-		peers := peer.Room(room)
+		peer.Emit("Join", string(data))
+
+		// announce client to all other clients in the room
+		player["local"] = false
+		data, _ = json.Marshal(player)
+		peers := peer.Broadcast(room)
 		peers.Emit("Join", string(data))
 
 		// let our client know about existing clients in the room
@@ -190,4 +196,28 @@ func onChat(peer gecgosio.Peer, msg string) {
 	}
 
 	peer.Room().Emit("Chat", string(updatedMsg));
+}
+
+func onAnim(peer gecgosio.Peer, msg string) {
+	client := clients[peer.Id]
+
+	// Parse the JSON string into a map
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(msg), &data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	// Add the username property to the map
+	data["username"] = client.Username
+
+	// Marshal the map back into a JSON string
+	updatedMsg, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	peer.Broadcast().Emit("Anim", string(updatedMsg));
 }

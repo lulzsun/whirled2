@@ -1,6 +1,10 @@
-import { defineQuery, defineSystem } from "bitecs";
+import { defineQuery, defineSystem, hasComponent } from "bitecs";
 import { World } from "../factory/world";
-import { GltfComponent, SpineComponent } from "../components";
+import {
+	GltfComponent,
+	LocalPlayerComponent,
+	SpineComponent,
+} from "../components";
 
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
@@ -49,6 +53,24 @@ export function createAnimationSystem() {
 				//@ts-ignore: createPlayer() adds a mixer component to the model
 				let mixer = player.children[y].mixer;
 				if (mixer instanceof THREE.AnimationMixer) {
+					let animations = player.children[y].animations;
+
+					if (GltfComponent.animAction[eid] !== -1) {
+						const clip = animations[GltfComponent.animAction[eid]];
+						// if action has finished playing, return to playing animation state
+						if (mixer.clipAction(clip).time === clip.duration) {
+							GltfComponent.animAction[eid] = -1;
+							const clip =
+								animations[GltfComponent.animState[eid]] ??
+								animations.find((animation) =>
+									/idle_state$/i.test(animation.name),
+								) ??
+								animations[0];
+							mixer.stopAllAction();
+							mixer.clipAction(clip).play();
+						}
+					}
+
 					mixer.update(delta / GltfComponent.timeScale[eid]);
 				}
 			}
@@ -95,17 +117,31 @@ export function getActionNames(
 export function playAnimation(
 	world: World,
 	eid: number,
-	name: string,
+	clip: string | number,
 	anims: THREE.AnimationClip[],
 ) {
+	let animName = "";
+	let animIndex = 0;
+
+	if (typeof clip === "string") {
+		animName = clip;
+		animIndex = anims.findIndex((anim) => anim.name === animName);
+	}
+	if (typeof clip === "number") {
+		animIndex = clip;
+		animName = anims[animIndex].name;
+	}
+	if (animIndex === -1) return;
+
 	const player = world.players.get(eid)?.player;
+	if (player === undefined) return;
+
 	//@ts-ignore
 	const mixer: THREE.AnimationMixer = player.children[0].mixer;
-	const animIndex = anims.findIndex((anim) => anim.name === name);
 
 	mixer.stopAllAction();
 
-	if (/_action$/i.test(name)) {
+	if (/_action$/i.test(animName)) {
 		GltfComponent.animAction[eid] = animIndex;
 		const clip =
 			anims[GltfComponent.animAction[eid]] ??
@@ -117,7 +153,8 @@ export function playAnimation(
 		animation.loop = THREE.LoopOnce;
 		animation.play();
 
-		console.log("Playing animation action:", name, anims[animIndex], anims);
+		if (hasComponent(world, LocalPlayerComponent, eid))
+			world.network.emit("Anim", { action: animIndex });
 	} else {
 		GltfComponent.animState[eid] = animIndex;
 		const clip =
@@ -130,6 +167,10 @@ export function playAnimation(
 		// animation.loop = THREE.LoopOnce;
 		animation.play();
 
-		console.log("Playing animation state:", name, anims[animIndex], anims);
+		if (hasComponent(world, LocalPlayerComponent, eid))
+			world.network.emit("Anim", { state: animIndex });
 	}
+
+	console.log(defineQuery([LocalPlayerComponent])(world).length);
+	console.log("Playing animation:", eid, animName, anims[animIndex], anims);
 }

@@ -13,11 +13,13 @@ import {
 	MoveTowardsComponent,
 	NameplateComponent,
 	ChatMessageComponent,
+	GltfComponent,
 } from "../components";
 import { createDisconnectUI } from "../ui/disconnect";
 import { createNameplate } from "../factory/nameplate";
 import { createChatMessage } from "../factory/chatmessage";
 import { API_URL } from "../constants";
+import { playAnimation } from "./animation";
 
 export enum NetworkEvent {
 	Auth,
@@ -25,6 +27,7 @@ export enum NetworkEvent {
 	Leave,
 	Move,
 	Chat,
+	Anim,
 }
 
 export type NetworkPlayer = {
@@ -316,6 +319,28 @@ export function createNetworkSystem(world: World) {
 						ChatMessageComponent,
 						chatMessageEntity.eid,
 					);
+					break;
+				}
+				case NetworkEvent.Anim: {
+					const d: {
+						username: string;
+						action: number;
+						state: number;
+					} = event.data as any;
+					const eid = playersByUsername.get(d.username)?.eid;
+					if (eid === undefined) {
+						break;
+					}
+					const player = world.players.get(eid)?.player;
+					const anims = player?.children[0].animations;
+					if (anims && hasComponent(world, GltfComponent, eid)) {
+						playAnimation(
+							world,
+							eid,
+							d.action ?? d.state ?? -1,
+							anims,
+						);
+					}
 					break;
 				}
 				default: {
