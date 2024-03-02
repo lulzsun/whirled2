@@ -79,7 +79,7 @@ export function createControlSystem(world: World) {
 			const eid = currIntersect.root.eid ?? -1;
 			// open up right click context menu (player)
 			contextMenu.setItem(createPlayerContextMenuUI(world, eid));
-			contextMenu.open(canvas, event.clientX, event.clientY);
+			contextMenu.open(event);
 		} else {
 			contextMenu.close();
 		}

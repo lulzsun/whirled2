@@ -56,3 +56,37 @@ export function createAnimationSystem() {
 		return world;
 	});
 }
+
+export function getStateNames(
+	anims: THREE.AnimationClip[] | undefined,
+): string[] {
+	if (anims === undefined) return [];
+
+	let result: string[] = [];
+
+	anims.forEach((anim) => {
+		// if animation name does not have suffix "_action", it is a state
+		if (/^(?!.*_action$).*$/i.test(anim.name)) {
+			result.push(anim.name);
+		}
+	});
+
+	return result;
+}
+
+export function getActionNames(
+	anims: THREE.AnimationClip[] | undefined,
+): string[] {
+	if (anims === undefined) return [];
+
+	let result: string[] = [];
+
+	anims.forEach((anim) => {
+		// if animation name has suffix "_action", it is an action
+		if (/_action$/i.test(anim.name)) {
+			result.push(anim.name);
+		}
+	});
+
+	return [];
+}

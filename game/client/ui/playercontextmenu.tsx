@@ -3,26 +3,49 @@ import { World } from "../factory/world";
 import { getActionNames, getStateNames } from "../systems/animation";
 import { entityExists } from "bitecs";
 import { API_URL } from "../constants";
+import { createContextMenuUI } from "./contextmenu";
 
 export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	if (!entityExists(world, eid)) throw `Could not find eid: ${eid}`;
 
 	const player = world.network.getPlayer(eid);
+	const firstModelAnims = world.players.get(player.eid)?.player.children[0]
+		.animations;
+
+	const animations = {
+		states: getStateNames(firstModelAnims),
+		actions: getActionNames(firstModelAnims),
+	};
+
+	console.log(animations);
+
+	const statesAnimMenu = createContextMenuUI(true);
+	const onStatesMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
+		event,
+	) => {
+		const menu =
+			event.currentTarget.parentElement!.appendChild(statesAnimMenu);
+		menu.setItem(createAnimationMenu(animations.states));
+		menu.open(event);
+	};
 
 	return (
 		<>
-			<li class="px-4 py-2 text-sm text-gray-900 dark:text-white border-b border-white">
+			<li class="flex space-x-2 px-4 py-2 text-sm text-gray-900 dark:text-white border-b border-white">
 				<img
 					class="w-10 h-10 rounded-full"
 					src={`${API_URL}/static/profile_picture.png`}
 				/>
-				<div>{player.nickname}</div>
-				<div class="font-medium truncate">@{player.username}</div>
+				<div>
+					<div class="font-bold truncate">{player.nickname}</div>
+					<div class="font-medium">@{player.username}</div>
+				</div>
 			</li>
 			<li>
 				<button
 					type="button"
 					class="relative flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+					onClick={onStatesMenuOpen}
 				>
 					States
 					<svg
@@ -73,6 +96,33 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 					View Avatar in Stuff
 				</a>
 			</li>
+		</>
+	) as HTMLElement;
+};
+
+export const createAnimationMenu = (states: string[]) => {
+	return (
+		<>
+			<div class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700">
+				<ul
+					class="text-sm text-gray-700 dark:text-gray-200"
+					aria-labelledby="doubleDropdownButton"
+				>
+					{states.map((name, i) => {
+						return (
+							<li>
+								<button
+									key={i}
+									type="button"
+									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+								>
+									{name}
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			</div>
 		</>
 	) as HTMLElement;
 };
