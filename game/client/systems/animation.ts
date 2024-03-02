@@ -65,8 +65,8 @@ export function getStateNames(
 	let result: string[] = [];
 
 	anims.forEach((anim) => {
-		// if animation name does not have suffix "_action", it is a state
-		if (/^(?!.*_action$).*$/i.test(anim.name)) {
+		// if animation name has suffix "_state", it is a state
+		if (/_state$/i.test(anim.name)) {
 			result.push(anim.name);
 		}
 	});
@@ -88,5 +88,5 @@ export function getActionNames(
 		}
 	});
 
-	return [];
+	return result;
 }

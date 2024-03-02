@@ -78,7 +78,7 @@ export const createPlayer = (
 				model.animations = gltf.animations;
 				const clip =
 					model.animations.find((animation) =>
-						/idle$/.test(animation.name.toLowerCase()),
+						/idle_state$/i.test(animation.name),
 					) ?? model.animations[0];
 				const action = mixer.clipAction(clip).play();
 				action.time = Math.random() * clip.duration;

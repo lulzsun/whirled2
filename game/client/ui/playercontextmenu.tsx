@@ -23,10 +23,20 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	const onStatesMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
 		event,
 	) => {
-		const menu =
-			event.currentTarget.parentElement!.appendChild(statesAnimMenu);
-		menu.setItem(createAnimationMenu(animations.states));
-		menu.open(event);
+		event.currentTarget.parentElement!.appendChild(statesAnimMenu);
+		statesAnimMenu.setItem(createAnimationMenu(animations.states));
+		statesAnimMenu.open(event);
+		actionsAnimMenu.close();
+	};
+
+	const actionsAnimMenu = createContextMenuUI(true);
+	const onActionsMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
+		event,
+	) => {
+		event.currentTarget.parentElement!.appendChild(actionsAnimMenu);
+		actionsAnimMenu.setItem(createAnimationMenu(animations.actions));
+		actionsAnimMenu.open(event);
+		statesAnimMenu.close();
 	};
 
 	return (
@@ -69,6 +79,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 				<button
 					type="button"
 					class="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+					onClick={onActionsMenuOpen}
 				>
 					Actions
 					<svg
@@ -100,7 +111,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	) as HTMLElement;
 };
 
-export const createAnimationMenu = (states: string[]) => {
+export const createAnimationMenu = (names: string[]) => {
 	return (
 		<>
 			<div class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700">
@@ -108,7 +119,7 @@ export const createAnimationMenu = (states: string[]) => {
 					class="text-sm text-gray-700 dark:text-gray-200"
 					aria-labelledby="doubleDropdownButton"
 				>
-					{states.map((name, i) => {
+					{names.map((name, i) => {
 						return (
 							<li>
 								<button
@@ -116,7 +127,7 @@ export const createAnimationMenu = (states: string[]) => {
 									type="button"
 									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
 								>
-									{name}
+									{name.replace(/_(action|state)$/i, "")}
 								</button>
 							</li>
 						);

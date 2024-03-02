@@ -79,7 +79,7 @@ export function createMovementSystem() {
 				// Play default walking animation
 				const clip =
 					animations.find((animation) =>
-						/walking$|walk$/.test(animation.name.toLowerCase()),
+						/walking_state$|walk_state$/i.test(animation.name),
 					) ?? animations[0];
 				mixer.clipAction(clip).play();
 			} else {
@@ -88,7 +88,7 @@ export function createMovementSystem() {
 				// Play default idle animation
 				const clip =
 					animations.find((animation) =>
-						/idle$/.test(animation.name.toLowerCase()),
+						/idle_state$/i.test(animation.name),
 					) ?? animations[0];
 				mixer.stopAllAction();
 				mixer.clipAction(clip).play();
