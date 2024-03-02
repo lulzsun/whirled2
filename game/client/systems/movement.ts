@@ -1,7 +1,11 @@
 import * as THREE from "three";
 
 import { defineQuery, defineSystem, removeComponent } from "bitecs";
-import { MoveTowardsComponent, TransformComponent } from "../components";
+import {
+	GltfComponent,
+	MoveTowardsComponent,
+	TransformComponent,
+} from "../components";
 import { World } from "../factory/world";
 
 const movementQuery = defineQuery([MoveTowardsComponent]);
@@ -85,11 +89,13 @@ export function createMovementSystem() {
 			} else {
 				removeComponent(world, MoveTowardsComponent, e);
 
-				// Play default idle animation
+				// Play default state animation
 				const clip =
+					animations[GltfComponent.animState[e]] ??
 					animations.find((animation) =>
 						/idle_state$/i.test(animation.name),
-					) ?? animations[0];
+					) ??
+					animations[0];
 				mixer.stopAllAction();
 				mixer.clipAction(clip).play();
 			}

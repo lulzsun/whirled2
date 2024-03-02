@@ -1,6 +1,10 @@
 import React from "jsx-dom";
 import { World } from "../factory/world";
-import { getActionNames, getStateNames } from "../systems/animation";
+import {
+	getActionNames,
+	getStateNames,
+	playAnimation,
+} from "../systems/animation";
 import { entityExists } from "bitecs";
 import { API_URL } from "../constants";
 import { createContextMenuUI } from "./contextmenu";
@@ -12,6 +16,8 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	const firstModelAnims = world.players.get(player.eid)?.player.children[0]
 		.animations;
 
+	if (firstModelAnims === undefined) throw `No animations for eid: ${eid}`;
+
 	const animations = {
 		states: getStateNames(firstModelAnims),
 		actions: getActionNames(firstModelAnims),
@@ -22,7 +28,14 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 		event,
 	) => {
 		event.currentTarget.parentElement!.appendChild(statesAnimMenu);
-		statesAnimMenu.setItem(createAnimationMenu(animations.states));
+		statesAnimMenu.setItem(
+			createAnimationMenu(
+				world,
+				player.eid,
+				animations.states,
+				firstModelAnims,
+			),
+		);
 		statesAnimMenu.open(event);
 		actionsAnimMenu.close();
 	};
@@ -32,7 +45,14 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 		event,
 	) => {
 		event.currentTarget.parentElement!.appendChild(actionsAnimMenu);
-		actionsAnimMenu.setItem(createAnimationMenu(animations.actions));
+		actionsAnimMenu.setItem(
+			createAnimationMenu(
+				world,
+				player.eid,
+				animations.actions,
+				firstModelAnims,
+			),
+		);
 		actionsAnimMenu.open(event);
 		statesAnimMenu.close();
 	};
@@ -117,14 +137,16 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	) as HTMLElement;
 };
 
-export const createAnimationMenu = (names: string[]) => {
+export const createAnimationMenu = (
+	world: World,
+	eid: number,
+	names: string[],
+	anims: THREE.AnimationClip[],
+) => {
 	return (
 		<>
 			<div class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700">
-				<ul
-					class="text-sm text-gray-700 dark:text-gray-200"
-					aria-labelledby="doubleDropdownButton"
-				>
+				<ul class="text-sm text-gray-700 dark:text-gray-200">
 					{names.map((name, i) => {
 						return (
 							<li>
@@ -132,9 +154,9 @@ export const createAnimationMenu = (names: string[]) => {
 									key={i}
 									type="button"
 									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-									onClick={(_) => {
-										console.log("Play animation:", name);
-									}}
+									onClick={(_) =>
+										playAnimation(world, eid, name, anims)
+									}
 								>
 									{name.replace(/_(action|state)$/i, "")}
 								</button>

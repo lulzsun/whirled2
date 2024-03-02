@@ -80,10 +80,14 @@ export const createPlayer = (
 					model.animations.find((animation) =>
 						/idle_state$/i.test(animation.name),
 					) ?? model.animations[0];
+				const clipIndex = model.animations.indexOf(clip);
 				const action = mixer.clipAction(clip).play();
 				action.time = Math.random() * clip.duration;
+
 				addComponent(world, GltfComponent, eid);
 				GltfComponent.timeScale[eid] = 1000;
+				GltfComponent.animState[eid] = clipIndex;
+				GltfComponent.animAction[eid] = -1;
 
 				console.log("Created GLTF mesh", model);
 			},

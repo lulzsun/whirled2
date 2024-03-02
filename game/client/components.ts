@@ -1,15 +1,9 @@
 import { defineComponent, Types } from "bitecs";
 
-const { f32, eid } = Types;
+const { f32, eid, i8 } = Types;
 
 export const Vector3Schema = { x: f32, y: f32, z: f32 };
 export const QuaternionSchema = { x: f32, y: f32, z: f32, w: f32 };
-
-export const TransformSchema = {
-	position: Vector3Schema,
-	rotation: QuaternionSchema,
-	scale: Vector3Schema,
-};
 
 export type Vector3Component = {
 	x: Float32Array;
@@ -30,12 +24,19 @@ export type TransformComponentType = {
 	scale: Vector3Component;
 };
 
-export const TransformComponent =
-	defineComponent<TransformComponentType>(TransformSchema);
+export const TransformComponent = defineComponent({
+	position: Vector3Schema,
+	rotation: QuaternionSchema,
+	scale: Vector3Schema,
+});
 
 export const SpineComponent = defineComponent({ timeScale: f32 });
 
-export const GltfComponent = defineComponent({ timeScale: f32 });
+export const GltfComponent = defineComponent({
+	animState: i8,
+	animAction: i8,
+	timeScale: f32,
+});
 
 export const ObjectOutlineComponent = defineComponent();
 
