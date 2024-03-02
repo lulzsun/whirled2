@@ -52,27 +52,27 @@ export function createAnimationSystem() {
 			for (let y = 0; y < player.children.length; y++) {
 				//@ts-ignore: createPlayer() adds a mixer component to the model
 				let mixer = player.children[y].mixer;
-				if (mixer instanceof THREE.AnimationMixer) {
-					mixer.update(delta / GltfComponent.timeScale[eid]);
+				if (!(mixer instanceof THREE.AnimationMixer)) continue;
 
-					if (GltfComponent.animAction[eid] === -1) continue;
+				mixer.update(delta / GltfComponent.timeScale[eid]);
 
-					let animations = player.children[y].animations;
-					let clip = animations[GltfComponent.animAction[eid]];
+				if (GltfComponent.animAction[eid] === -1) continue;
 
-					if (mixer.clipAction(clip).time !== clip.duration) continue;
+				let animations = player.children[y].animations;
+				let clip = animations[GltfComponent.animAction[eid]];
 
-					// return to playing previous animation state
-					GltfComponent.animAction[eid] = -1;
-					clip =
-						animations[GltfComponent.animState[eid]] ??
-						animations.find((animation) =>
-							/idle_state$/i.test(animation.name),
-						) ??
-						animations[0];
-					mixer.stopAllAction();
-					mixer.clipAction(clip).play();
-				}
+				if (mixer.clipAction(clip).time !== clip.duration) continue;
+
+				// return to playing previous animation state
+				GltfComponent.animAction[eid] = -1;
+				clip =
+					animations[GltfComponent.animState[eid]] ??
+					animations.find((animation) =>
+						/idle_state$/i.test(animation.name),
+					) ??
+					animations[0];
+				mixer.stopAllAction();
+				mixer.clipAction(clip).play();
 			}
 		}
 
