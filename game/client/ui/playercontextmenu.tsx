@@ -101,14 +101,18 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 					</li>
 				</>
 			)}
-			<li class="border-t border-white">
-				<a
-					href="#"
-					class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white "
-				>
-					View Profile
-				</a>
-			</li>
+			{!/^Guest/i.test(player.username) && (
+				<li class="border-t border-white">
+					<a
+						hx-target="#page"
+						hx-push-url="false"
+						href={`/profile/${player.username}`}
+						class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
+					>
+						View Profile
+					</a>
+				</li>
+			)}
 		</>
 	) as HTMLElement;
 };

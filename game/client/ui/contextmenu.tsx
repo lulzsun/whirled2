@@ -21,6 +21,7 @@ export const createContextMenuUI = (hasParentMenu?: boolean) => {
 						menuItems={element.menuItems}
 					/>,
 				);
+				htmx.process(element);
 
 				const canvas =
 					document.querySelector<HTMLCanvasElement>("#app")!;

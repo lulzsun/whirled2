@@ -1,16 +1,31 @@
 {{ define "comment" }}
 	<section id="_{{ .CommentId }}_parent" class="flex">
 		<div class="mr-2 flex-shrink-0">
-			<img class="w-10 h-10 rounded-full" src="/static/profile_picture.png" alt="" />
+			<img
+				class="w-10 h-10 rounded-full"
+				src="/static/profile_picture.png"
+				alt=""
+			/>
 		</div>
 		<div class="w-full">
 			<div class="flex items-start mb-1">
 				<div class="pr-4">
 					<div class="flex gap-2">
 						<div class="text-sm font-medium dark:text-white">
-							<a href="#" class="hover:underline">{{ .Username }}</a>
+							<a
+								hx-target="#page"
+								hx-push-url="false"
+								href="/profile/{{ .Username }}"
+								class="hover:underline"
+							>
+								{{ .Username }}
+							</a>
 						</div>
-						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom">{{ .Timestamp }}</p>
+						<p
+							class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom"
+						>
+							{{ .Timestamp }}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -18,16 +33,36 @@
 				{{ .Content }}
 			</p>
 			<aside class="flex items-center mt-2 mb-4 flex-wrap">
-				<button hx-get="/upvote" hx-swap="none" class="pr-4 inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500">
-					<svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 18">
+				<button
+					hx-get="/upvote"
+					hx-swap="none"
+					class="pr-4 inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500"
+				>
+					<svg
+						class="w-3.5 h-3.5"
+						aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="currentColor"
+						viewBox="0 0 18 18"
+					>
 						<path
 							d="M3 7H1a1 1 0 0 0-1 1v8a2 2 0 0 0 4 0V8a1 1 0 0 0-1-1Zm12.954 0H12l1.558-4.5a1.778 1.778 0 0 0-3.331-1.06A24.859 24.859 0 0 1 6 6.8v9.586h.114C8.223 16.969 11.015 18 13.6 18c1.4 0 1.592-.526 1.88-1.317l2.354-7A2 2 0 0 0 15.954 7Z"
 						/>
 					</svg>
 				</button>
 				<p class="pr-4 text-xs">1</p>
-				<button hx-get="/downvote" hx-swap="none" class="pr-4 inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">
-					<svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 18">
+				<button
+					hx-get="/downvote"
+					hx-swap="none"
+					class="pr-4 inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group"
+				>
+					<svg
+						class="w-3.5 h-3.5"
+						aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="currentColor"
+						viewBox="0 0 18 18"
+					>
 						<path
 							d="M11.955 2.117h-.114C9.732 1.535 6.941.5 4.356.5c-1.4 0-1.592.526-1.879 1.316l-2.355 7A2 2 0 0 0 2 11.5h3.956L4.4 16a1.779 1.779 0 0 0 3.332 1.061 24.8 24.8 0 0 1 4.226-5.36l-.003-9.584ZM15 11h2a1 1 0 0 0 1-1V2a2 2 0 1 0-4 0v8a1 1 0 0 0 1 1Z"
 						/>
@@ -38,14 +73,33 @@
 						display: block;
 					}
 				</style>
-				<input type="checkbox" id="_{{ .CommentId }}_reply" autocomplete="off" class="hidden absolute" />
-				<label for="_{{ .CommentId }}_reply" class="flex items-center space-x-1 cursor-pointer">
-					<span class="pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">Reply</span>
+				<input
+					type="checkbox"
+					id="_{{ .CommentId }}_reply"
+					autocomplete="off"
+					class="hidden absolute"
+				/>
+				<label
+					for="_{{ .CommentId }}_reply"
+					class="flex items-center space-x-1 cursor-pointer"
+				>
+					<span
+						class="pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group"
+					>
+						Reply
+					</span>
 				</label>
 				<label class="flex items-center space-x-1 cursor-pointer">
-					<span class="pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">Report</span>
+					<span
+						class="pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group"
+					>
+						Report
+					</span>
 				</label>
-				<div id="_{{ .CommentId }}_reply_box" class="hidden mt-2 w-full">
+				<div
+					id="_{{ .CommentId }}_reply_box"
+					class="hidden mt-2 w-full"
+				>
 					{{ template "commentBox" . }}
 				</div>
 			</aside>
@@ -53,9 +107,25 @@
 	</section>
 	{{ if .DepthHideId }}
 		<section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
-			<form class="-mt-2" hx-target="#_{{ .CommentId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
-				<input type="hidden" name="viewReplies" value="{{ .DepthHideId }}" />
-				<button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">+ More replies</button>
+			<form
+				class="-mt-2"
+				hx-target="#_{{ .CommentId }}_more_replies"
+				hx-swap="innerHTML"
+				hx-push-url="false"
+				action="/profile/{{ .Username }}"
+				method="get"
+			>
+				<input
+					type="hidden"
+					name="viewReplies"
+					value="{{ .DepthHideId }}"
+				/>
+				<button
+					type="submit"
+					class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group"
+				>
+					+ More replies
+				</button>
 			</form>
 		</section>
 	{{ else }}
@@ -64,11 +134,34 @@
 				{{ template "comment" . }}
 			{{ end }}
 			{{ if .CountHideId }}
-				<section id="_{{ .CountHideId }}_more_replies" {{ if eq .CountHideId .CommentId }}class="mb-4"{{ else }}class="ml-12 mb-4"{{ end }}>
-					<form class="-mt-2" hx-target="#_{{ .CountHideId }}_more_replies" hx-swap="innerHTML" hx-push-url="false" action="/profile/{{ .Username }}" method="get">
-						<input type="hidden" name="viewReplies" value="{{ .CountHideId }}" />
+				<section
+					id="_{{ .CountHideId }}_more_replies"
+					{{ if eq .CountHideId .CommentId }}
+						class="mb-4"
+					{{ else }}
+						class="ml-12 mb-4"
+					{{ end }}
+				>
+					<form
+						class="-mt-2"
+						hx-target="#_{{ .CountHideId }}_more_replies"
+						hx-swap="innerHTML"
+						hx-push-url="false"
+						action="/profile/{{ .Username }}"
+						method="get"
+					>
+						<input
+							type="hidden"
+							name="viewReplies"
+							value="{{ .CountHideId }}"
+						/>
 						<input type="hidden" name="replyOffset" value="4" />
-						<button type="submit" class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group">+ More replies</button>
+						<button
+							type="submit"
+							class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-blue-600 hover:underline dark:text-blue-500 group"
+						>
+							+ More replies
+						</button>
 					</form>
 				</section>
 			{{ end }}
