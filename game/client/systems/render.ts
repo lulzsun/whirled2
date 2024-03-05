@@ -20,6 +20,8 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 
+import { ImGui, ImGui_Impl } from "imgui-js";
+
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
 const nameplateQuery = defineQuery([NameplateComponent]);
 
@@ -156,7 +158,17 @@ export function createRenderSystem(world: World) {
 			if (object !== -1) outlinePass.selectedObjects.splice(object, 1);
 		}
 
+		if (ImGui.bind === undefined) {
+			return world;
+		}
+
+		ImGui.End();
+		ImGui.EndFrame();
+		ImGui.Render();
+
 		world.composer.render();
+
+		ImGui_Impl.RenderDrawData(ImGui.GetDrawData());
 		return world;
 	});
 }

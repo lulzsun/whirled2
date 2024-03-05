@@ -17,6 +17,8 @@ import { createContextMenuUI } from "../ui/contextmenu";
 import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 import { API_URL } from "../constants";
 
+import { ImGui } from "imgui-js";
+
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
 export function createControlSystem(world: World) {
@@ -36,6 +38,9 @@ export function createControlSystem(world: World) {
 	const controls = new OrbitControls(world.camera, world.renderer.domElement);
 
 	canvas.addEventListener("pointermove", (event) => {
+		if (ImGui.GetCurrentContext() !== null)
+			controls.enabled = !ImGui.GetIO().WantCaptureMouse;
+
 		const rect = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;

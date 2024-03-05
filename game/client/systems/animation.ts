@@ -8,6 +8,7 @@ import {
 
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
+import { ImGui } from "imgui-js";
 
 const spineAvatarQuery = defineQuery([SpineComponent]);
 const gltfAvatarQuery = defineQuery([GltfComponent]);

@@ -30,6 +30,7 @@
 		"@esotericsoftware/spine-threejs": "^4.2.35",
 		"@geckos.io/client": "^3.0.0",
 		"bitecs": "^0.3.40",
+		"imgui-js": "github:Schiznitz/imgui-js",
 		"jsx-dom": "^8.1.2",
 		"three": "^0.141.0"
 	}
