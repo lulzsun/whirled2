@@ -2,7 +2,7 @@
 	<script>
 		if (window._openWebPanel) window._openWebPanel();
 	</script>
-	<div class="p-2 flex flex-col gap-2">
+	<div class="p-2 flex flex-col ">
 		<div
 			id="profile-card"
 			class="inline-block w-full text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
@@ -66,10 +66,12 @@
 			</div>
 			<div data-popper-arrow></div>
 		</div>
-		<section class="w-full grid place-items-center">
+		<section class="w-full grid place-items-center p-2">
 			{{ template "pagination" . }}
 		</section>
-		{{ template "commentBox" . }}
+		<section class="pb-2">
+			{{ template "commentBox" . }}
+		</section>
 		<section id="_profile_comments">
 			{{ range .Comments }}
 				{{ template "comment" . }}

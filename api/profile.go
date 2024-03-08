@@ -181,6 +181,8 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		if htmxEnabled && parentCommentId != "" {
+			// User is viewing more comments under /profile/,
+			// so we will just send partial html (comments)
 			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", data); err != nil {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
