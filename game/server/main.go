@@ -32,11 +32,11 @@ func Start(port int, app *pocketbase.PocketBase) {
 		DisableHttpServer: true,
 	})
 
-	server.OnConnection(func(peer gecgosio.Peer) {
+	server.OnConnection(func(peer *gecgosio.Peer) {
 		log.Printf("Client %s has connected!\n", peer.Id)
 
 		clients[peer.Id] = &Client{
-			Peer: &peer,
+			Peer: peer,
 		}
 
 		peer.On("Join", func(msg string) { peer.Emit("Auth", peer.Id) })
@@ -46,7 +46,7 @@ func Start(port int, app *pocketbase.PocketBase) {
 		peer.On("Anim", func(msg string) { onAnim(peer, msg) })
 	})
 
-	server.OnDisconnect(func(peer gecgosio.Peer) {
+	server.OnDisconnect(func(peer *gecgosio.Peer) {
 		log.Printf("Client %s has disconnected!\n", peer.Id)
 		client, ok := clients[peer.Id]
 		if ok {
