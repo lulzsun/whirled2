@@ -165,4 +165,56 @@ func Bootstrap(app *pocketbase.PocketBase) {
 			log.Fatalln(err)
 		}
 	}
+
+	// Rooms collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE rooms (
+		id TEXT PRIMARY KEY,
+		owner_id TEXT NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (owner_id) REFERENCES users (id)
+	);
+	*/
+	if _, err := app.Dao().FindCollectionByNameOrId("rooms"); err != nil {
+		roomsCollection := &models.Collection{
+			Name:       "rooms",
+			Type:       models.CollectionTypeBase,
+			ListRule:   nil,
+			ViewRule:   nil,
+			CreateRule: nil,
+			UpdateRule: nil,
+			DeleteRule: nil,
+			Schema: schema.NewSchema(
+				&schema.SchemaField{
+					Name:     "owner_id",
+					Type:     schema.FieldTypeRelation,
+					Required: true,
+					Options: &schema.RelationOptions{
+						MaxSelect:     types.Pointer(1),
+						CollectionId:  usersCollection.Id,
+						CascadeDelete: true,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "is_home",
+					Type:     schema.FieldTypeBool,
+					Required: false,
+				},
+				&schema.SchemaField{
+					Name:     "name",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(3),
+						Max: types.Pointer(30),
+					},
+				},
+			),
+		}
+
+		if err := app.Dao().SaveCollection(roomsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
 }

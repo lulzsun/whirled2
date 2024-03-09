@@ -23,8 +23,11 @@ var server *gecgosio.Server
 var clients = make(map[string]*Client)
 var numOfGuests = 0;
 var usernameToPeer = make(map[string]string)
+var pb *pocketbase.PocketBase
 
-func Start(port int) {
+func Start(port int, app *pocketbase.PocketBase) {
+	pb = app
+
 	server = gecgosio.Gecgos(&gecgosio.Options{
 		DisableHttpServer: true,
 	})

@@ -151,19 +151,33 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 	})
 
 	// POST /api/collections/users/records
-	// Creates a new profile for the new user
+	// Creates a profile & room for the new user
 	app.OnRecordAfterCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
+		// Creating new profile
 		collection, err := app.Dao().FindCollectionByNameOrId("profiles")
 		if err != nil {
 			return err
 		}
 		record := models.NewRecord(collection)
 		form := forms.NewRecordUpsert(app, record)
-
 		form.LoadData(map[string]any{
 			"user_id": e.Record.Id,
 		})
+		if err := form.Submit(); err != nil {
+			return err
+		}
 
+		// Creating new room (home)
+		collection, err = app.Dao().FindCollectionByNameOrId("rooms")
+		if err != nil {
+			return err
+		}
+		record = models.NewRecord(collection)
+		form = forms.NewRecordUpsert(app, record)
+		form.LoadData(map[string]any{
+			"owner_id": e.Record.Id,
+			"is_home": true,
+		})
 		if err := form.Submit(); err != nil {
 			return err
 		}

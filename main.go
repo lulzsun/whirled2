@@ -26,9 +26,6 @@ func main() {
 
 	log.Println("Local IPs:", localIPs)
 
-	// start gecgos.io game server
-	server.Start(42069)
-
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,
 		// DefaultDebug: false
@@ -37,12 +34,14 @@ func main() {
 		api.AddBaseRoutes,
 		api.AddAuthRoutes,
 		api.AddProfileRoutes,
+		api.AddRoomRoutes,
 		server.AddAuthRoutes,
 		// Add more routes here
 	}
 	customEventHooks := []func(*pocketbase.PocketBase){
 		api.AddAuthEventHooks,
 		api.AddProfileEventHooks,
+		api.AddRoomEventHooks,
 		// Add more event hooks here
 	}
 	for _, AddEventHooks := range customEventHooks {
@@ -77,6 +76,8 @@ func main() {
 			return nil
 		})
 
+		// start gecgos.io game server
+		server.Start(42069, app)
 		log.Println("Server started at http://127.0.0.1:42069")
 		return nil
 	})

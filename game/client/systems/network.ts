@@ -158,7 +158,13 @@ export function createNetworkSystem(world: World) {
 							throw new Error("Something went wrong");
 						})
 						.then((code: string) => {
-							const room = "bravenewwhirled";
+							let room = "";
+							if (window.location.pathname === "/") {
+								const params = new URLSearchParams(
+									window.location.search,
+								);
+								room = params.get("room") ?? "";
+							}
 							network.emit(
 								"Auth",
 								{ code, room },

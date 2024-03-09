@@ -5,6 +5,7 @@ import (
 	"log"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
+	"github.com/pocketbase/dbx"
 )
 
 // Authorize a peer as user or guest and have them join a room
@@ -54,10 +55,29 @@ func onAuth(peer gecgosio.Peer, msg string) {
 			},
 		}
 
-		defaultRoom := "bravenewwhirled"
-		room, ok := j["room"].(string)
-		if !ok {
-			room = defaultRoom
+		roomId, ok := j["room"].(string)
+		if !ok || (ok && roomId == "") {
+			roomId = "underwhirled"
+			// check if client has a home room
+			room := struct {
+				Id string `db:"id" json:"id"`
+			}{}
+			err := pb.DB().
+				NewQuery(`
+					SELECT rooms.id
+					FROM rooms 
+					INNER JOIN users ON rooms.owner_id = users.id
+					WHERE users.username = {:username} AND rooms.is_home = true
+				`).
+				Bind(dbx.Params{
+					"username": client.Username,
+				}).One(&room)
+
+			if err != nil {
+				log.Println(err)
+			} else {
+				roomId = room.Id
+			}
 		}
 
 		// join our client to a room
@@ -66,13 +86,14 @@ func onAuth(peer gecgosio.Peer, msg string) {
 			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
 			return
 		}
-		peer.Join(room)
+		peer.Join(roomId)
 		peer.Emit("Join", string(data))
+		log.Printf("User '%s' is joining room id '%s'", client.Username, roomId)
 
 		// announce client to all other clients in the room
 		player["local"] = false
 		data, _ = json.Marshal(player)
-		peers := peer.Broadcast(room)
+		peers := peer.Broadcast(roomId)
 		peers.Emit("Join", string(data))
 
 		// let our client know about existing clients in the room

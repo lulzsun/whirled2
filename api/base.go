@@ -37,6 +37,7 @@ func AppendToBaseTmplFiles(files ...string) []string {
 func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/", func(c echo.Context) error {
 		htmxEnabled := false
+		params := c.QueryParams()
 		info := apis.RequestInfo(c)
 
 		utils.ProcessHXRequest(c, func() error {
@@ -46,7 +47,7 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		})
 
-		if info.AuthRecord != nil {
+		if info.AuthRecord != nil || len(params) > 0 {
 			// if the user is auth'd, we will return an "empty page",
 			// the client should handle this by hiding the "empty page" side panel
 			if htmxEnabled {
@@ -60,6 +61,7 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			}
 			return nil
 		}
+		
 
 		// if the user is not auth'd, we will give them the initial load a redirect
 		if htmxEnabled {
