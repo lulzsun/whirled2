@@ -57,8 +57,7 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 
 		roomId, ok := j["room"].(string)
 		if !ok || (ok && roomId == "") {
-			roomId = "underwhirled"
-			// check if client has a home room
+			// client did not provide a room id, check if client has a home room
 			room := struct {
 				Id string `db:"id" json:"id"`
 			}{}
@@ -74,7 +73,31 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 				}).One(&room)
 
 			if err != nil {
-				log.Println(err)
+				roomId = "underwhirled"
+			} else {
+				roomId = room.Id
+			}
+		} else {
+			// client provided a room id, check if room exists
+			room := struct {
+				Id string `db:"id" json:"id"`
+			}{}
+			err := pb.DB().
+				NewQuery(`
+					SELECT r1.id FROM rooms r1 WHERE r1.id = {:roomId}
+					UNION ALL
+					SELECT r2.id FROM rooms r2
+					INNER JOIN users ON r2.owner_id = users.id
+					WHERE users.username = {:username} AND r2.is_home = true
+						AND NOT EXISTS (SELECT r1.id FROM rooms r1 WHERE r1.id = {:roomId})
+				`).
+				Bind(dbx.Params{
+					"username": client.Username,
+					"roomId": roomId,
+				}).One(&room)
+
+			if err != nil {
+				roomId = "underwhirled"
 			} else {
 				roomId = room.Id
 			}
