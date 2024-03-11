@@ -28,6 +28,7 @@
 				window.addEventListener("DOMContentLoaded", () => {
 					document.getElementById("game").removeAttribute("style");
 					window._split_instance = Split(["#game", "#web"], {
+						sizes: [100, 0],
 						minSize: [0, 640],
 						expandToMin: true,
 					});
@@ -59,11 +60,12 @@
 					};
 					window._openWebPanel = () => {
 						if (window._split_instance) return;
+						document.getElementById("web").style.display = "flex";
 						window._split_instance = Split(["#game", "#web"], {
+							sizes: [100, 0],
 							minSize: [0, 640],
 							expandToMin: true,
 						});
-						document.getElementById("web").style.display = "flex";
 						window._checkWindowSize();
 					};
 					window._checkWindowSize();

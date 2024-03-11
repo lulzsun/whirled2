@@ -1,6 +1,7 @@
 {{ define "page" }}
 	<script id="focusGame">
 		if (window._closeWebPanel) window._closeWebPanel();
+		if (window.game.reconnect) window.game.reconnect();
 	</script>
 	{{ if .NoJs }}
 		<noscript>

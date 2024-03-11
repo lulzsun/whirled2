@@ -7,6 +7,9 @@ declare global {
 	interface Window {
 		world: World;
 		htmx: any;
+		game: {
+			reconnect: () => void;
+		};
 	}
 }
 if (window.htmx === undefined) {
@@ -14,6 +17,7 @@ if (window.htmx === undefined) {
 	window.htmx.process = () => {};
 }
 window.world = world;
+window.game.reconnect = () => {};
 
 const systems = createSystems(world);
 

@@ -24,8 +24,6 @@ func main() {
 		os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
 	}
 
-	log.Println("Local IPs:", localIPs)
-
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,
 		// DefaultDebug: false
