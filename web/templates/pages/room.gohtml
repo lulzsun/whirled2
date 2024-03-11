@@ -27,14 +27,14 @@
 		<div
 			class="grid grid-cols-3 @3xl/web:grid-cols-4 @7xl/web:grid-cols-6 gap-4"
 		>
-			{{ range $i, $e := .ActiveRooms }}
+			{{ range $i, $room := .ActiveRooms }}
 				<div
 					class="max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700 
 					{{ if or (eq $i 6) (eq $i 7) }}
 						hidden @3xl/web:block @7xl/web:hidden
 					{{ end }}"
 				>
-					<a href="#">
+					<a hx-disable href="/?room={{ $room.Id }}">
 						<img
 							class="rounded-t-lg h-auto max-w-full"
 							src="/static/room.png"
@@ -42,7 +42,13 @@
 						/>
 					</a>
 					<div class="p-1 text-sm">
-						<a class="hover:underline" href="#">Untitled Room</a>
+						<a
+							hx-disable
+							class="hover:underline truncate"
+							href="/?room={{ $room.Id }}"
+						>
+							{{ $room.Name }}
+						</a>
 						<div class="flex place-content-between">
 							<div class="flex-none flex items-center text-xs">
 								<svg
@@ -56,7 +62,7 @@
 										d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"
 									/>
 								</svg>
-								<span>0</span>
+								<span>{{ $room.UsersCount }}</span>
 							</div>
 							<div class="flex items-center text-yellow-300">
 								<svg

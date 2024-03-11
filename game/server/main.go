@@ -132,6 +132,24 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	})
 }
 
+func GetActiveRooms(limit int) (map[string]int) {
+	rooms := server.Rooms
+	activeRooms := make(map[string]int)
+
+	if server == nil || rooms == nil {
+		return activeRooms
+	}
+
+	for key, value := range rooms {
+		if key == "@underwhirled" {
+			continue
+		}
+		activeRooms[key] = len(value)
+	}
+
+	return activeRooms
+}
+
 func generateAuthCode() (string, error) {
     // Generate a random seed based on current time
     seed := time.Now().UnixNano()

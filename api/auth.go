@@ -176,6 +176,7 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		form = forms.NewRecordUpsert(app, record)
 		form.LoadData(map[string]any{
 			"owner_id": e.Record.Id,
+			"name": e.Record.GetString("username") + "'s Home",
 			"is_home": true,
 		})
 		if err := form.Submit(); err != nil {

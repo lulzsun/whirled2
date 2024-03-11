@@ -55,6 +55,14 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 			},
 		}
 
+		// prepare client (player) data
+		data, err := json.Marshal(player)
+		if err != nil {
+			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+			return
+		}
+
+		// verify client
 		roomId, ok := j["room"].(string)
 		if !ok || (ok && roomId == "") {
 			// client did not provide a room id, check if client has a home room
@@ -73,7 +81,7 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 				}).One(&room)
 
 			if err != nil {
-				roomId = "underwhirled"
+				roomId = "@underwhirled"
 			} else {
 				roomId = room.Id
 			}
@@ -97,18 +105,16 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 				}).One(&room)
 
 			if err != nil {
-				roomId = "underwhirled"
+				roomId = "@underwhirled"
 			} else {
-				roomId = room.Id
+				if roomId != room.Id {
+					log.Printf("Room '%s' does not exist or '%s' does not have privileges", roomId, client.Username)
+					roomId = room.Id
+				}
 			}
 		}
 
 		// join our client to a room
-		data, err := json.Marshal(player)
-		if err != nil {
-			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
-			return
-		}
 		peer.Join(roomId)
 		peer.Emit("Join", string(data))
 		log.Printf("User '%s' is joining room id '%s'", client.Username, roomId)

@@ -2,20 +2,26 @@ package api
 
 import (
 	"log"
+	"sort"
 	"text/template"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+
+	"whirled2/game/server"
 )
 
 var roomTmplFiles []string
 var roomTmpl *template.Template
 
 type Room struct {
-	OwnerId    string `db:"owner_id" json:"owner_id"`
-	Name  string `db:"nickname" json:"nickname"`
+	Id 			string `db:"id" json:"id"`
+	OwnerId		string `db:"owner_id" json:"owner_id"`
+	Name		string `db:"nickname" json:"nickname"`
+
+	UsersCount	int
 }
 
 func init() {
@@ -52,10 +58,23 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		// }
 
 		data := struct {
-			ActiveRooms []int
+			ActiveRooms []Room
 		}{
-			ActiveRooms: []int{0, 0, 0, 0, 0, 0, 0, 0},
+			ActiveRooms: []Room{},
 		}
+		rooms := server.GetActiveRooms(6)
+
+		for id, count := range rooms {
+			data.ActiveRooms = append(data.ActiveRooms, Room{
+				Id: id,
+				Name: "Untitled Room",
+				UsersCount: count,
+			})
+		}
+
+		sort.Slice(data.ActiveRooms, func(i, j int) bool {
+			return data.ActiveRooms[i].UsersCount > data.ActiveRooms[j].UsersCount
+		})
 
 		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
 			log.Println(err)
