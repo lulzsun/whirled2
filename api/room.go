@@ -2,10 +2,10 @@ package api
 
 import (
 	"log"
-	"sort"
 	"text/template"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -19,7 +19,7 @@ var roomTmpl *template.Template
 type Room struct {
 	Id 			string `db:"id" json:"id"`
 	OwnerId		string `db:"owner_id" json:"owner_id"`
-	Name		string `db:"nickname" json:"nickname"`
+	Name		string `db:"name" json:"name"`
 
 	UsersCount	int
 }
@@ -41,40 +41,32 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		return nil
 	})
 	e.Router.GET("/rooms", func(c echo.Context) error {
-		// err := app.DB().
-		// 	NewQuery(`
-		// 		SELECT profiles.id, user_id, users.nickname
-		// 		FROM rooms 
-		// 		INNER JOIN users ON profiles.user_id = users.id
-		// 		WHERE users.username = {:username}
-		// 	`).
-		// 	Bind(dbx.Params{
-		// 		"username": username,
-		// 	}).One(&profile)
-
-		// if err != nil {
-		// 	log.Println(err)
-		// 	return apis.NewBadRequestError("Something went wrong.", err)
-		// }
-
 		data := struct {
 			ActiveRooms []Room
 		}{
 			ActiveRooms: []Room{},
 		}
-		rooms := server.GetActiveRooms(6)
+		rooms := server.GetActiveRooms(6, 0)
+		log.Println(rooms)
 
-		for id, count := range rooms {
+		q := app.DB().NewQuery(`SELECT name FROM rooms WHERE id = {:id}`)
+		q.Prepare()
+		defer q.Close()
+
+		for _, room := range rooms {
+			dbRoom := Room{}
+			q.Bind(dbx.Params{"id": room.Id})
+			err := q.One(&dbRoom)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			data.ActiveRooms = append(data.ActiveRooms, Room{
-				Id: id,
-				Name: "Untitled Room",
-				UsersCount: count,
+				Id: room.Id,
+				Name: dbRoom.Name,
+				UsersCount: room.UsersCount,
 			})
 		}
-
-		sort.Slice(data.ActiveRooms, func(i, j int) bool {
-			return data.ActiveRooms[i].UsersCount > data.ActiveRooms[j].UsersCount
-		})
 
 		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
 			log.Println(err)

@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"math"
 	"math/rand"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -132,9 +134,14 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	})
 }
 
-func GetActiveRooms(limit int) (map[string]int) {
+type ActiveRoom struct {
+	Id 			string 
+	UsersCount	int
+}
+
+func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 	rooms := server.Rooms
-	activeRooms := make(map[string]int)
+	activeRooms := []ActiveRoom{}
 
 	if server == nil || rooms == nil {
 		return activeRooms
@@ -144,10 +151,17 @@ func GetActiveRooms(limit int) (map[string]int) {
 		if key == "@underwhirled" {
 			continue
 		}
-		activeRooms[key] = len(value)
+		activeRooms = append(activeRooms, ActiveRoom{
+			Id: key,
+			UsersCount: len(value),
+		})
 	}
 
-	return activeRooms
+	sort.Slice(activeRooms, func(i, j int) bool {
+		return activeRooms[i].UsersCount > activeRooms[j].UsersCount
+	})
+
+	return activeRooms[offset:int(math.Min(float64(offset+limit), float64(len(activeRooms))))]
 }
 
 func generateAuthCode() (string, error) {
