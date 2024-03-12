@@ -47,7 +47,6 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			ActiveRooms: []Room{},
 		}
 		rooms := server.GetActiveRooms(6, 0)
-		log.Println(rooms)
 
 		q := app.DB().NewQuery(`SELECT name FROM rooms WHERE id = {:id}`)
 		q.Prepare()

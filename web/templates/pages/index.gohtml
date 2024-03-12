@@ -32,6 +32,7 @@
 						minSize: [0, 640],
 						expandToMin: true,
 					});
+					window._split_instance.setSizes([100, 0]);
 					window._checkWindowSize = () => {
 						if (!window._split_instance) return;
 						if (window.innerWidth < 640) {
@@ -66,6 +67,7 @@
 							minSize: [0, 640],
 							expandToMin: true,
 						});
+						window._split_instance.setSizes([100, 0]);
 						window._checkWindowSize();
 					};
 					window._checkWindowSize();
