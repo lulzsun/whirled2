@@ -28,11 +28,11 @@
 				window.addEventListener("DOMContentLoaded", () => {
 					document.getElementById("game").removeAttribute("style");
 					window._split_instance = Split(["#game", "#web"], {
-						sizes: [100, 0],
+						sizes: [75, 25],
 						minSize: [0, 640],
 						expandToMin: true,
 					});
-					window._split_instance.setSizes([100, 0]);
+					window._split_instance.setSizes([75, 25]);
 					window._checkWindowSize = () => {
 						if (!window._split_instance) return;
 						if (window.innerWidth < 640) {
@@ -63,11 +63,11 @@
 						if (window._split_instance) return;
 						document.getElementById("web").style.display = "flex";
 						window._split_instance = Split(["#game", "#web"], {
-							sizes: [100, 0],
+							sizes: [75, 25],
 							minSize: [0, 640],
 							expandToMin: true,
 						});
-						window._split_instance.setSizes([100, 0]);
+						window._split_instance.setSizes([75, 25]);
 						window._checkWindowSize();
 					};
 					window._checkWindowSize();
