@@ -12,9 +12,10 @@
 				class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white select-none"
 			>
 				New Whirled
+				<span class="text-[10px] font-light">alpha</span>
 			</span>
 		</a>
-		<div class="flex flex-row mr-3">
+		<div class="hidden min-[848px]:flex flex-row mr-3">
 			<ul
 				class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400"
 			>
@@ -22,7 +23,7 @@
 					<a
 						hx-target="#page"
 						href="/profile"
-						class="inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
+						class="select-none inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
 					>
 						<svg
 							class="w-4 h-4 mr-2 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
@@ -42,7 +43,7 @@
 					<a
 						hx-target="#page"
 						href="/stuff"
-						class="inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
+						class="select-none inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
 					>
 						<svg
 							class="w-4 h-4 mr-2 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
@@ -61,8 +62,7 @@
 				<li class="mr-2">
 					<a
 						hx-target="#page"
-						href="/games"
-						class="inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
+						class="select-none cursor-not-allowed inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
 					>
 						<svg
 							class="w-4 h-4 mr-2 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
@@ -104,8 +104,7 @@
 				<li class="mr-2">
 					<a
 						hx-target="#page"
-						href="/groups"
-						class="inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
+						class="select-none cursor-not-allowed inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
 					>
 						<svg
 							class="w-4 h-4 mr-2 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
@@ -124,8 +123,7 @@
 				<li class="mr-2">
 					<a
 						hx-target="#page"
-						href="/shop"
-						class="inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
+						class="select-none cursor-not-allowed inline-flex items-center justify-center p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 group"
 					>
 						<svg
 							class="w-4 h-4 mr-2 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
@@ -144,5 +142,23 @@
 			</ul>
 			{{ template "profileHeader" . }}
 		</div>
+		<button
+			type="button"
+			class="inline-flex min-[848px]:hidden items-center p-1.5 text-sm text-gray-500 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+		>
+			<span class="sr-only">Open navbar</span>
+			<svg
+				class="w-8 h-8"
+				aria-hidden="true"
+				fill="currentColor"
+				viewBox="0 0 16 16"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"
+				/>
+			</svg>
+		</button>
 	</header>
 {{ end }}

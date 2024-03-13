@@ -17,7 +17,9 @@ if (window.htmx === undefined) {
 	window.htmx.process = () => {};
 }
 window.world = world;
-window.game.reconnect = () => {};
+window.game = {
+	reconnect: () => {},
+};
 
 const systems = createSystems(world);
 

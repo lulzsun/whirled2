@@ -4,7 +4,7 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 	const chatInput = createRef<HTMLInputElement>();
 
 	return (
-		<div className="absolute left-1 bottom-1 w-64 text-white z-10">
+		<div className="absolute left-1 bottom-1 w-46 text-white z-10">
 			<div id="chatbox" class="pb-2" />
 			<div class="relative">
 				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
@@ -21,7 +21,7 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 					</svg>
 				</div>
 				<input
-					class="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+					class="block w-full p-1.5 ps-10 text-xs text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 					placeholder="Send a Message..."
 					required
 					ref={chatInput}
