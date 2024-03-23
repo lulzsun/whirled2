@@ -14,7 +14,7 @@ import (
 // let our peer know about existing peers in the room ("Join" event for each peer)
 //
 // If 'msg' does not provide a room, then join default room (bravenewwhirled)
-func onAuth(peer *gecgosio.Peer, msg string) {
+func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
 	if client.Auth == "" {
@@ -161,7 +161,7 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 	clients[peer.Id] = client
 }
 
-func onMove(peer *gecgosio.Peer, msg string) {
+func onPlayerMove(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
 	// Parse the JSON string into a map
@@ -229,7 +229,7 @@ func onMove(peer *gecgosio.Peer, msg string) {
 	peer.Room().Emit(PlayerMove, string(updatedMsg));
 }
 
-func onChat(peer *gecgosio.Peer, msg string) {
+func onPlayerChat(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
 	// Create a new msg map (JSON)
@@ -248,7 +248,7 @@ func onChat(peer *gecgosio.Peer, msg string) {
 	peer.Room().Emit(PlayerChat, string(updatedMsg));
 }
 
-func onAnim(peer *gecgosio.Peer, msg string) {
+func onPlayerAnim(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
 	// Parse the JSON string into a map

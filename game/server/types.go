@@ -11,6 +11,13 @@ type Client struct {
 	Rotation Rotation
 }
 
+type Object struct {
+	Id string
+	Name string
+	Position Position
+	Rotation Rotation
+}
+
 type Position struct {
 	X float64
 	Y float64
@@ -31,4 +38,8 @@ const ( // god this is fucking awful, figure out how to use protobufs
 	PlayerMove			= "3"
 	PlayerChat			= "4"
 	PlayerAnim			= "5"
+
+	ObjectJoin			= "6"
+	ObjectLeave			= "7"
+	ObjectMove			= "8"
 )

@@ -1,6 +1,7 @@
 import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
+import { NetworkEvent } from "./systems/network";
 
 const world = createWorld();
 declare global {
@@ -20,7 +21,7 @@ if (window.htmx === undefined) {
 window.world = world;
 window.game = {
 	addToRoom: (id) => {
-		alert(id);
+		world.network.emit(NetworkEvent.ObjectJoin, { id });
 	},
 	reconnect: () => {},
 };

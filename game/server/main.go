@@ -22,7 +22,10 @@ import (
 )
 
 var server *gecgosio.Server
+
 var clients = make(map[string]*Client)
+var objects = make(map[string]*Object)
+
 var numOfGuests = 0;
 var usernameToPeer = make(map[string]string)
 var pb *pocketbase.PocketBase
@@ -42,10 +45,12 @@ func Start(port int, app *pocketbase.PocketBase) {
 		}
 
 		peer.On(PlayerJoin, func(msg string) { peer.Emit(PlayerAuth, peer.Id) })
-		peer.On(PlayerAuth, func(msg string) { onAuth(peer, msg) })
-		peer.On(PlayerMove, func(msg string) { onMove(peer, msg) })
-		peer.On(PlayerChat, func(msg string) { onChat(peer, msg) })
-		peer.On(PlayerAnim, func(msg string) { onAnim(peer, msg) })
+		peer.On(PlayerAuth, func(msg string) { onPlayerAuth(peer, msg) })
+		peer.On(PlayerMove, func(msg string) { onPlayerMove(peer, msg) })
+		peer.On(PlayerChat, func(msg string) { onPlayerChat(peer, msg) })
+		peer.On(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
+
+		peer.On(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer *gecgosio.Peer) {

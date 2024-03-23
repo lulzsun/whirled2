@@ -29,6 +29,10 @@ export enum NetworkEvent {
 	PlayerMove,
 	PlayerChat,
 	PlayerAnim,
+
+	ObjectJoin,
+	ObjectLeave,
+	ObjectMove,
 }
 
 export type NetworkPlayer = {
@@ -90,7 +94,6 @@ export function createNetworkSystem(world: World) {
 			data?: Data | null | undefined,
 			options?: EmitOptions | undefined,
 		) => {
-			console.log(event, NetworkEvent[event]);
 			network.emit(event + "", data, options);
 		},
 	};
