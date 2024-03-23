@@ -18,6 +18,7 @@ import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 import { API_URL } from "../constants";
 
 import { ImGui } from "imgui-js";
+import { NetworkEvent } from "./network";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -62,7 +63,7 @@ export function createControlSystem(world: World) {
 			);
 			const rotation = localPlayer.rotation;
 
-			world.network.emit("Move", {
+			world.network.emit(NetworkEvent.PlayerMove, {
 				position: {
 					x: currIntersect.point.x,
 					y: currIntersect.point.y,

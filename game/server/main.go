@@ -41,18 +41,18 @@ func Start(port int, app *pocketbase.PocketBase) {
 			Peer: peer,
 		}
 
-		peer.On("Join", func(msg string) { peer.Emit("Auth", peer.Id) })
-		peer.On("Auth", func(msg string) { onAuth(peer, msg) })
-		peer.On("Move", func(msg string) { onMove(peer, msg) })
-		peer.On("Chat", func(msg string) { onChat(peer, msg) })
-		peer.On("Anim", func(msg string) { onAnim(peer, msg) })
+		peer.On(PlayerJoin, func(msg string) { peer.Emit(PlayerAuth, peer.Id) })
+		peer.On(PlayerAuth, func(msg string) { onAuth(peer, msg) })
+		peer.On(PlayerMove, func(msg string) { onMove(peer, msg) })
+		peer.On(PlayerChat, func(msg string) { onChat(peer, msg) })
+		peer.On(PlayerAnim, func(msg string) { onAnim(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer *gecgosio.Peer) {
 		log.Printf("Client %s has disconnected!\n", peer.Id)
 		client, ok := clients[peer.Id]
 		if ok {
-			peer.Room().Emit("Leave", client.Username)
+			peer.Room().Emit(PlayerLeave, client.Username)
 			delete(usernameToPeer, client.Username)
 			delete(clients, peer.Id)
 		}

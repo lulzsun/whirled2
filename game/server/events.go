@@ -116,14 +116,14 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 
 		// join our client to a room
 		peer.Join(roomId)
-		peer.Emit("Join", string(data))
+		peer.Emit(PlayerJoin, string(data))
 		log.Printf("User '%s' is joining room id '%s'", client.Username, roomId)
 
 		// announce client to all other clients in the room
 		player["local"] = false
 		data, _ = json.Marshal(player)
 		peers := peer.Broadcast(roomId)
-		peers.Emit("Join", string(data))
+		peers.Emit(PlayerJoin, string(data))
 
 		// let our client know about existing clients in the room
 		for _, p := range peers {
@@ -150,7 +150,7 @@ func onAuth(peer *gecgosio.Peer, msg string) {
 				log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
 				continue
 			}
-			peer.Emit("Join", string(data))
+			peer.Emit(PlayerJoin, string(data))
 		}
 		
 		client.Auth = ""
@@ -226,7 +226,7 @@ func onMove(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	peer.Room().Emit("Move", string(updatedMsg));
+	peer.Room().Emit(PlayerMove, string(updatedMsg));
 }
 
 func onChat(peer *gecgosio.Peer, msg string) {
@@ -245,7 +245,7 @@ func onChat(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	peer.Room().Emit("Chat", string(updatedMsg));
+	peer.Room().Emit(PlayerChat, string(updatedMsg));
 }
 
 func onAnim(peer *gecgosio.Peer, msg string) {
@@ -269,5 +269,5 @@ func onAnim(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	peer.Broadcast().Emit("Anim", string(updatedMsg));
+	peer.Broadcast().Emit(PlayerAnim, string(updatedMsg));
 }

@@ -9,6 +9,7 @@ import {
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 import { ImGui } from "imgui-js";
+import { NetworkEvent } from "./network";
 
 const spineAvatarQuery = defineQuery([SpineComponent]);
 const gltfAvatarQuery = defineQuery([GltfComponent]);
@@ -155,7 +156,7 @@ export function playAnimation(
 		animation.play();
 
 		if (hasComponent(world, LocalPlayerComponent, eid))
-			world.network.emit("Anim", { action: animIndex });
+			world.network.emit(NetworkEvent.PlayerAnim, { action: animIndex });
 	} else {
 		GltfComponent.animState[eid] = animIndex;
 		const clip =
@@ -169,7 +170,7 @@ export function playAnimation(
 		animation.play();
 
 		if (hasComponent(world, LocalPlayerComponent, eid))
-			world.network.emit("Anim", { state: animIndex });
+			world.network.emit(NetworkEvent.PlayerAnim, { state: animIndex });
 	}
 
 	console.log("Playing animation:", eid, animName, anims[animIndex], anims);

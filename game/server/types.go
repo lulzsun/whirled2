@@ -23,3 +23,12 @@ type Rotation struct {
 	Z float64
 	W float64
 }
+
+const ( // god this is fucking awful, figure out how to use protobufs
+	PlayerAuth	 		= "0"
+	PlayerJoin			= "1"
+	PlayerLeave			= "2"
+	PlayerMove			= "3"
+	PlayerChat			= "4"
+	PlayerAnim			= "5"
+)

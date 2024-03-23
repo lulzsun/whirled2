@@ -1,4 +1,5 @@
-import { ClientChannel, geckos } from "@geckos.io/client";
+import { Data, geckos } from "@geckos.io/client";
+import { EmitOptions } from "@geckos.io/common/lib/types.js";
 import { World } from "../factory/world";
 import {
 	addComponent,
@@ -22,12 +23,12 @@ import { API_URL } from "../constants";
 import { playAnimation } from "./animation";
 
 export enum NetworkEvent {
-	Auth,
-	Join,
-	Leave,
-	Move,
-	Chat,
-	Anim,
+	PlayerAuth,
+	PlayerJoin,
+	PlayerLeave,
+	PlayerMove,
+	PlayerChat,
+	PlayerAnim,
 }
 
 export type NetworkPlayer = {
@@ -37,10 +38,17 @@ export type NetworkPlayer = {
 	isLocal: boolean;
 };
 
-export type Network = ClientChannel & {
+export type Network = {
 	getPlayer: {
 		(eid: number): NetworkPlayer;
 		(username: string): NetworkPlayer;
+	};
+	emit: {
+		(
+			eventType: NetworkEvent,
+			data?: Data | null | undefined,
+			options?: EmitOptions | undefined,
+		): void;
 	};
 };
 
@@ -52,7 +60,10 @@ export function createNetworkSystem(world: World) {
 		type: NetworkEvent;
 		data: string | number | Object;
 	}[] = [];
-	const network: Network = Object.assign(geckos({ port: 42069 }), {
+
+	const network = geckos({ port: 42069 });
+
+	world.network = {
 		getPlayer: (arg: number | string) => {
 			if (typeof arg === "number") {
 				const player = playersByEid.get(arg);
@@ -74,8 +85,15 @@ export function createNetworkSystem(world: World) {
 				} as NetworkPlayer;
 			}
 		},
-	});
-	world.network = network;
+		emit: (
+			event: NetworkEvent,
+			data?: Data | null | undefined,
+			options?: EmitOptions | undefined,
+		) => {
+			console.log(event, NetworkEvent[event]);
+			network.emit(event + "", data, options);
+		},
+	};
 
 	network.onConnect((error) => {
 		if (error) {
@@ -90,7 +108,7 @@ export function createNetworkSystem(world: World) {
 		Object.keys(NetworkEvent)
 			.filter((v) => isNaN(Number(v)))
 			.forEach((event, i) => {
-				network.on(event, (data) => {
+				network.on(i + "", (data) => {
 					const isEmpty =
 						typeof data === "string" && data.length === 0;
 					console.log(
@@ -101,7 +119,7 @@ export function createNetworkSystem(world: World) {
 				});
 			});
 
-		network.emit("Join");
+		world.network.emit(NetworkEvent.PlayerJoin);
 	});
 
 	network.onDisconnect((error) => {
@@ -143,7 +161,7 @@ export function createNetworkSystem(world: World) {
 		for (let i = 0; i < events.length; i++) {
 			let event = events[i];
 			switch (event.type) {
-				case NetworkEvent.Auth:
+				case NetworkEvent.PlayerAuth:
 					const id = event.data;
 					// Make a request to get auth code
 					fetch(`${API_URL}/game/${id}/auth`, {
@@ -165,8 +183,8 @@ export function createNetworkSystem(world: World) {
 								);
 								room = params.get("room") ?? "";
 							}
-							network.emit(
-								"Auth",
+							world.network.emit(
+								NetworkEvent.PlayerAuth,
 								{ code, room },
 								{
 									reliable: true,
@@ -179,7 +197,7 @@ export function createNetworkSystem(world: World) {
 							console.error(e);
 						});
 					break;
-				case NetworkEvent.Join: {
+				case NetworkEvent.PlayerJoin: {
 					const playerEntity = createPlayer(
 						world,
 						(event.data as any).local ?? false,
@@ -248,7 +266,7 @@ export function createNetworkSystem(world: World) {
 					world.scene.add(playerEntity);
 					break;
 				}
-				case NetworkEvent.Leave: {
+				case NetworkEvent.PlayerLeave: {
 					const username = event.data as string;
 					const player = playersByUsername.get(username);
 
@@ -261,7 +279,7 @@ export function createNetworkSystem(world: World) {
 					playersByEid.delete(player.eid);
 					break;
 				}
-				case NetworkEvent.Move: {
+				case NetworkEvent.PlayerMove: {
 					const player = Object.assign(
 						playersByUsername.get((event.data as any).username) as {
 							eid: number;
@@ -303,7 +321,7 @@ export function createNetworkSystem(world: World) {
 					MoveTowardsComponent.z[player.eid] = player.position.z;
 					break;
 				}
-				case NetworkEvent.Chat: {
+				case NetworkEvent.PlayerChat: {
 					const player = Object.assign(
 						playersByUsername.get((event.data as any).username) as {
 							eid: number;
@@ -327,7 +345,7 @@ export function createNetworkSystem(world: World) {
 					);
 					break;
 				}
-				case NetworkEvent.Anim: {
+				case NetworkEvent.PlayerAnim: {
 					const d: {
 						username: string;
 						action: number;
