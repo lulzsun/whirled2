@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -14,11 +15,22 @@ import (
 var stuffTmplFiles []string
 var stuffTmpl *template.Template
 
+type Category int64
+const (
+	Undefined Category = iota
+	Avatar
+	Furniture
+)
+
 type Stuff struct {
-	Id			string `db:"id" json:"id"`
-	OwnerId		string `db:"owner_id" json:"owner_id"`
-	Name		string `db:"name" json:"name"`
-	Description	string `db:"description" json:"description"`
+	Id			string 	`db:"id" json:"id"`
+	OwnerId		string 	`db:"owner_id" json:"owner_id"`
+	StuffId		string 	`db:"stuff_id" json:"stuff_id"`
+	Name		string 	`db:"name" json:"name"`
+	Description	string 	`db:"description" json:"description"`
+	Thumbnail	string 	`db:"thumb" json:"thumb"`
+
+	Type		int 	`db:"type" json:"type"`
 }
 
 func init() {
@@ -48,6 +60,7 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			c.Redirect(302, "/login")
 			return nil
 		}
+		userId := info.AuthRecord.Id
 
 		category := c.PathParam("category")
 		if category != "avatars" && category != "furniture" && category != "backdrops" && category != "games" {
@@ -60,10 +73,28 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Items		[]Stuff
 		}{Category: strings.Title(category)}
 
+		stuff := []Stuff{}
+
 		switch category := c.PathParam("category"); category {
 		case "avatars":
 		case "furniture":
-			
+			err := app.DB().
+			NewQuery(`
+				SELECT *
+				FROM stuff 
+				INNER JOIN furniture ON stuff.type = {:type}
+				WHERE stuff.owner_id = {:owner_id}
+			`).
+			Bind(dbx.Params{
+				"type": Furniture,
+				"owner_id": userId,
+			}).All(&stuff)
+
+			if err != nil {
+				log.Println(err)
+			} else {
+				data.Items = stuff
+			}
 		case "backdrops":
 			c.Redirect(302, "/404")
 		case "games":
@@ -77,6 +108,11 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
+		return nil
+	})
+	e.Router.GET("/stuff/:category/:id", func(c echo.Context) error {
+		// TODO: Stuff item preview page
+		c.String(404, "work in progress...")
 		return nil
 	})
 }

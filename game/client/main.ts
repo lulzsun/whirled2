@@ -8,6 +8,7 @@ declare global {
 		world: World;
 		htmx: any;
 		game: {
+			addToRoom: (id: string) => void;
 			reconnect: () => void;
 		};
 	}
@@ -18,6 +19,9 @@ if (window.htmx === undefined) {
 }
 window.world = world;
 window.game = {
+	addToRoom: (id) => {
+		alert(id);
+	},
 	reconnect: () => {},
 };
 
