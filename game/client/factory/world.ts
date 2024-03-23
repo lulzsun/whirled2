@@ -94,7 +94,7 @@ export const createWorld = (): World => {
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 
 	world.spineAssetManager = new spine.AssetManager(
-		`${API_URL}/static/assets/`,
+		`${API_URL}/static/assets/avatar/`,
 	);
 
 	return world;

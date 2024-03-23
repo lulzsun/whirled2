@@ -64,7 +64,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 			<li class="flex space-x-2 px-4 py-2 text-sm text-gray-900 dark:text-white">
 				<img
 					class="w-10 h-10 rounded-full"
-					src={`${API_URL}/static/profile_picture.png`}
+					src={`${API_URL}/static/assets/profile_picture.png`}
 				/>
 				<div>
 					<div class="font-bold truncate">{player.nickname}</div>
