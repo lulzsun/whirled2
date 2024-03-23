@@ -33,6 +33,7 @@ func main() {
 		api.AddAuthRoutes,
 		api.AddProfileRoutes,
 		api.AddRoomRoutes,
+		api.AddStuffRoutes,
 		server.AddAuthRoutes,
 		// Add more routes here
 	}
@@ -40,6 +41,7 @@ func main() {
 		api.AddAuthEventHooks,
 		api.AddProfileEventHooks,
 		api.AddRoomEventHooks,
+		api.AddStuffEventHooks,
 		// Add more event hooks here
 	}
 	for _, AddEventHooks := range customEventHooks {

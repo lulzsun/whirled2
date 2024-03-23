@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/models/schema"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
@@ -170,7 +171,10 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	/* SQLITE equivalent:
 	CREATE TABLE rooms (
 		id TEXT PRIMARY KEY,
-		owner_id TEXT NOT NULL,
+		owner_id TEXT,
+		name TEXT,
+		description TEXT,
+		furniture JSONB,
 		created DATE NOT NULL,
 		updated DATE NOT NULL,
 		FOREIGN KEY (owner_id) REFERENCES users (id)
@@ -189,17 +193,12 @@ func Bootstrap(app *pocketbase.PocketBase) {
 				&schema.SchemaField{
 					Name:     "owner_id",
 					Type:     schema.FieldTypeRelation,
-					Required: true,
+					Required: false,
 					Options: &schema.RelationOptions{
 						MaxSelect:     types.Pointer(1),
 						CollectionId:  usersCollection.Id,
 						CascadeDelete: true,
 					},
-				},
-				&schema.SchemaField{
-					Name:     "is_home",
-					Type:     schema.FieldTypeBool,
-					Required: false,
 				},
 				&schema.SchemaField{
 					Name:     "name",
@@ -210,10 +209,184 @@ func Bootstrap(app *pocketbase.PocketBase) {
 						Max: types.Pointer(30),
 					},
 				},
+				&schema.SchemaField{
+					Name:     "description",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(1),
+						Max: types.Pointer(280),
+					},
+				},
+				&schema.SchemaField{
+					Name:     "is_home",
+					Type:     schema.FieldTypeBool,
+					Required: false,
+				},
+				&schema.SchemaField{
+					Name:     "furniture",
+					Type:     schema.FieldTypeJson,
+					Required: false,
+				},
 			),
 		}
 
 		if err := app.Dao().SaveCollection(roomsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Stuff collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE stuff (
+		id TEXT PRIMARY KEY,
+		owner_id TEXT NOT NULL,
+		stuff_id TEXT NOT NULL,
+		type INT NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (owner_id) REFERENCES users (id)
+	);
+	*/
+	if _, err := app.Dao().FindCollectionByNameOrId("stuff"); err != nil {
+		stuffCollection := &models.Collection{
+			Name:       "stuff",
+			Type:       models.CollectionTypeBase,
+			ListRule:   nil,
+			ViewRule:   nil,
+			CreateRule: nil,
+			UpdateRule: nil,
+			DeleteRule: nil,
+			Schema: schema.NewSchema(
+				&schema.SchemaField{
+					Name:     "owner_id",
+					Type:     schema.FieldTypeRelation,
+					Required: true,
+					Options: &schema.RelationOptions{
+						MaxSelect:     types.Pointer(1),
+						CollectionId:  usersCollection.Id,
+						CascadeDelete: true,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "stuff_id",
+					Type:     schema.FieldTypeText,
+					Required: true,
+				},
+				&schema.SchemaField{
+					Name:     "type",
+					Type:     schema.FieldTypeNumber,
+					Required: true,
+				},
+			),
+		}
+
+		if err := app.Dao().SaveCollection(stuffCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Furniture collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE furniture (
+		id TEXT PRIMARY KEY,
+		creator_id TEXT,
+		name TEXT,
+		description TEXT,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (creator_id) REFERENCES users (id)
+	);
+	*/
+	if _, err := app.Dao().FindCollectionByNameOrId("furniture"); err != nil {
+		furnitureCollection := &models.Collection{
+			Name:       "furniture",
+			Type:       models.CollectionTypeBase,
+			ListRule:   nil,
+			ViewRule:   nil,
+			CreateRule: nil,
+			UpdateRule: nil,
+			DeleteRule: nil,
+			Schema: schema.NewSchema(
+				&schema.SchemaField{
+					Name:     "creator_id",
+					Type:     schema.FieldTypeRelation,
+					Required: false,
+					Options: &schema.RelationOptions{
+						MaxSelect:     types.Pointer(1),
+						CollectionId:  usersCollection.Id,
+						CascadeDelete: true,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "name",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(3),
+						Max: types.Pointer(30),
+					},
+				},
+				&schema.SchemaField{
+					Name:     "description",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(1),
+						Max: types.Pointer(280),
+					},
+				},
+				&schema.SchemaField{
+					Name:     "thumb",
+					Type:     schema.FieldTypeFile,
+					Required: false,
+					Options: &schema.FileOptions{
+						MimeTypes: []string{
+							"image/jpeg", 
+							"image/png", 
+							"image/gif", 
+							"image/bmp",
+							"image/webp",
+						},
+						MaxSelect: 1,
+						MaxSize: 5000000, //5 MB in bytes
+						Protected: false,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "file",
+					Type:     schema.FieldTypeFile,
+					Required: true,
+					Options: &schema.FileOptions{
+						MaxSelect: 1,
+						MaxSize: 100000000, //100 MB in bytes
+						Protected: false,
+					},
+				},
+			),
+		}
+
+		if err := app.Dao().SaveCollection(furnitureCollection); err != nil {
+			log.Fatalln(err)
+		}
+
+		// add some default furniture
+		record := models.NewRecord(furnitureCollection)
+		form := forms.NewRecordUpsert(app, record)
+
+		form.LoadData(map[string]any{
+			"name": "Chair",
+			"description": "Test furniture",
+		})
+
+		// manually upload file(s)
+		file, err := filesystem.NewFileFromPath("./web/static/assets/furniture/SheenChair.glb")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+
+		if err := form.Submit(); err != nil {
 			log.Fatalln(err)
 		}
 	}

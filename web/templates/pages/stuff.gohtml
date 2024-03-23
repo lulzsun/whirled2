@@ -1,0 +1,219 @@
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div class="p-2 flex flex-col gap-2 w-full @4xl/web:w-3/4">
+		<aside
+			id="default-sidebar"
+			class="fixed top-0 left-0 z-40 w-32 h-full transition-transform -translate-x-full sm:translate-x-0"
+		>
+			<div
+				class="h-full pr-2 py-2 overflow-y-auto bg-gray-50 dark:bg-gray-800 text-sm"
+			>
+				<ul class="space-y-2 font-medium">
+					<li>
+						<span
+							class="flex items-center p-2 text-gray-900 dark:text-white"
+						>
+							<span class="select-none font-bold text-base">
+								My Stuff
+							</span>
+						</span>
+					</li>
+					<li>
+						<a
+							href="/stuff/avatars"
+							hx-target="#page"
+							class="select-none flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+						>
+							<svg
+								class="flex-shrink-0 w-4 h-4 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"
+								/>
+							</svg>
+							<span class="flex-1 ms-3 whitespace-nowrap">
+								Avatars
+							</span>
+						</a>
+					</li>
+					<li>
+						<a
+							href="/stuff/furniture"
+							hx-target="#page"
+							class="select-none flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+						>
+							<svg
+								class="flex-shrink-0 w-4 h-4 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M5.04.303A.5.5 0 0 1 5.5 0h5c.2 0 .38.12.46.303l3 7a.5.5 0 0 1-.363.687h-.002q-.225.044-.45.081a33 33 0 0 1-4.645.425V13.5a.5.5 0 1 1-1 0V8.495a33 33 0 0 1-4.645-.425q-.225-.036-.45-.08h-.003a.5.5 0 0 1-.362-.688l3-7Z"
+								/>
+								<path
+									d="M6.493 12.574a.5.5 0 0 1-.411.575c-.712.118-1.28.295-1.655.493a1.3 1.3 0 0 0-.37.265.3.3 0 0 0-.052.075l-.001.004-.004.01V14l.002.008.016.033a.6.6 0 0 0 .145.15c.165.13.435.27.813.395.751.25 1.82.414 3.024.414s2.273-.163 3.024-.414c.378-.126.648-.265.813-.395a.6.6 0 0 0 .146-.15l.015-.033L12 14v-.004a.3.3 0 0 0-.057-.09 1.3 1.3 0 0 0-.37-.264c-.376-.198-.943-.375-1.655-.493a.5.5 0 1 1 .164-.986c.77.127 1.452.328 1.957.594C12.5 13 13 13.4 13 14c0 .426-.26.752-.544.977-.29.228-.68.413-1.116.558-.878.293-2.059.465-3.34.465s-2.462-.172-3.34-.465c-.436-.145-.826-.33-1.116-.558C3.26 14.752 3 14.426 3 14c0-.599.5-1 .961-1.243.505-.266 1.187-.467 1.957-.594a.5.5 0 0 1 .575.411"
+								/>
+							</svg>
+							<span class="flex-1 ms-3 whitespace-nowrap">
+								Furniture
+							</span>
+						</a>
+					</li>
+					<li>
+						<a
+							hx-target="#page"
+							class="select-none cursor-not-allowed flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+						>
+							<svg
+								class="flex-shrink-0 w-4 h-4 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"
+								/>
+								<path
+									d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"
+								/>
+							</svg>
+							<span class="flex-1 ms-3 whitespace-nowrap">
+								Backdrops
+							</span>
+						</a>
+					</li>
+					<li>
+						<a
+							hx-target="#page"
+							class="select-none cursor-not-allowed flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+						>
+							<svg
+								class="flex-shrink-0 w-4 h-4 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									d="M10 2a2 2 0 0 1-1.5 1.937v5.087c.863.083 1.5.377 1.5.726 0 .414-.895.75-2 .75s-2-.336-2-.75c0-.35.637-.643 1.5-.726V3.937A2 2 0 1 1 10 2"
+								/>
+								<path
+									d="M0 9.665v1.717a1 1 0 0 0 .553.894l6.553 3.277a2 2 0 0 0 1.788 0l6.553-3.277a1 1 0 0 0 .553-.894V9.665c0-.1-.06-.19-.152-.23L9.5 6.715v.993l5.227 2.178a.125.125 0 0 1 .001.23l-5.94 2.546a2 2 0 0 1-1.576 0l-5.94-2.546a.125.125 0 0 1 .001-.23L6.5 7.708l-.013-.988L.152 9.435a.25.25 0 0 0-.152.23"
+								/>
+							</svg>
+							<span class="flex-1 ms-3 whitespace-nowrap">
+								Games
+							</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</aside>
+		<div class="p-4 sm:ml-32 space-y-4">
+			<div
+				class="flex place-content-between place-items-center space-x-2"
+			>
+				<div>
+					<span class="select-none font-bold text-base">
+						{{ .Category }}
+					</span>
+					<button
+						data-drawer-target="default-sidebar"
+						data-drawer-toggle="default-sidebar"
+						aria-controls="default-sidebar"
+						type="button"
+						class="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+					>
+						<span class="sr-only">Open sidebar</span>
+						<svg
+							class="w-3.5 h-3.5"
+							aria-hidden="true"
+							fill="none"
+							viewBox="0 0 10 6"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="m1 1 4 4 4-4"
+							/>
+						</svg>
+					</button>
+				</div>
+				<form class="max-w-lg">
+					<div class="flex">
+						<button
+							class="flex-shrink-0 z-10 inline-flex items-center py-1.5 px-2 text-xs font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-s-lg hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-700 dark:text-white dark:border-gray-600"
+							type="button"
+						>
+							Sort by new
+							<svg
+								class="w-2.5 h-2.5 ms-1.5"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 10 6"
+							>
+								<path
+									stroke="currentColor"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="m1 1 4 4 4-4"
+								/>
+							</svg>
+						</button>
+						<div class="relative w-full">
+							<input
+								type="search"
+								class="block p-1.5 w-full z-20 text-xs text-gray-900 bg-gray-50 rounded-e-lg border-s-gray-50 border-s-2 border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-s-gray-700  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
+								placeholder="Search"
+								required
+							/>
+							<button
+								type="submit"
+								class="absolute top-0 end-0 p-1.5 text-xs font-medium h-full text-white bg-blue-700 rounded-e-lg border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+							>
+								<svg
+									class="w-4 h-4"
+									aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 20 20"
+								>
+									<path
+										stroke="currentColor"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
+									/>
+								</svg>
+								<span class="sr-only">Search</span>
+							</button>
+						</div>
+					</div>
+				</form>
+			</div>
+			<div
+				class="p-4 border-2 border-gray-200 rounded-lg dark:border-gray-700"
+			>
+				{{ range $i, $item := .Items }}
+					<div>hi</div>
+				{{ end }}
+			</div>
+		</div>
+	</div>
+{{ end }}
