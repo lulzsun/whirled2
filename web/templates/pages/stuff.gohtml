@@ -234,7 +234,7 @@
 						<button
 							class="hover:underline bg-gray-700 rounded-lg py-1 px-1.5 truncate"
 							onclick="(function(){
-							window.game.addToRoom('{{ $item.StuffId }}');
+							window.game.addStuff('{{ $item.Id }}', '{{ $item.Type }}');
 							return false;
 						})();return false;"
 						>

@@ -9,7 +9,7 @@ declare global {
 		world: World;
 		htmx: any;
 		game: {
-			addToRoom: (id: string) => void;
+			addStuff: (id: string, type: string) => void;
 			reconnect: () => void;
 		};
 	}
@@ -20,8 +20,11 @@ if (window.htmx === undefined) {
 }
 window.world = world;
 window.game = {
-	addToRoom: (id) => {
-		world.network.emit(NetworkEvent.ObjectJoin, { id });
+	addStuff: (id, type) => {
+		world.network.emit(NetworkEvent.ObjectJoin, {
+			id,
+			type: parseInt(type),
+		});
 	},
 	reconnect: () => {},
 };

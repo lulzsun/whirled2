@@ -40,6 +40,8 @@ export const GltfComponent = defineComponent({
 
 export const ObjectOutlineComponent = defineComponent();
 
+export const ObjectComponent = defineComponent();
+
 export const PlayerComponent = defineComponent();
 
 export const LocalPlayerComponent = defineComponent();

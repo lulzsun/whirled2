@@ -80,13 +80,16 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		case "furniture":
 			err := app.DB().
 			NewQuery(`
-				SELECT *
-				FROM stuff 
-				INNER JOIN furniture ON stuff.type = {:type}
-				WHERE stuff.owner_id = {:owner_id}
+				SELECT
+					s.id,
+					s.type,
+					s.stuff_id,
+					f.name
+				FROM stuff s
+				INNER JOIN furniture f ON f.id = s.stuff_id
+				WHERE s.owner_id = {:owner_id}
 			`).
 			Bind(dbx.Params{
-				"type": Furniture,
 				"owner_id": userId,
 			}).All(&stuff)
 

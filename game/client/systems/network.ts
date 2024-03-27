@@ -8,7 +8,6 @@ import {
 	removeComponent,
 	removeEntity,
 } from "bitecs";
-import { createPlayer } from "../factory/player";
 import {
 	TransformComponent,
 	MoveTowardsComponent,
@@ -16,11 +15,13 @@ import {
 	ChatMessageComponent,
 	GltfComponent,
 } from "../components";
+import { API_URL } from "../constants";
+import { playAnimation } from "./animation";
+import { createPlayer } from "../factory/player";
 import { createDisconnectUI } from "../ui/disconnect";
 import { createNameplate } from "../factory/nameplate";
 import { createChatMessage } from "../factory/chatmessage";
-import { API_URL } from "../constants";
-import { playAnimation } from "./animation";
+import { createObject } from "../factory/object";
 
 export enum NetworkEvent {
 	PlayerAuth,
@@ -368,6 +369,15 @@ export function createNetworkSystem(world: World) {
 							anims,
 						);
 					}
+					break;
+				}
+				case NetworkEvent.ObjectJoin: {
+					const objectEntity = createObject(
+						world,
+						(event.data as any).file ?? "",
+					);
+					console.log("epic", objectEntity);
+					world.scene.add(objectEntity);
 					break;
 				}
 				default: {
