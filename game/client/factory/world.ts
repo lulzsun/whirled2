@@ -8,6 +8,7 @@ import { Nameplate } from "./nameplate";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
+import { createObject } from "./object";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -48,17 +49,23 @@ export const createWorld = (): World => {
 	// add a floor
 	const gridHelper = new THREE.GridHelper(20, 10, 0xffffff, 0xffffff);
 	gridHelper.position.y = 0.01;
-	const plane = new THREE.Mesh(
+
+	world.scene.add(gridHelper);
+
+	const planeMesh = new THREE.Mesh(
 		new THREE.PlaneGeometry(20, 20),
 		new THREE.MeshBasicMaterial({
 			color: 0x0,
 			side: THREE.DoubleSide,
 		}),
 	);
-	plane.position.z = 0;
-	plane.rotation.x = (Math.PI / 180) * -90;
-
-	world.scene.add(gridHelper);
+	planeMesh.position.z = 0;
+	planeMesh.rotation.x = (Math.PI / 180) * -90;
+	const plane = createObject(
+		world,
+		undefined,
+		new THREE.Group().add(planeMesh),
+	);
 	world.scene.add(plane);
 
 	// add "stars" to the background

@@ -11,44 +11,17 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export type Object = THREE.Group & { eid: number };
 
-export const createObject = (world: World, fileUrl: string): Object => {
+export const createObject = (
+	world: World,
+	fileUrl?: string,
+	group: THREE.Group = new THREE.Group(),
+): Object => {
 	const eid = addEntity(world);
-	let entity = Object.assign(new THREE.Group(), { eid });
 
 	addComponent(world, ObjectComponent, eid);
 	addComponent(world, TransformComponent, eid);
 
-	const loader = new GLTFLoader();
-	loader.load(
-		`${fileUrl}`,
-		function (gltf) {
-			let model: THREE.Group | THREE.Object3D = gltf.scene;
-			model.scale.set(
-				1 * model.scale.x,
-				1 * model.scale.y,
-				1 * model.scale.z,
-			);
-
-			entity.add(
-				Object.assign(model, {
-					mixer: new THREE.AnimationMixer(model),
-				}),
-			);
-
-			model = entity.children[0];
-
-			addComponent(world, GltfComponent, eid);
-			GltfComponent.timeScale[eid] = 1000;
-			GltfComponent.animState[eid] = -1;
-			GltfComponent.animAction[eid] = -1;
-
-			console.log("Created GLTF mesh", model);
-		},
-		undefined,
-		function (e) {
-			console.error(e);
-		},
-	);
+	let entity = Object.assign(group, { eid });
 
 	// position
 	Object.defineProperty(entity.position, "eid", { get: () => eid });
@@ -128,6 +101,42 @@ export const createObject = (world: World, fileUrl: string): Object => {
 	//   get () { return this.store.z[this.eid] },
 	//   set (n) { this.store.z[this.eid] = n }
 	// })
+
+	if (fileUrl === undefined) {
+		return entity;
+	}
+
+	const loader = new GLTFLoader();
+	loader.load(
+		`${fileUrl}`,
+		function (gltf) {
+			let model: THREE.Group | THREE.Object3D = gltf.scene;
+			model.scale.set(
+				1 * model.scale.x,
+				1 * model.scale.y,
+				1 * model.scale.z,
+			);
+
+			entity.add(
+				Object.assign(model, {
+					mixer: new THREE.AnimationMixer(model),
+				}),
+			);
+
+			model = entity.children[0];
+
+			addComponent(world, GltfComponent, eid);
+			GltfComponent.timeScale[eid] = 1000;
+			GltfComponent.animState[eid] = -1;
+			GltfComponent.animAction[eid] = -1;
+
+			console.log("Created GLTF mesh", model);
+		},
+		undefined,
+		function (e) {
+			console.error(e);
+		},
+	);
 
 	return entity;
 };

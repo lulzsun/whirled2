@@ -10,7 +10,13 @@ import {
 	hasComponent,
 	removeComponent,
 } from "bitecs";
-import { LocalPlayerComponent, ObjectOutlineComponent } from "../components";
+import {
+	LocalPlayerComponent,
+	ObjectComponent,
+	ObjectOutlineComponent,
+	PlayerComponent,
+	TransformComponent,
+} from "../components";
 import { World } from "../factory/world";
 
 import { createContextMenuUI } from "../ui/contextmenu";
@@ -97,12 +103,12 @@ export function createControlSystem(world: World) {
 
 		const intersects = raycaster.intersectObjects(
 			world.scene.children.filter((x) => {
-				//@ts-ignore: ignore player objects
-				// const eid = x.eid;
-				// if (eid !== undefined) {
-				// 	return !world.players.has(eid);
-				// }
-				return true;
+				//@ts-ignore: only make certain objects interactive
+				const eid = x.eid;
+				if (eid !== undefined) {
+					return hasComponent(world, TransformComponent, eid);
+				}
+				return false;
 			}),
 			true,
 		);
@@ -131,8 +137,12 @@ export function createControlSystem(world: World) {
 				cleanupIntersect(currIntersect);
 				//@ts-ignore
 				const eid = root.eid;
-				if (eid !== undefined) {
-					// intersecting an ecs entity, probably a player
+
+				// attach outline component on player hover
+				if (
+					eid !== undefined &&
+					hasComponent(world, PlayerComponent, eid)
+				) {
 					currIntersect = { point: intersects[i].point, root };
 					if (!hasComponent(world, ObjectOutlineComponent, eid))
 						addComponent(world, ObjectOutlineComponent, eid);
