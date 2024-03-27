@@ -142,9 +142,9 @@ export function createControlSystem(world: World) {
 				currIntersect = { point: intersects[i].point, root };
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
-					currIntersect.point.x - 15,
-					currIntersect.point.y + 1,
-					currIntersect.point.z + 10,
+					currIntersect.point.x,
+					currIntersect.point.y + 0.01,
+					currIntersect.point.z,
 				);
 			}
 		} else {
@@ -163,8 +163,7 @@ const createPointer = (world: World, pointerMesh: THREE.Group) => {
 	fileLoader.load(
 		`${API_URL}/static/assets/avatar/walkable.svg`,
 		function (data) {
-			pointerMesh.scale.multiplyScalar(1);
-			pointerMesh.position.set(0, 1, 0);
+			pointerMesh.position.set(0, 0.01, 0);
 			pointerMesh.rotation.x = (Math.PI / 180) * -90;
 
 			let renderOrder = 0;

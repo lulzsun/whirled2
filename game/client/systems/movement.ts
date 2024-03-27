@@ -26,7 +26,7 @@ export function createMovementSystem() {
 			//@ts-ignore
 			const mixer: THREE.AnimationMixer = player.children[0].mixer;
 			const animations = player.children[0].animations;
-			const speed = 0.35;
+			const speed = 0.01;
 
 			const initialPosition = new THREE.Vector3(
 				TransformComponent.position.x[e],

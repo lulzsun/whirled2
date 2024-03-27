@@ -24,9 +24,9 @@ export const createObject = (world: World, fileUrl: string): Object => {
 		function (gltf) {
 			let model: THREE.Group | THREE.Object3D = gltf.scene;
 			model.scale.set(
-				30 * model.scale.x,
-				30 * model.scale.y,
-				30 * model.scale.z,
+				1 * model.scale.x,
+				1 * model.scale.y,
+				1 * model.scale.z,
 			);
 
 			entity.add(
