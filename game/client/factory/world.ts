@@ -64,6 +64,7 @@ export const createWorld = (): World => {
 	const plane = createObject(
 		world,
 		undefined,
+		1,
 		new THREE.Group().add(planeMesh),
 	);
 	world.scene.add(plane);

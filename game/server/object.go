@@ -57,6 +57,7 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 
 		Name string		`db:"name" json:"name"`
 		File string		`db:"file" json:"file"`
+		Scale float64	`db:"scale" json:"scale"`
 	}{}
 	err = pb.DB().
 		NewQuery(`
@@ -67,7 +68,8 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 				f.creator_id, 
 				f.name, 
 				f.description,
-				f.file
+				f.file,
+				f.scale
 			FROM stuff s
 			INNER JOIN furniture f ON f.id = s.stuff_id
 			WHERE s.id = {:id}
@@ -100,6 +102,7 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 			"z": 0,
 			"w": 0,
 		},
+		"initialScale": dbObject.Scale,
 	}
 
 	newData, err := json.Marshal(object)

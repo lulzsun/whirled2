@@ -14,12 +14,17 @@ export type Object = THREE.Group & { eid: number };
 export const createObject = (
 	world: World,
 	fileUrl?: string,
+	initialScale: number = 1,
 	group: THREE.Group = new THREE.Group(),
 ): Object => {
 	const eid = addEntity(world);
 
 	addComponent(world, ObjectComponent, eid);
 	addComponent(world, TransformComponent, eid);
+
+	TransformComponent.scale.x[eid] = 1;
+	TransformComponent.scale.y[eid] = 1;
+	TransformComponent.scale.z[eid] = 1;
 
 	let entity = Object.assign(group, { eid });
 
@@ -86,21 +91,35 @@ export const createObject = (
 	});
 
 	// scale
-	// Object.defineProperty(obj3d.scale, 'eid', { get: () => eid })
-	// Object.defineProperty(obj3d.scale, 'store', { get: () => TransformComponent.scale })
+	Object.defineProperty(entity.scale, "eid", { get: () => eid });
+	Object.defineProperty(entity.scale, "store", {
+		get: () => TransformComponent.scale,
+	});
 
-	// Object.defineProperty(obj3d.scale, 'x', {
-	//   get () { return this.store.x[this.eid] },
-	//   set (n) { this.store.x[this.eid] = n }
-	// })
-	// Object.defineProperty(obj3d.scale, 'y', {
-	//   get () { return this.store.y[this.eid] },
-	//   set (n) { this.store.y[this.eid] = n }
-	// })
-	// Object.defineProperty(obj3d.scale, 'z', {
-	//   get () { return this.store.z[this.eid] },
-	//   set (n) { this.store.z[this.eid] = n }
-	// })
+	Object.defineProperty(entity.scale, "x", {
+		get() {
+			return this.store.x[this.eid];
+		},
+		set(n) {
+			this.store.x[this.eid] = n;
+		},
+	});
+	Object.defineProperty(entity.scale, "y", {
+		get() {
+			return this.store.y[this.eid];
+		},
+		set(n) {
+			this.store.y[this.eid] = n;
+		},
+	});
+	Object.defineProperty(entity.scale, "z", {
+		get() {
+			return this.store.z[this.eid];
+		},
+		set(n) {
+			this.store.z[this.eid] = n;
+		},
+	});
 
 	if (fileUrl === undefined) {
 		return entity;
@@ -112,9 +131,9 @@ export const createObject = (
 		function (gltf) {
 			let model: THREE.Group | THREE.Object3D = gltf.scene;
 			model.scale.set(
-				1 * model.scale.x,
-				1 * model.scale.y,
-				1 * model.scale.z,
+				initialScale * model.scale.x,
+				initialScale * model.scale.y,
+				initialScale * model.scale.z,
 			);
 
 			entity.add(

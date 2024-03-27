@@ -363,6 +363,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 						Protected: false,
 					},
 				},
+				&schema.SchemaField{
+					Name:     "scale",
+					Type:     schema.FieldTypeNumber,
+					Required: false,
+					Options: &schema.NumberOptions{
+						Min: types.Pointer(0.001),
+						Max: types.Pointer(100.0),
+						NoDecimal: false,
+					},
+				},
 			),
 		}
 
@@ -377,6 +387,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		form.LoadData(map[string]any{
 			"name": "Chair",
 			"description": "Test furniture",
+			"scale": 5,
 		})
 
 		// manually upload file(s)

@@ -372,12 +372,14 @@ export function createNetworkSystem(world: World) {
 					break;
 				}
 				case NetworkEvent.ObjectJoin: {
-					const objectEntity = createObject(
+					const object = createObject(
 						world,
 						(event.data as any).file ?? "",
+						(event.data as any).initialScale ?? 1,
 					);
-					console.log("epic", objectEntity);
-					world.scene.add(objectEntity);
+
+					console.log("epic", object);
+					world.scene.add(object);
 					break;
 				}
 				default: {
