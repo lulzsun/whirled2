@@ -12,7 +12,6 @@ import {
 } from "bitecs";
 import {
 	LocalPlayerComponent,
-	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
 	TransformComponent,
@@ -126,14 +125,13 @@ export function createControlSystem(world: World) {
 		};
 
 		if (intersects.length > 0) {
-			for (let i = 0; i < intersects.length; i++) {
-				let root = intersects[i].object;
-				while (root.parent != null && root.parent.type !== "Scene") {
+			let root = intersects[0].object;
+			do {
+				if (root.parent != null && root.parent.type !== "Scene") {
 					root = root.parent;
-				}
-				if (root.id === pointerMesh.id) {
 					continue;
 				}
+
 				cleanupIntersect(currIntersect);
 				//@ts-ignore
 				const eid = root.eid;
@@ -143,20 +141,21 @@ export function createControlSystem(world: World) {
 					eid !== undefined &&
 					hasComponent(world, PlayerComponent, eid)
 				) {
-					currIntersect = { point: intersects[i].point, root };
+					currIntersect = { point: intersects[0].point, root };
 					if (!hasComponent(world, ObjectOutlineComponent, eid))
 						addComponent(world, ObjectOutlineComponent, eid);
 					pointerMesh.visible = false;
 					break;
 				}
-				currIntersect = { point: intersects[i].point, root };
+				currIntersect = { point: intersects[0].point, root };
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
 					currIntersect.point.x,
 					currIntersect.point.y + 0.01,
 					currIntersect.point.z,
 				);
-			}
+				break;
+			} while (true);
 		} else {
 			if (currIntersect) {
 				cleanupIntersect(currIntersect);
