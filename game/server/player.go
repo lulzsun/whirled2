@@ -117,7 +117,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		// join our client to a room
 		peer.Join(roomId)
 		peer.Emit(PlayerJoin, string(data))
-		log.Printf("User '%s' is joining room id '%s'", client.Username, roomId)
+		log.Printf("User '%s' is joining room '%s'", client.Username, roomId)
 
 		// announce client to all other clients in the room
 		player["local"] = false
@@ -151,6 +151,16 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 				continue
 			}
 			peer.Emit(PlayerJoin, string(data))
+		}
+
+		// let our client know about existing objects in the room
+		for _, object := range objects[roomId] {
+			data, err := json.Marshal(object)
+			if err != nil {
+				log.Printf("Failed to join object '%s', unable to marshal json.", client.Username)
+				return
+			}
+			peer.Emit(ObjectJoin, string(data))
 		}
 		
 		client.Auth = ""

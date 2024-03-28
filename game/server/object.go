@@ -47,17 +47,20 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	// making sure this object does not already exist in the room
+	// making sure this object does not already exist
+	if _, ok := objects[objectId]; ok {
+		return
+	}
 
 	// retrieve object (furniture) data from db
 	dbObject := struct {
 		Id string		`db:"id" json:"id"`
-		Type string		`db:"type" json:"type"`
+		Type int		`db:"type" json:"type"`
 		StuffId string	`db:"stuff_id" json:"stuff_id"`
 
 		Name string		`db:"name" json:"name"`
 		File string		`db:"file" json:"file"`
-		Scale float64	`db:"scale" json:"scale"`
+		Scale int		`db:"scale" json:"scale"`
 	}{}
 	err = pb.DB().
 		NewQuery(`
@@ -85,24 +88,29 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	dbObject.File = "/api/files/furniture/" + dbObject.StuffId + "/" + dbObject.File
 
 	// prepare object (furniture) data
-	object := map[string]interface{}{
-		"id": dbObject.Id,
-		"type": dbObject.Type,
-		"stuff_id": dbObject.StuffId,
-		"name": dbObject.Name,
-		"file": dbObject.File,
-		"position": map[string]interface{}{
-			"x": 0,
-			"y": 0,
-			"z": 0,
+	object := &Object{
+		Id: dbObject.Id,
+		Type: dbObject.Type,
+		StuffId: dbObject.StuffId,
+		Name: dbObject.Name,
+		File: dbObject.File,
+		Position: Position{
+			X: 0,
+			Y: 0,
+			Z: 0,
 		},
-		"rotation": map[string]interface{}{
-			"x": 0,
-			"y": 0,
-			"z": 0,
-			"w": 0,
+		Rotation: Rotation{
+			X: 0,
+			Y: 0,
+			Z: 0,
+			W: 0,
 		},
-		"initialScale": dbObject.Scale,
+		Scale: Scale{
+			X: 1,
+			Y: 1,
+			Z: 1,
+		},
+		InitialScale: dbObject.Scale,
 	}
 
 	newData, err := json.Marshal(object)
@@ -111,5 +119,12 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	peer.Room().Emit(ObjectJoin, string(newData));
+	// prepare to store as server object
+	if _, ok := objects[currentRoom]; !ok {
+		objects[currentRoom] = make(map[string]*Object)
+	}
+	objects[currentRoom][objectId] = object
+	log.Printf("Object '%s' is joining room '%s'", objectId, currentRoom)
+
+	peer.Room().Emit(ObjectJoin, string(newData))
 }

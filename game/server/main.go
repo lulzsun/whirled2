@@ -24,7 +24,7 @@ import (
 var server *gecgosio.Server
 
 var clients = make(map[string]*Client)
-var objects = make(map[string]*Object)
+var objects = make(map[string]map[string]*Object)
 
 var numOfGuests = 0;
 var usernameToPeer = make(map[string]string)
@@ -38,7 +38,7 @@ func Start(port int, app *pocketbase.PocketBase) {
 	})
 
 	server.OnConnection(func(peer *gecgosio.Peer) {
-		log.Printf("Client %s has connected!\n", peer.Id)
+		log.Printf("Client '%s' has connected", peer.Id)
 
 		clients[peer.Id] = &Client{
 			Peer: peer,
@@ -54,10 +54,26 @@ func Start(port int, app *pocketbase.PocketBase) {
 	})
 
 	server.OnDisconnect(func(peer *gecgosio.Peer) {
-		log.Printf("Client %s has disconnected!\n", peer.Id)
+		log.Printf("Client '%s' has disconnected", peer.Id)
 		client, ok := clients[peer.Id]
 		if ok {
 			peer.Room().Emit(PlayerLeave, client.Username)
+			for _, roomId := range(peer.Rooms()) {
+				// check if room is empty (of players)
+				if len(server.Rooms[roomId]) > 1 {
+					continue
+				}
+				// check if objects exist in room
+				if _, ok := objects[roomId]; !ok {
+					continue
+				}
+				// clear out objects in rooms
+				for objectId, _ := range(objects[roomId]) {
+					delete(objects[roomId], objectId)
+					log.Printf("Object '%s' has been deleted from room '%s'", objectId, roomId)
+				}
+				delete(objects, roomId)
+			}
 			delete(usernameToPeer, client.Username)
 			delete(clients, peer.Id)
 		}

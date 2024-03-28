@@ -12,10 +12,16 @@ type Client struct {
 }
 
 type Object struct {
-	Id string
-	Name string
-	Position Position
-	Rotation Rotation
+	Id string			`db:"id" json:"id"`
+	Type int			`db:"type" json:"type"`
+	StuffId string		`db:"stuff_id" json:"stuff_id"`
+
+	Name string			`db:"name" json:"name"`
+	File string			`db:"file" json:"file"`
+	Position Position	`db:"position" json:"position"`
+	Rotation Rotation	`db:"rotation" json:"rotation"`
+	Scale Scale			`db:"scale" json:"scale"`
+	InitialScale int	`db:"initialScale" json:"initialScale"`
 }
 
 type Position struct {
@@ -29,6 +35,12 @@ type Rotation struct {
 	Y float64
 	Z float64
 	W float64
+}
+
+type Scale struct {
+	X float64
+	Y float64
+	Z float64
 }
 
 const ( // god this is fucking awful, figure out how to use protobufs
