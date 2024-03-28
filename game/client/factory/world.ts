@@ -49,7 +49,6 @@ export const createWorld = (): World => {
 	// add a floor
 	const gridHelper = new THREE.GridHelper(20, 10, 0xffffff, 0xffffff);
 	gridHelper.position.y = 0.01;
-
 	world.scene.add(gridHelper);
 
 	const planeMesh = new THREE.Mesh(
