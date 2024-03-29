@@ -12,29 +12,12 @@ import (
 func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
-	// check if client owns the current room they're in
 	// note: this assumes the client is only in a single room
-	currentRoom := peer.Rooms()[0]
-	err := pb.DB().
-		NewQuery(`
-			SELECT r.id
-			FROM rooms r
-			INNER JOIN users u ON r.owner_id = u.id
-			WHERE r.id = {:roomId} AND u.username = {:username}
-		`).
-		Bind(dbx.Params{
-			"roomId": currentRoom,
-			"username": client.Username,
-		}).One(&struct{}{})
-
-	if err != nil {
-		// user does not own this room, so do nothing
-		return
-	}
+	roomId := peer.Rooms()[0]
 
 	// Parse the JSON string into a map
 	var data map[string]interface{}
-	err = json.Unmarshal([]byte(msg), &data)
+	err := json.Unmarshal([]byte(msg), &data)
 	if err != nil {
 		log.Println("Error:", err)
 		return
@@ -48,7 +31,25 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	}
 
 	// making sure this object does not already exist
-	if _, ok := objects[objectId]; ok {
+	if _, ok := objects[roomId][objectId]; ok {
+		return
+	}
+
+	// check if client owns the current room they're in
+	err = pb.DB().
+		NewQuery(`
+			SELECT r.id
+			FROM rooms r
+			INNER JOIN users u ON r.owner_id = u.id
+			WHERE r.id = {:roomId} AND u.username = {:username}
+		`).
+		Bind(dbx.Params{
+			"roomId": roomId,
+			"username": client.Username,
+		}).One(&struct{}{})
+
+	if err != nil {
+		// user does not own this room, so do nothing
 		return
 	}
 
@@ -120,11 +121,11 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	}
 
 	// prepare to store as server object
-	if _, ok := objects[currentRoom]; !ok {
-		objects[currentRoom] = make(map[string]*Object)
+	if _, ok := objects[roomId]; !ok {
+		objects[roomId] = make(map[string]*Object)
 	}
-	objects[currentRoom][objectId] = object
-	log.Printf("Object '%s' is joining room '%s'", objectId, currentRoom)
+	objects[roomId][objectId] = object
+	log.Printf("Object '%s' is joining room '%s'", objectId, roomId)
 
 	peer.Room().Emit(ObjectJoin, string(newData))
 }
