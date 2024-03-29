@@ -2,7 +2,7 @@ import { createTimeSystem } from "../systems/time";
 import { createRenderSystem } from "../systems/render";
 import { createNetworkSystem } from "../systems/network";
 import { createMovementSystem } from "../systems/movement";
-import { createChatSystem } from "../systems/chat";
+import { createUISystem } from "../systems/ui";
 import { createAnimationSystem } from "../systems/animation";
 import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
@@ -14,7 +14,7 @@ export const createSystems = (world: World) => {
 		createTimeSystem,
 		createNetworkSystem,
 		createMovementSystem,
-		createChatSystem,
+		createUISystem,
 		createAnimationSystem,
 		createControlSystem,
 		createRenderSystem, // Render system should run last

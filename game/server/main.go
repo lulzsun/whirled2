@@ -68,7 +68,7 @@ func Start(port int, app *pocketbase.PocketBase) {
 					continue
 				}
 				// clear out objects in rooms
-				for objectId, _ := range(objects[roomId]) {
+				for objectId := range(objects[roomId]) {
 					delete(objects[roomId], objectId)
 					log.Printf("Object '%s' has been deleted from room '%s'", objectId, roomId)
 				}
@@ -185,6 +185,7 @@ func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 	return activeRooms[offset:int(math.Min(float64(offset+limit), float64(len(activeRooms))))]
 }
 
+// TODO: not secure, tie logic with secret key or something
 func generateAuthCode() (string, error) {
     // Generate a random seed based on current time
     seed := time.Now().UnixNano()

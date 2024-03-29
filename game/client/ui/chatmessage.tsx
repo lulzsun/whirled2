@@ -13,6 +13,6 @@ export const createChatMessageUI = (
 		</>,
 	);
 	element.className =
-		"block text-white font-outline drop-shadow-lg font-black text-xs";
+		"block text-white font-outline drop-shadow-lg font-black text-xs break-all";
 	return element as HTMLElement;
 };
