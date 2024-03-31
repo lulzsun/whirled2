@@ -17,6 +17,8 @@ export function createUISystem(world: World) {
 	});
 	container.appendChild(chatUI);
 
+	const editButton = createEditButton();
+	container.appendChild(editButton);
 
 	return defineSystem((world: World) => {
 		return world;

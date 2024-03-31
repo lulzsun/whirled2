@@ -1,3 +1,4 @@
+import { World } from "./world";
 import { createTimeSystem } from "../systems/time";
 import { createRenderSystem } from "../systems/render";
 import { createNetworkSystem } from "../systems/network";
@@ -6,7 +7,7 @@ import { createUISystem } from "../systems/ui";
 import { createAnimationSystem } from "../systems/animation";
 import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
-import { World } from "./world";
+import { createEditorSystem } from "../systems/editor";
 
 export const createSystems = (world: World) => {
 	return [
@@ -17,6 +18,7 @@ export const createSystems = (world: World) => {
 		createUISystem,
 		createAnimationSystem,
 		createControlSystem,
+		createEditorSystem,
 		createRenderSystem, // Render system should run last
 	].map((createSystem) => createSystem(world));
 };

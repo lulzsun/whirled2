@@ -16,7 +16,7 @@ export function createTimeSystem() {
 		world.time.elapsed += world.time.delta;
 		world.time.last = now;
 
-		if (ImGui.bind !== undefined) {
+		if (ImGui.bind !== undefined && world.editMode) {
 			ImGui.SetNextWindowPos(
 				new ImGui.ImVec2(
 					world.renderer.domElement.getBoundingClientRect().right -

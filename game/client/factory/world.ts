@@ -8,10 +8,11 @@ import { Nameplate } from "./nameplate";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
-import { createObject } from "./object";
+import { Object, createObject } from "./object";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
+	objects: Map<number, Object>;
 	camera: THREE.Camera;
 	scene: THREE.Scene;
 	renderer: THREE.WebGLRenderer;
@@ -23,6 +24,7 @@ export type World = {
 	};
 	network: Network;
 	spineAssetManager: spine.AssetManager;
+	editMode: boolean;
 };
 
 export const createWorld = (): World => {
@@ -97,6 +99,7 @@ export const createWorld = (): World => {
 	world.renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 
 	world.players = new Map();
+	world.objects = new Map();
 
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 

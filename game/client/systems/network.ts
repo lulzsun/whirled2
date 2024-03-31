@@ -378,7 +378,7 @@ export function createNetworkSystem(world: World) {
 						(event.data as any).initialScale ?? 1,
 					);
 
-					console.log("epic", object);
+					world.objects.set(object.eid, object);
 					world.scene.add(object);
 					break;
 				}

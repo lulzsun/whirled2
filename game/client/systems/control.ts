@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
 	addComponent,
@@ -22,7 +21,6 @@ import { createContextMenuUI } from "../ui/contextmenu";
 import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 import { API_URL } from "../constants";
 
-import { ImGui } from "imgui-js";
 import { NetworkEvent } from "./network";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
@@ -41,12 +39,7 @@ export function createControlSystem(world: World) {
 	const contextMenu = createContextMenuUI();
 	world.renderer.domElement.parentElement!.appendChild(contextMenu);
 
-	const controls = new OrbitControls(world.camera, world.renderer.domElement);
-
 	canvas.addEventListener("pointermove", (event) => {
-		if (ImGui.GetCurrentContext() !== null)
-			controls.enabled = !ImGui.GetIO().WantCaptureMouse;
-
 		const rect = canvas.getBoundingClientRect();
 		pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -97,7 +90,6 @@ export function createControlSystem(world: World) {
 	});
 
 	return defineSystem((world: World) => {
-		controls.update();
 		raycaster.setFromCamera(pointer, world.camera);
 
 		const intersects = raycaster.intersectObjects(
