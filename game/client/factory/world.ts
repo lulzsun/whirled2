@@ -9,6 +9,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
+import { ObjectComponent } from "../components";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -32,6 +33,9 @@ export const createWorld = (): World => {
 	const canvas = document.querySelector<HTMLCanvasElement>("#app")!;
 	const aspect = window.innerWidth / window.innerHeight;
 
+	world.players = new Map();
+	world.objects = new Map();
+
 	// create a scene
 	world.scene = new THREE.Scene();
 
@@ -50,8 +54,9 @@ export const createWorld = (): World => {
 
 	// add a floor
 	const gridHelper = new THREE.GridHelper(20, 10, 0xffffff, 0xffffff);
+	//@ts-ignore
+	gridHelper.ignoreIntersect = true;
 	gridHelper.position.y = 0.01;
-	world.scene.add(gridHelper);
 
 	const planeMesh = new THREE.Mesh(
 		new THREE.PlaneGeometry(20, 20),
@@ -66,13 +71,14 @@ export const createWorld = (): World => {
 		world,
 		undefined,
 		1,
-		new THREE.Group().add(planeMesh),
+		new THREE.Group().add(planeMesh).add(gridHelper),
 	);
+	world.objects.set(plane.eid, plane);
 	world.scene.add(plane);
 
 	// add "stars" to the background
 	var stars = new Array(0);
-	for (var i = 0; i < 200; i++) {
+	for (var i = 0; i < 0; i++) {
 		let x = THREE.MathUtils.randFloatSpread(50);
 		let y = THREE.MathUtils.randFloatSpread(50);
 		let z = THREE.MathUtils.randFloatSpread(50);
@@ -97,9 +103,6 @@ export const createWorld = (): World => {
 
 	// create a default renderer, this can be modified later by render system
 	world.renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
-
-	world.players = new Map();
-	world.objects = new Map();
 
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 

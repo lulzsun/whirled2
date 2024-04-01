@@ -8,6 +8,7 @@ import {
 import { World } from "../factory/world";
 import {
 	NameplateComponent,
+	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
 } from "../components";
@@ -30,6 +31,12 @@ const enterOutlinePlayerQuery = enterQuery(
 );
 const exitOutlinePlayerQuery = exitQuery(
 	defineQuery([PlayerComponent, ObjectOutlineComponent]),
+);
+const enterOutlineObjectQuery = enterQuery(
+	defineQuery([ObjectComponent, ObjectOutlineComponent]),
+);
+const exitOutlineObjectQuery = exitQuery(
+	defineQuery([ObjectComponent, ObjectOutlineComponent]),
 );
 
 export function createRenderSystem(world: World) {
@@ -143,19 +150,39 @@ export function createRenderSystem(world: World) {
 		}
 
 		// handle postprocessing
-		const enterOutlines = enterOutlinePlayerQuery(world);
-		for (let i = 0; i < enterOutlines.length; i++) {
-			// handle adding player outlines (on mouse hover)
-			const player = world.players.get(enterOutlines[i])!.player;
-			const object = outlinePass.selectedObjects.indexOf(player);
-			if (object === -1) outlinePass.selectedObjects.push(player);
+		{
+			const enterOutlines = enterOutlinePlayerQuery(world);
+			for (let i = 0; i < enterOutlines.length; i++) {
+				// handle adding player outlines
+				const player = world.players.get(enterOutlines[i])!.player;
+				const outline = outlinePass.selectedObjects.indexOf(player);
+				if (outline === -1) outlinePass.selectedObjects.push(player);
+			}
+			const exitOutlines = exitOutlinePlayerQuery(world);
+			for (let i = 0; i < exitOutlines.length; i++) {
+				// handle removing player outlines
+				const player = world.players.get(exitOutlines[i])!.player;
+				const outline = outlinePass.selectedObjects.indexOf(player);
+				if (outline !== -1)
+					outlinePass.selectedObjects.splice(outline, 1);
+			}
 		}
-		const exitOutlines = exitOutlinePlayerQuery(world);
-		for (let i = 0; i < exitOutlines.length; i++) {
-			// handle adding player outlines (on mouse hover)
-			const player = world.players.get(exitOutlines[i])!.player;
-			const object = outlinePass.selectedObjects.indexOf(player);
-			if (object !== -1) outlinePass.selectedObjects.splice(object, 1);
+		{
+			const enterOutlines = enterOutlineObjectQuery(world);
+			for (let i = 0; i < enterOutlines.length; i++) {
+				// handle adding object outlines
+				const object = world.objects.get(enterOutlines[i])!;
+				const outline = outlinePass.selectedObjects.indexOf(object);
+				if (outline === -1) outlinePass.selectedObjects.push(object);
+			}
+			const exitOutlines = exitOutlineObjectQuery(world);
+			for (let i = 0; i < exitOutlines.length; i++) {
+				// handle adding object outlines
+				const object = world.objects.get(exitOutlines[i])!;
+				const outline = outlinePass.selectedObjects.indexOf(object);
+				if (outline !== -1)
+					outlinePass.selectedObjects.splice(outline, 1);
+			}
 		}
 
 		if (ImGui.bind === undefined) {

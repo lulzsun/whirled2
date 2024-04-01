@@ -11,6 +11,7 @@ import {
 } from "bitecs";
 import {
 	LocalPlayerComponent,
+	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
 	TransformComponent,
@@ -82,8 +83,12 @@ export function createControlSystem(world: World) {
 			//@ts-ignore
 			const eid = currIntersect.root.eid ?? -1;
 			// open up right click context menu (player)
-			contextMenu.setItem(createPlayerContextMenuUI(world, eid));
-			contextMenu.open(event);
+			if (hasComponent(world, PlayerComponent, eid)) {
+				contextMenu.setItem(createPlayerContextMenuUI(world, eid));
+				contextMenu.open(event);
+			} else {
+				contextMenu.close();
+			}
 		} else {
 			contextMenu.close();
 		}
@@ -116,9 +121,16 @@ export function createControlSystem(world: World) {
 			}
 		};
 
-		if (intersects.length > 0) {
-			let root = intersects[0].object;
+		if (intersects.length > 0 && !world.editMode) {
+			let i = 0;
+			let root = intersects[i].object;
+			while (root.type === "GridHelper") {
+				i++;
+				if (i > intersects.length - 1) break;
+				root = intersects[i].object;
+			}
 			do {
+				if (intersects[i] === undefined) break;
 				if (root.parent != null && root.parent.type !== "Scene") {
 					root = root.parent;
 					continue;
@@ -133,13 +145,13 @@ export function createControlSystem(world: World) {
 					eid !== undefined &&
 					hasComponent(world, PlayerComponent, eid)
 				) {
-					currIntersect = { point: intersects[0].point, root };
+					currIntersect = { point: intersects[i].point, root };
 					if (!hasComponent(world, ObjectOutlineComponent, eid))
 						addComponent(world, ObjectOutlineComponent, eid);
 					pointerMesh.visible = false;
 					break;
 				}
-				currIntersect = { point: intersects[0].point, root };
+				currIntersect = { point: intersects[i].point, root };
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
 					currIntersect.point.x,
