@@ -18,7 +18,7 @@ import {
 	ObjectOutlineComponent,
 	TransformComponent,
 } from "../components";
-import { Object } from "../factory/object";
+import { STATIC, UNIQUE } from "./imgui";
 
 const objectQuery = defineQuery([ObjectComponent]);
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
@@ -32,12 +32,32 @@ export function createEditorSystem(world: World) {
 	let transformControlsCaptureMouse = true;
 	let selectedObject: number | null = null;
 
-	const unselectObject = () => {
+	const unselectObject = (force: boolean = false) => {
+		if (
+			ImGui.bind !== undefined &&
+			ImGui.GetIO().WantCaptureMouse &&
+			!force
+		)
+			return;
 		if (selectedObject !== null) {
 			removeComponent(world, ObjectOutlineComponent, selectedObject);
 			selectedObject = null;
 		}
 		transformControls.detach();
+	};
+
+	const selectObject = (eid: number | null, force: boolean = false) => {
+		unselectObject(force);
+		if (eid === null) return;
+		addComponent(world, ObjectOutlineComponent, eid);
+		selectedObject = eid;
+		var object = world.scene.getObjectByProperty("eid", eid);
+		if (!object) {
+			removeComponent(world, ObjectOutlineComponent, eid);
+			selectedObject = null;
+			return;
+		}
+		transformControls.attach(object);
 	};
 
 	const orbitControls = new OrbitControls(
@@ -107,10 +127,7 @@ export function createEditorSystem(world: World) {
 					unselectObject();
 					break;
 				}
-				unselectObject();
-				addComponent(world, ObjectOutlineComponent, eid);
-				selectedObject = eid;
-				transformControls.attach(root as Object);
+				selectObject(eid);
 				break;
 			} while (true);
 		} else {
@@ -129,9 +146,8 @@ export function createEditorSystem(world: World) {
 		raycaster.setFromCamera(pointer, world.camera);
 
 		if (ImGui.bind === undefined || !world.editMode) {
-			if (selectedObject) {
-				selectedObject = null;
-				transformControls.detach();
+			if (selectedObject !== null) {
+				unselectObject();
 			}
 			return world;
 		}
@@ -156,8 +172,7 @@ export function createEditorSystem(world: World) {
 			ImGui.ImGuiCond.Appearing,
 		);
 		ImGui.SetNextWindowSize(new ImGui.ImVec2(69 * 4, 420), ImGui.Cond.Once);
-		ImGui.Begin("Explorer", null, ImGui.WindowFlags.None);
-		populateExplorer();
+		renderExplorer(world, selectObject);
 
 		ImGui.SetNextWindowPos(
 			new ImGui.ImVec2(
@@ -167,59 +182,41 @@ export function createEditorSystem(world: World) {
 			ImGui.ImGuiCond.Appearing,
 		);
 		ImGui.SetNextWindowSize(new ImGui.ImVec2(69 * 4, 420), ImGui.Cond.Once);
-		ImGui.Begin("Inspector", null, ImGui.WindowFlags.None);
-		ImGui.TextWrapped(`Hello, Whirled!`);
+		renderInspector(world, selectedObject);
 		return world;
 	});
 }
 
-function UNIQUE(key: string): string {
-	return key;
-}
-
-class Static<T> {
-	constructor(public value: T) {}
-	access: ImGui.Access<T> = (value: T = this.value): T =>
-		(this.value = value);
-}
-
-const _static_map: Map<string, Static<any>> = new Map();
-
-function STATIC<T>(key: string, init: T): Static<T> {
-	let value: Static<T> | undefined = _static_map.get(key);
-	if (value === undefined) {
-		_static_map.set(key, (value = new Static<T>(init)));
-	}
-	return value;
-}
-
-function populateExplorer() {
+function renderExplorer(world: World, onSelect: (eid: number) => void) {
+	ImGui.Begin("Explorer", null, ImGui.WindowFlags.None);
 	const base_flags = STATIC<ImGui.TreeNodeFlags>(
 		UNIQUE("base_flags#f8c171be"),
 		ImGui.TreeNodeFlags.OpenOnArrow |
 			ImGui.TreeNodeFlags.OpenOnDoubleClick |
 			ImGui.TreeNodeFlags.SpanAvailWidth,
 	);
-	const selection_mask = STATIC<number>(
-		UNIQUE("selection_mask#b42bb9cf"),
-		1 << 2,
-	);
-	let node_clicked: number = -1;
-	for (let i = 0; i < 6; i++) {
+	const objects = world.scene.children.filter((x) => {
+		//@ts-ignore: only make certain objects interactive
+		const eid = x.eid;
+		if (eid !== undefined) return true;
+		return false;
+	});
+	for (let i = 0; i < objects.length; i++) {
 		// Disable the default "open on single-click behavior" + set Selected flag according to our selection.
 		// To alter selection we use IsItemClicked() && !IsItemToggledOpen(), so clicking on an arrow doesn't alter selection.
 		let node_flags: ImGui.TreeNodeFlags = base_flags.value;
 		const is_selected: boolean = false;
+		const objectName = `${objects[i].name || objects[i].uuid}`;
 		if (is_selected) node_flags |= ImGui.TreeNodeFlags.Selected;
-		if (i < 3) {
+		if (false) {
 			// this.Items 0..2 are Tree Node
 			const node_open: boolean = ImGui.TreeNodeEx(
 				/*(void*)(intptr_t)*/ i,
 				node_flags,
-				`Selectable Node ${i}`,
+				objectName,
 			);
 			if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen())
-				node_clicked = i;
+				console.log(`click ${i}`);
 			if (ImGui.BeginDragDropSource()) {
 				ImGui.SetDragDropPayload("_TREENODE", null, 0);
 				ImGui.Text("This is a drag and drop source");
@@ -230,23 +227,105 @@ function populateExplorer() {
 				ImGui.TreePop();
 			}
 		} else {
-			// this.Items 3..5 are Tree Leaves
-			// The only reason we use TreeNode at all is to allow selection of the leaf. Otherwise we can
-			// use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
 			node_flags |=
-				ImGui.TreeNodeFlags.Leaf | ImGui.TreeNodeFlags.NoTreePushOnOpen; // ImGui.TreeNodeFlags.Bullet
-			ImGui.TreeNodeEx(
-				/*(void*)(intptr_t)*/ i,
-				node_flags,
-				`Selectable Leaf ${i}`,
-			);
-			if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen())
-				node_clicked = i;
+				ImGui.TreeNodeFlags.Leaf | ImGui.TreeNodeFlags.NoTreePushOnOpen;
+			ImGui.TreeNodeEx(i, node_flags, objectName);
+			if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen()) {
+				//@ts-ignore
+				onSelect(objects[i].eid ?? null, true);
+			}
 			if (ImGui.BeginDragDropSource()) {
 				ImGui.SetDragDropPayload("_TREENODE", null, 0);
-				ImGui.Text("This is a drag and drop source");
+				ImGui.Text(objectName);
 				ImGui.EndDragDropSource();
 			}
+		}
+	}
+}
+
+function renderInspector(world: World, selectedObject: number | null) {
+	const eid = selectedObject ?? -1;
+	const object = world.scene.getObjectByProperty("eid", eid);
+
+	ImGui.Begin("Inspector", null, ImGui.WindowFlags.None);
+	if (object === undefined) {
+		ImGui.TextWrapped(`No selected object`);
+	} else {
+		ImGui.TextWrapped(`${object.name}`);
+		if (
+			ImGui.CollapsingHeader(
+				"Transform Component",
+				ImGui.ImGuiTreeNodeFlags.DefaultOpen,
+			)
+		) {
+			const posX = STATIC<ImGui.ImScalar<number>>(UNIQUE(`posX#${eid}`), [
+				TransformComponent.position.x[eid],
+			]);
+			const posY = STATIC<ImGui.ImScalar<number>>(UNIQUE(`posY#${eid}`), [
+				TransformComponent.position.y[eid],
+			]);
+			const posZ = STATIC<ImGui.ImScalar<number>>(UNIQUE(`posZ#${eid}`), [
+				TransformComponent.position.z[eid],
+			]);
+			posX.value[0] = TransformComponent.position.x[eid];
+			posY.value[0] = TransformComponent.position.y[eid];
+			posZ.value[0] = TransformComponent.position.z[eid];
+
+			ImGui.PushItemWidth(ImGui.CalcItemWidth() / 4);
+			ImGui.Text("Position:");
+			ImGui.SameLine();
+			ImGui.DragFloat(`X##posX#${eid}`, posX.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Y##posY#${eid}`, posY.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Z##posZ#${eid}`, posZ.value);
+			ImGui.PopItemWidth();
+
+			const rotX = STATIC<ImGui.ImScalar<number>>(UNIQUE(`rotX#${eid}`), [
+				TransformComponent.rotation.x[eid],
+			]);
+			const rotY = STATIC<ImGui.ImScalar<number>>(UNIQUE(`rotY#${eid}`), [
+				TransformComponent.rotation.y[eid],
+			]);
+			const rotZ = STATIC<ImGui.ImScalar<number>>(UNIQUE(`rotZ#${eid}`), [
+				TransformComponent.rotation.z[eid],
+			]);
+			rotX.value[0] = TransformComponent.rotation.x[eid];
+			rotY.value[0] = TransformComponent.rotation.y[eid];
+			rotZ.value[0] = TransformComponent.rotation.z[eid];
+
+			ImGui.PushItemWidth(ImGui.CalcItemWidth() / 4);
+			ImGui.Text("Rotation:");
+			ImGui.SameLine();
+			ImGui.DragFloat(`X##rotX#${eid}`, rotX.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Y##rotY#${eid}`, rotY.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Z##rotZ#${eid}`, rotZ.value);
+			ImGui.PopItemWidth();
+
+			const scaX = STATIC<ImGui.ImScalar<number>>(UNIQUE(`scaX#${eid}`), [
+				TransformComponent.scale.x[eid],
+			]);
+			const scaY = STATIC<ImGui.ImScalar<number>>(UNIQUE(`scaY#${eid}`), [
+				TransformComponent.scale.y[eid],
+			]);
+			const scaZ = STATIC<ImGui.ImScalar<number>>(UNIQUE(`scaZ#${eid}`), [
+				TransformComponent.scale.z[eid],
+			]);
+			scaX.value[0] = TransformComponent.scale.x[eid];
+			scaY.value[0] = TransformComponent.scale.y[eid];
+			scaZ.value[0] = TransformComponent.scale.z[eid];
+
+			ImGui.PushItemWidth(ImGui.CalcItemWidth() / 4);
+			ImGui.Text("Scale:");
+			ImGui.SameLine();
+			ImGui.DragFloat(`X##scaX#${eid}`, scaX.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Y##scaY#${eid}`, scaY.value);
+			ImGui.SameLine();
+			ImGui.DragFloat(`Z##scaZ#${eid}`, scaZ.value);
+			ImGui.PopItemWidth();
 		}
 	}
 }

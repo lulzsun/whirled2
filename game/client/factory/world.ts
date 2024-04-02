@@ -69,6 +69,7 @@ export const createWorld = (): World => {
 	planeMesh.rotation.x = (Math.PI / 180) * -90;
 	const plane = createObject(
 		world,
+		"Floor",
 		undefined,
 		1,
 		new THREE.Group().add(planeMesh).add(gridHelper),

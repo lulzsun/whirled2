@@ -21,12 +21,14 @@ export enum Avatar {
 
 export const createPlayer = (
 	world: World,
+	name: string = "Unnamed",
 	local: boolean = false,
 	avatar: Avatar = Avatar.GLTF,
 	avatarName: string = "",
 ): Player => {
 	const eid = addEntity(world);
 	let entity = Object.assign(new THREE.Group(), { eid });
+	entity.name = `${name} (Player)`;
 
 	if (local) {
 		addComponent(world, LocalPlayerComponent, eid);

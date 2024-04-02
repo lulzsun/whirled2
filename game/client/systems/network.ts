@@ -202,10 +202,6 @@ export function createNetworkSystem(world: World) {
 						});
 					break;
 				case NetworkEvent.PlayerJoin: {
-					const playerEntity = createPlayer(
-						world,
-						(event.data as any).local ?? false,
-					);
 					const player: {
 						username: string;
 						nickname: string;
@@ -223,6 +219,11 @@ export function createNetworkSystem(world: World) {
 						};
 						eid: number;
 					} = event.data as any;
+					const playerEntity = createPlayer(
+						world,
+						player.username,
+						player.local ?? false,
+					);
 					player.eid = playerEntity.eid;
 
 					const nameplateEntity = createNameplate(
@@ -374,6 +375,7 @@ export function createNetworkSystem(world: World) {
 				case NetworkEvent.ObjectJoin: {
 					const object = createObject(
 						world,
+						(event.data as any).name ?? "Unnamed",
 						(event.data as any).file ?? "",
 						(event.data as any).initialScale ?? 1,
 					);

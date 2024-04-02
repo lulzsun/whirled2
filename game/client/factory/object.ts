@@ -13,7 +13,8 @@ export type Object = THREE.Group & { eid: number };
 
 export const createObject = (
 	world: World,
-	fileUrl?: string,
+	name: string = "Unnamed",
+	fileUrl: string | undefined = undefined,
 	initialScale: number = 1,
 	group: THREE.Group = new THREE.Group(),
 ): Object => {
@@ -27,6 +28,7 @@ export const createObject = (
 	TransformComponent.scale.z[eid] = 1;
 
 	let entity = Object.assign(group, { eid });
+	entity.name = `${name} (Object)`;
 
 	// position
 	Object.defineProperty(entity.position, "eid", { get: () => eid });
