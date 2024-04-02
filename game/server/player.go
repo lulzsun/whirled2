@@ -8,7 +8,7 @@ import (
 	"github.com/pocketbase/dbx"
 )
 
-// Authorize a peer as user or guest and have them join a room
+// Authorize a peer as user or guest when they join a room
 //
 // After successful authorization, send "Join" event to all peers in room and
 // let our peer know about existing peers in the room ("Join" event for each peer)

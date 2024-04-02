@@ -54,6 +54,7 @@
 						}
 					};
 					window._closeWebPanel = () => {
+						if (!window._split_instance) return;
 						window._split_instance.destroy();
 						window._split_instance = undefined;
 						document.getElementById("web").style.display = "none";
