@@ -9,7 +9,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
-import { ObjectComponent } from "../components";
+import { Editor } from "../systems/editor";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -25,7 +25,7 @@ export type World = {
 	};
 	network: Network;
 	spineAssetManager: spine.AssetManager;
-	editMode: boolean;
+	editor: Editor;
 };
 
 export const createWorld = (): World => {
@@ -36,7 +36,7 @@ export const createWorld = (): World => {
 	world.players = new Map();
 	world.objects = new Map();
 
-	// create a scene
+	// initialize scene
 	world.scene = new THREE.Scene();
 
 	// add a camera

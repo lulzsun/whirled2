@@ -36,6 +36,10 @@ export const createPlayer = (
 	addComponent(world, PlayerComponent, eid);
 	addComponent(world, TransformComponent, eid);
 
+	TransformComponent.scale.x[eid] = 1;
+	TransformComponent.scale.y[eid] = 1;
+	TransformComponent.scale.z[eid] = 1;
+
 	if (avatar === Avatar.Spine) {
 		if (avatarName === "") avatarName = "spineboy";
 
@@ -163,21 +167,35 @@ export const createPlayer = (
 	});
 
 	// scale
-	// Object.defineProperty(obj3d.scale, 'eid', { get: () => eid })
-	// Object.defineProperty(obj3d.scale, 'store', { get: () => TransformComponent.scale })
+	Object.defineProperty(entity.scale, "eid", { get: () => eid });
+	Object.defineProperty(entity.scale, "store", {
+		get: () => TransformComponent.scale,
+	});
 
-	// Object.defineProperty(obj3d.scale, 'x', {
-	//   get () { return this.store.x[this.eid] },
-	//   set (n) { this.store.x[this.eid] = n }
-	// })
-	// Object.defineProperty(obj3d.scale, 'y', {
-	//   get () { return this.store.y[this.eid] },
-	//   set (n) { this.store.y[this.eid] = n }
-	// })
-	// Object.defineProperty(obj3d.scale, 'z', {
-	//   get () { return this.store.z[this.eid] },
-	//   set (n) { this.store.z[this.eid] = n }
-	// })
+	Object.defineProperty(entity.scale, "x", {
+		get() {
+			return this.store.x[this.eid];
+		},
+		set(n) {
+			this.store.x[this.eid] = n;
+		},
+	});
+	Object.defineProperty(entity.scale, "y", {
+		get() {
+			return this.store.y[this.eid];
+		},
+		set(n) {
+			this.store.y[this.eid] = n;
+		},
+	});
+	Object.defineProperty(entity.scale, "z", {
+		get() {
+			return this.store.z[this.eid];
+		},
+		set(n) {
+			this.store.z[this.eid] = n;
+		},
+	});
 
 	return entity;
 };

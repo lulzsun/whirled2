@@ -20,17 +20,29 @@ import {
 } from "../components";
 import { STATIC, UNIQUE } from "./imgui";
 
-const objectQuery = defineQuery([ObjectComponent]);
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
+
+export type Editor = {
+	enabled: boolean;
+	selectedObject: number | null;
+	selectedTool: EditorTool;
+};
+
+type EditorTool = null | "translate" | "rotate" | "scale";
 
 export function createEditorSystem(world: World) {
 	const pointer = new THREE.Vector2();
 	const raycaster = new THREE.Raycaster();
 
+	world.editor = {
+		enabled: false,
+		selectedObject: null,
+		selectedTool: null,
+	};
+
 	const canvas = world.renderer.domElement;
 
 	let transformControlsCaptureMouse = true;
-	let selectedObject: number | null = null;
 
 	const unselectObject = (force: boolean = false) => {
 		if (
@@ -39,9 +51,13 @@ export function createEditorSystem(world: World) {
 			!force
 		)
 			return;
-		if (selectedObject !== null) {
-			removeComponent(world, ObjectOutlineComponent, selectedObject);
-			selectedObject = null;
+		if (world.editor.selectedObject !== null) {
+			removeComponent(
+				world,
+				ObjectOutlineComponent,
+				world.editor.selectedObject,
+			);
+			world.editor.selectedObject = null;
 		}
 		transformControls.detach();
 	};
@@ -50,14 +66,16 @@ export function createEditorSystem(world: World) {
 		unselectObject(force);
 		if (eid === null) return;
 		addComponent(world, ObjectOutlineComponent, eid);
-		selectedObject = eid;
+		world.editor.selectedObject = eid;
 		var object = world.scene.getObjectByProperty("eid", eid);
 		if (!object) {
 			removeComponent(world, ObjectOutlineComponent, eid);
-			selectedObject = null;
+			world.editor.selectedObject = null;
 			return;
 		}
-		transformControls.attach(object);
+		if (world.editor.selectedTool !== null) {
+			transformControls.attach(object);
+		}
 	};
 
 	const orbitControls = new OrbitControls(
@@ -65,7 +83,7 @@ export function createEditorSystem(world: World) {
 		world.renderer.domElement,
 	);
 	canvas.addEventListener("pointermove", (event) => {
-		if (!world.editMode) return;
+		if (!world.editor.enabled) return;
 		if (ImGui.GetCurrentContext() !== null) {
 			orbitControls.enabled =
 				(!ImGui.GetIO().WantCaptureMouse &&
@@ -82,7 +100,7 @@ export function createEditorSystem(world: World) {
 		if (transformControls.axis !== null) {
 			return;
 		}
-		if (!(event.button === 0 && world.editMode)) return;
+		if (!(event.button === 0 && world.editor.enabled)) return;
 		const intersects = raycaster.intersectObjects(
 			world.scene.children.filter((x) => {
 				//@ts-ignore: only make certain objects interactive
@@ -141,15 +159,25 @@ export function createEditorSystem(world: World) {
 	});
 	world.scene.add(transformControls);
 
+	let lastSelectedTool: EditorTool = null;
 	return defineSystem((world: World) => {
 		orbitControls.update();
 		raycaster.setFromCamera(pointer, world.camera);
 
-		if (ImGui.bind === undefined || !world.editMode) {
-			if (selectedObject !== null) {
+		if (ImGui.bind === undefined || !world.editor.enabled) {
+			if (world.editor.selectedObject !== null) {
 				unselectObject();
 			}
 			return world;
+		}
+
+		if (lastSelectedTool !== world.editor.selectedTool) {
+			lastSelectedTool = world.editor.selectedTool;
+			if (lastSelectedTool !== null) {
+				transformControls.setMode(lastSelectedTool);
+			} else {
+				selectObject(null, true);
+			}
 		}
 
 		{
@@ -157,7 +185,7 @@ export function createEditorSystem(world: World) {
 			for (let x = 0; x < objects.length; x++) {
 				var obj = world.objects.get(objects[x]);
 				if (obj === undefined) continue;
-				if (selectedObject === objects[x]) {
+				if (world.editor.selectedObject === objects[x]) {
 					unselectObject();
 				}
 			}
@@ -176,25 +204,31 @@ export function createEditorSystem(world: World) {
 
 		ImGui.SetNextWindowPos(
 			new ImGui.ImVec2(
+				canvas.getBoundingClientRect().width -
+					canvas.getBoundingClientRect().right +
+					69 * 4,
+				0,
+			),
+			ImGui.ImGuiCond.Appearing,
+		);
+		ImGui.SetNextWindowSize(new ImGui.ImVec2(50 * 4, 75), ImGui.Cond.Once);
+		renderToolbar(world);
+
+		ImGui.SetNextWindowPos(
+			new ImGui.ImVec2(
 				canvas.getBoundingClientRect().right - 69 * 4,
 				canvas.getBoundingClientRect().height - 420,
 			),
 			ImGui.ImGuiCond.Appearing,
 		);
 		ImGui.SetNextWindowSize(new ImGui.ImVec2(69 * 4, 420), ImGui.Cond.Once);
-		renderInspector(world, selectedObject);
+		renderInspector(world);
 		return world;
 	});
 }
 
 function renderExplorer(world: World, onSelect: (eid: number) => void) {
 	ImGui.Begin("Explorer", null, ImGui.WindowFlags.None);
-	const base_flags = STATIC<ImGui.TreeNodeFlags>(
-		UNIQUE("base_flags#f8c171be"),
-		ImGui.TreeNodeFlags.OpenOnArrow |
-			ImGui.TreeNodeFlags.OpenOnDoubleClick |
-			ImGui.TreeNodeFlags.SpanAvailWidth,
-	);
 	const objects = world.scene.children.filter((x) => {
 		//@ts-ignore: only make certain objects interactive
 		const eid = x.eid;
@@ -202,24 +236,23 @@ function renderExplorer(world: World, onSelect: (eid: number) => void) {
 		return false;
 	});
 	for (let i = 0; i < objects.length; i++) {
-		// Disable the default "open on single-click behavior" + set Selected flag according to our selection.
-		// To alter selection we use IsItemClicked() && !IsItemToggledOpen(), so clicking on an arrow doesn't alter selection.
-		let node_flags: ImGui.TreeNodeFlags = base_flags.value;
+		let node_flags: ImGui.TreeNodeFlags =
+			ImGui.TreeNodeFlags.OpenOnArrow |
+			ImGui.TreeNodeFlags.OpenOnDoubleClick |
+			ImGui.TreeNodeFlags.SpanAvailWidth;
 		const is_selected: boolean = false;
 		const objectName = `${objects[i].name || objects[i].uuid}`;
 		if (is_selected) node_flags |= ImGui.TreeNodeFlags.Selected;
 		if (false) {
-			// this.Items 0..2 are Tree Node
-			const node_open: boolean = ImGui.TreeNodeEx(
-				/*(void*)(intptr_t)*/ i,
-				node_flags,
-				objectName,
-			);
-			if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen())
-				console.log(`click ${i}`);
+			// this is for nested objects (not implemented yet)
+			const node_open = ImGui.TreeNodeEx(i, node_flags, objectName);
+			if (ImGui.IsItemClicked() && !ImGui.IsItemToggledOpen()) {
+				//@ts-ignore
+				onSelect(objects[i].eid ?? null, true);
+			}
 			if (ImGui.BeginDragDropSource()) {
 				ImGui.SetDragDropPayload("_TREENODE", null, 0);
-				ImGui.Text("This is a drag and drop source");
+				ImGui.Text(objectName);
 				ImGui.EndDragDropSource();
 			}
 			if (node_open) {
@@ -243,8 +276,8 @@ function renderExplorer(world: World, onSelect: (eid: number) => void) {
 	}
 }
 
-function renderInspector(world: World, selectedObject: number | null) {
-	const eid = selectedObject ?? -1;
+function renderInspector(world: World) {
+	const eid = world.editor.selectedObject ?? -1;
 	const object = world.scene.getObjectByProperty("eid", eid);
 
 	ImGui.Begin("Inspector", null, ImGui.WindowFlags.None);
@@ -327,5 +360,61 @@ function renderInspector(world: World, selectedObject: number | null) {
 			ImGui.DragFloat(`Z##scaZ#${eid}`, scaZ.value);
 			ImGui.PopItemWidth();
 		}
+	}
+}
+
+function renderToolbar(world: World) {
+	ImGui.Begin("Tools", null, ImGui.WindowFlags.None);
+	const button_sz: ImGui.Vec2 = new ImGui.Vec2(40, 40);
+	const window_visible_x2: number =
+		ImGui.GetWindowPos().x + ImGui.GetWindowContentRegionMax().x;
+
+	const buttons: { name: string; isSelected: boolean; click: () => void }[] =
+		[
+			{
+				name: "None",
+				isSelected: world.editor.selectedTool === null,
+				click: () => {
+					world.editor.selectedTool = null;
+				},
+			},
+			{
+				name: "Move",
+				isSelected: world.editor.selectedTool === "translate",
+				click: () => {
+					world.editor.selectedTool = "translate";
+				},
+			},
+			{
+				name: "Rotate",
+				isSelected: world.editor.selectedTool === "rotate",
+				click: () => {
+					world.editor.selectedTool = "rotate";
+				},
+			},
+			{
+				name: "Scale",
+				isSelected: world.editor.selectedTool === "scale",
+				click: () => {
+					world.editor.selectedTool = "scale";
+				},
+			},
+		];
+	for (let n = 0; n < buttons.length; n++) {
+		ImGui.PushID(n);
+		ImGui.PushStyleVar(
+			ImGui.ImGuiStyleVar.SelectableTextAlign,
+			new ImGui.ImVec2(0.5, 0.5),
+		);
+		ImGui.Selectable(buttons[n].name, buttons[n].isSelected, 0, button_sz);
+		ImGui.PopStyleVar();
+		if (ImGui.IsItemClicked()) {
+			buttons[n].click();
+		}
+		const last_button_x2: number = ImGui.GetItemRectMax().x;
+		const next_button_x2: number = last_button_x2 + button_sz.x;
+		if (n + 1 < buttons.length && next_button_x2 < window_visible_x2)
+			ImGui.SameLine();
+		ImGui.PopID();
 	}
 }

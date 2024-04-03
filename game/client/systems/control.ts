@@ -121,7 +121,10 @@ export function createControlSystem(world: World) {
 			}
 		};
 
-		if (intersects.length > 0 && !world.editMode) {
+		if (
+			intersects.length > 0 &&
+			(!world.editor.enabled || !world.editor.selectedTool)
+		) {
 			let i = 0;
 			let root = intersects[i].object;
 			while (root.type === "GridHelper") {

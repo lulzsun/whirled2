@@ -54,9 +54,10 @@ export const createEditButton = () => {
 			type="button"
 			class="focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
 			onClick={(e) => {
-				window.world.editMode = !window.world.editMode;
+				window.world.editor.enabled = !window.world.editor.enabled;
 
-				if (window.world.editMode) {
+				if (window.world.editor.enabled) {
+					window.world.editor.selectedTool = "translate";
 					e.currentTarget.className =
 						"focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg p-1.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900";
 					e.currentTarget.innerText = "exit editor";
