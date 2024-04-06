@@ -41,6 +41,7 @@ export type NetworkPlayer = {
 	username: string;
 	nickname: string;
 	isLocal: boolean;
+	isOwner: boolean;
 };
 
 export type NetworkObject = {
@@ -237,6 +238,7 @@ export function createNetworkSystem(world: World) {
 						username: string;
 						nickname: string;
 						local: boolean;
+						owner: boolean;
 						position: {
 							x: number;
 							y: number;
@@ -299,7 +301,14 @@ export function createNetworkSystem(world: World) {
 						username: player.username,
 						nickname: player.nickname,
 						isLocal: player.local,
+						isOwner: player.owner,
 					};
+
+					if (player.local && player.owner) {
+						document
+							.getElementById("openEditorBtn")
+							?.setAttribute("style", "");
+					}
 
 					playersByUsername.set(player.username, networkPlayer);
 					playersByEid.set(player.eid, networkPlayer);

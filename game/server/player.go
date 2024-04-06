@@ -64,13 +64,6 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			},
 		}
 
-		// prepare client (player) data
-		data, err := json.Marshal(player)
-		if err != nil {
-			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
-			return
-		}
-
 		// verify client
 		roomId, ok := j["room"].(string)
 		if !ok || (ok && roomId == "") {
@@ -92,6 +85,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			if err != nil {
 				roomId = "@underwhirled"
 			} else {
+				player["owner"] = true;
 				roomId = room.Id
 			}
 		// client provided a room id, check if room exists on server
@@ -100,30 +94,37 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		} else {
 			room := struct {
 				Id string		`db:"id" json:"id"`
+				Owner string	`db:"owner" json:"owner"`
 				Objects string 	`db:"objects" json:"objects"`
 			}{}
 			err := pb.DB().
 				NewQuery(`
-					SELECT r1.id FROM rooms r1 WHERE r1.id = {:roomId}
-					UNION ALL
-					SELECT r2.id FROM rooms r2
-					INNER JOIN users ON r2.owner_id = users.id
-					WHERE users.username = {:username} AND r2.is_home = true
-						AND NOT EXISTS (SELECT r1.id FROM rooms r1 WHERE r1.id = {:roomId})
+					SELECT r.id, r.objects, u.username AS owner 
+					FROM rooms r
+					INNER JOIN users u ON r.owner_id = u.id
+					WHERE r.id = {:roomId}
 				`).
 				Bind(dbx.Params{
-					"username": client.Username,
 					"roomId": roomId,
 				}).One(&room)
 
 			if err != nil {
 				roomId = "@underwhirled"
+			} else if roomId != room.Id {
+				log.Printf("Room '%s' does not exist or '%s' does not have privileges", roomId, client.Username)
+				roomId = "@underwhirled"
 			} else {
-				if roomId != room.Id {
-					log.Printf("Room '%s' does not exist or '%s' does not have privileges", roomId, client.Username)
-					roomId = room.Id
+				if room.Owner == client.Username {
+					player["owner"] = true;
 				}
 			}
+		}
+
+		// prepare client (player) data
+		data, err := json.Marshal(player)
+		if err != nil {
+			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+			return
 		}
 
 		// try to populate room with saved objects

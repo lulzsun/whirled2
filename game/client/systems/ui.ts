@@ -16,9 +16,7 @@ export function createUISystem(world: World) {
 		world.network.emit(NetworkEvent.PlayerChat, msg);
 	});
 	container.appendChild(chatUI);
-
-	const editButton = createEditButton();
-	container.appendChild(editButton);
+	container.appendChild(createEditButton());
 
 	return defineSystem((world: World) => {
 		return world;
