@@ -33,7 +33,7 @@ export enum NetworkEvent {
 
 	ObjectJoin,
 	ObjectLeave,
-	ObjectMove,
+	ObjectTransform,
 }
 
 export type NetworkPlayer = {
@@ -43,10 +43,20 @@ export type NetworkPlayer = {
 	isLocal: boolean;
 };
 
+export type NetworkObject = {
+	eid: number;
+	id: string;
+	name: string;
+};
+
 export type Network = {
 	getPlayer: {
-		(eid: number): NetworkPlayer;
-		(username: string): NetworkPlayer;
+		(eid: number): NetworkPlayer | null;
+		(username: string): NetworkPlayer | null;
+	};
+	getObject: {
+		(eid: number): NetworkObject | null;
+		(id: string): NetworkObject | null;
 	};
 	emit: {
 		(
@@ -60,6 +70,8 @@ export type Network = {
 export function createNetworkSystem(world: World) {
 	const playersByUsername = new Map<string, NetworkPlayer>();
 	const playersByEid = new Map<number, NetworkPlayer>();
+	const objectsById = new Map<string, NetworkObject>();
+	const objectsByEid = new Map<number, NetworkObject>();
 
 	let events: {
 		type: NetworkEvent;
@@ -72,7 +84,7 @@ export function createNetworkSystem(world: World) {
 		getPlayer: (arg: number | string) => {
 			if (typeof arg === "number") {
 				const player = playersByEid.get(arg);
-				if (!player) throw `Issue finding player by eid: ${arg}`;
+				if (!player) return null;
 				return {
 					eid: arg,
 					username: player.username,
@@ -81,13 +93,32 @@ export function createNetworkSystem(world: World) {
 				} as NetworkPlayer;
 			} else {
 				const player = playersByUsername.get(arg);
-				if (!player) throw `Issue finding player by username: ${arg}`;
+				if (!player) return null;
 				return {
 					eid: player.eid,
 					username: arg,
 					nickname: player.nickname,
 					isLocal: player.isLocal,
 				} as NetworkPlayer;
+			}
+		},
+		getObject: (arg: number | string) => {
+			if (typeof arg === "number") {
+				const object = objectsByEid.get(arg);
+				if (!object) return null;
+				return {
+					eid: arg,
+					id: object.id,
+					name: object.name,
+				} as NetworkObject;
+			} else {
+				const object = objectsById.get(arg);
+				if (!object) return null;
+				return {
+					eid: object.eid,
+					id: arg,
+					name: object.name,
+				} as NetworkObject;
 			}
 		},
 		emit: (
@@ -217,6 +248,11 @@ export function createNetworkSystem(world: World) {
 							z: number;
 							w: number;
 						};
+						scale: {
+							x: number;
+							y: number;
+							z: number;
+						};
 						eid: number;
 					} = event.data as any;
 					const playerEntity = createPlayer(
@@ -225,6 +261,27 @@ export function createNetworkSystem(world: World) {
 						player.local ?? false,
 					);
 					player.eid = playerEntity.eid;
+
+					TransformComponent.position.x[player.eid] =
+						player.position.x;
+					TransformComponent.position.y[player.eid] =
+						player.position.y;
+					TransformComponent.position.z[player.eid] =
+						player.position.z;
+
+					TransformComponent.rotation.x[player.eid] =
+						player.rotation.x;
+					TransformComponent.rotation.y[player.eid] =
+						player.rotation.y;
+					TransformComponent.rotation.z[player.eid] =
+						player.rotation.z;
+					TransformComponent.rotation.w[player.eid] =
+						player.rotation.w;
+					playerEntity.rotation._onChangeCallback();
+
+					TransformComponent.scale.x[player.eid] = player.scale.x;
+					TransformComponent.scale.y[player.eid] = player.scale.y;
+					TransformComponent.scale.z[player.eid] = player.scale.z;
 
 					const nameplateEntity = createNameplate(
 						world,
@@ -246,23 +303,6 @@ export function createNetworkSystem(world: World) {
 
 					playersByUsername.set(player.username, networkPlayer);
 					playersByEid.set(player.eid, networkPlayer);
-
-					TransformComponent.position.x[player.eid] =
-						player.position.x;
-					TransformComponent.position.y[player.eid] =
-						player.position.y;
-					TransformComponent.position.z[player.eid] =
-						player.position.z;
-
-					TransformComponent.rotation.x[player.eid] =
-						player.rotation.x;
-					TransformComponent.rotation.y[player.eid] =
-						player.rotation.y;
-					TransformComponent.rotation.z[player.eid] =
-						player.rotation.z;
-					TransformComponent.rotation.w[player.eid] =
-						player.rotation.w;
-					playerEntity.rotation._onChangeCallback();
 
 					world.players.set(player.eid, {
 						player: playerEntity,
@@ -373,15 +413,118 @@ export function createNetworkSystem(world: World) {
 					break;
 				}
 				case NetworkEvent.ObjectJoin: {
-					const object = createObject(
-						world,
-						(event.data as any).name ?? "Unnamed",
-						(event.data as any).file ?? "",
-						(event.data as any).initialScale ?? 1,
-					);
+					const object: {
+						id: string;
+						name: string;
+						file: string;
+						position: {
+							x: number;
+							y: number;
+							z: number;
+						};
+						rotation: {
+							x: number;
+							y: number;
+							z: number;
+							w: number;
+						};
+						scale: {
+							x: number;
+							y: number;
+							z: number;
+						};
+						initialScale: number;
+						eid: number;
+					} = event.data as any;
 
-					world.objects.set(object.eid, object);
-					world.scene.add(object);
+					const objectEntity = createObject(
+						world,
+						object.name ?? "Unnamed",
+						object.file ?? "",
+						object.initialScale ?? 1,
+					);
+					object.eid = objectEntity.eid;
+
+					TransformComponent.position.x[object.eid] =
+						object.position.x;
+					TransformComponent.position.y[object.eid] =
+						object.position.y;
+					TransformComponent.position.z[object.eid] =
+						object.position.z;
+
+					TransformComponent.rotation.x[object.eid] =
+						object.rotation.x;
+					TransformComponent.rotation.y[object.eid] =
+						object.rotation.y;
+					TransformComponent.rotation.z[object.eid] =
+						object.rotation.z;
+					TransformComponent.rotation.w[object.eid] =
+						object.rotation.w;
+					objectEntity.rotation._onChangeCallback();
+
+					TransformComponent.scale.x[object.eid] = object.scale.x;
+					TransformComponent.scale.y[object.eid] = object.scale.y;
+					TransformComponent.scale.z[object.eid] = object.scale.z;
+
+					const networkObject: NetworkObject = {
+						eid: object.eid,
+						id: object.id,
+						name: object.name,
+					};
+
+					objectsById.set(object.id, networkObject);
+					objectsByEid.set(object.eid, networkObject);
+
+					world.objects.set(object.eid, objectEntity);
+					world.scene.add(objectEntity);
+					break;
+				}
+				case NetworkEvent.ObjectTransform: {
+					const object: {
+						id: string;
+						isPlayer: boolean;
+						position: {
+							x: number;
+							y: number;
+							z: number;
+						};
+						rotation: {
+							x: number;
+							y: number;
+							z: number;
+							w: number;
+						};
+						scale: {
+							x: number;
+							y: number;
+							z: number;
+						};
+					} = event.data as any;
+					let eid = -1;
+					if (object.isPlayer) {
+						eid = world.network.getPlayer(object.id)?.eid ?? -1;
+					} else {
+						eid = world.network.getObject(object.id)?.eid ?? -1;
+					}
+					if (eid === -1) break;
+					const objectEntity = world.scene.getObjectByProperty(
+						"eid",
+						eid,
+					);
+					if (objectEntity === undefined) break;
+					TransformComponent.position.x[eid] = object.position.x;
+					TransformComponent.position.y[eid] = object.position.y;
+					TransformComponent.position.z[eid] = object.position.z;
+
+					TransformComponent.rotation.x[eid] = object.rotation.x;
+					TransformComponent.rotation.y[eid] = object.rotation.y;
+					TransformComponent.rotation.z[eid] = object.rotation.z;
+					TransformComponent.rotation.w[eid] = object.rotation.w;
+					objectEntity.rotation._onChangeCallback();
+
+					TransformComponent.scale.x[eid] = object.scale.x;
+					TransformComponent.scale.y[eid] = object.scale.y;
+					TransformComponent.scale.z[eid] = object.scale.z;
 					break;
 				}
 				default: {

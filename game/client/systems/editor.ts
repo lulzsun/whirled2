@@ -16,9 +16,11 @@ import { TransformControls } from "three/examples/jsm/controls/TransformControls
 import {
 	ObjectComponent,
 	ObjectOutlineComponent,
+	PlayerComponent,
 	TransformComponent,
 } from "../components";
 import { STATIC, UNIQUE } from "./imgui";
+import { NetworkEvent } from "./network";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 
@@ -73,7 +75,13 @@ export function createEditorSystem(world: World) {
 			world.editor.selectedObject = null;
 			return;
 		}
-		if (world.editor.selectedTool !== null) {
+		if (
+			world.editor.selectedTool !== null &&
+			!(
+				world.network.getPlayer(eid) === null &&
+				world.network.getObject(eid) === null
+			)
+		) {
 			transformControls.attach(object);
 		}
 	};
@@ -156,6 +164,40 @@ export function createEditorSystem(world: World) {
 	const transformControls = new TransformControls(world.camera, canvas);
 	transformControls.addEventListener("dragging-changed", (event) => {
 		transformControlsCaptureMouse = !event.value;
+	});
+	transformControls.addEventListener("change", () => {
+		if (!transformControlsCaptureMouse) {
+			const eid = world.editor.selectedObject ?? -1;
+			if (eid === -1) return;
+			let id: string | null = null;
+			let isPlayer = hasComponent(world, PlayerComponent, eid);
+			if (isPlayer) {
+				id = world.network.getPlayer(eid)?.username ?? null;
+			} else {
+				id = world.network.getObject(eid)?.id ?? null;
+			}
+			if (id === null) return;
+			world.network.emit(NetworkEvent.ObjectTransform, {
+				id,
+				isPlayer,
+				position: {
+					x: TransformComponent.position.x[eid],
+					y: TransformComponent.position.y[eid],
+					z: TransformComponent.position.z[eid],
+				},
+				rotation: {
+					x: TransformComponent.rotation.x[eid],
+					y: TransformComponent.rotation.y[eid],
+					z: TransformComponent.rotation.z[eid],
+					w: 0,
+				},
+				scale: {
+					x: TransformComponent.scale.x[eid],
+					y: TransformComponent.scale.y[eid],
+					z: TransformComponent.scale.z[eid],
+				},
+			});
+		}
 	});
 	world.scene.add(transformControls);
 

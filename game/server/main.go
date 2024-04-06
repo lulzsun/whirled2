@@ -27,7 +27,7 @@ var clients = make(map[string]*Client)
 var objects = make(map[string]map[string]*Object)
 
 var numOfGuests = 0;
-var usernameToPeer = make(map[string]string)
+var usernameToPeerId = make(map[string]string)
 var pb *pocketbase.PocketBase
 
 func Start(port int, app *pocketbase.PocketBase) {
@@ -51,6 +51,7 @@ func Start(port int, app *pocketbase.PocketBase) {
 		peer.On(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
 
 		peer.On(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
+		peer.On(ObjectTransform, func(msg string) { onObjectTransform(peer, msg) })
 	})
 
 	server.OnDisconnect(func(peer *gecgosio.Peer) {
@@ -74,7 +75,7 @@ func Start(port int, app *pocketbase.PocketBase) {
 				}
 				delete(objects, roomId)
 			}
-			delete(usernameToPeer, client.Username)
+			delete(usernameToPeerId, client.Username)
 			delete(clients, peer.Id)
 		}
 	})

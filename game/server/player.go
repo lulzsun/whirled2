@@ -32,11 +32,15 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
 
 		// check if peer already auth'd, if so we perform a "reconnect"
-		if peerId, ok := usernameToPeer[client.Username]; ok {
+		if peerId, ok := usernameToPeerId[client.Username]; ok {
 			log.Printf("Disconnecting client '%s' authorized as '%s'", peerId, client.Username)
 			clients[peerId].Peer.Disconnect()
 		}
-		usernameToPeer[client.Username] = peer.Id
+		usernameToPeerId[client.Username] = peer.Id
+
+		client.Scale.X = 1
+		client.Scale.Y = 1
+		client.Scale.Z = 1
 
 		player := map[string]interface{}{
 			"username": client.Username,
@@ -52,6 +56,11 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 				"y": client.Rotation.Y,
 				"z": client.Rotation.Z,
 				"w": client.Rotation.W,
+			},
+			"scale": map[string]interface{}{
+				"x": client.Scale.X,
+				"y": client.Scale.Y,
+				"z": client.Scale.Z,
 			},
 		}
 
@@ -144,6 +153,11 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 					"y": clients[p.Id].Rotation.Y,
 					"z": clients[p.Id].Rotation.Z,
 					"w": clients[p.Id].Rotation.W,
+				},
+				"scale": map[string]interface{}{
+					"x": clients[p.Id].Scale.X,
+					"y": clients[p.Id].Scale.Y,
+					"z": clients[p.Id].Scale.Z,
 				},
 			})
 			if err != nil {
