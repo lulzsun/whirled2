@@ -174,7 +174,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		owner_id TEXT,
 		name TEXT,
 		description TEXT,
-		furniture JSONB,
+		objects JSONB,
 		created DATE NOT NULL,
 		updated DATE NOT NULL,
 		FOREIGN KEY (owner_id) REFERENCES users (id)
@@ -224,7 +224,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					Required: false,
 				},
 				&schema.SchemaField{
-					Name:     "furniture",
+					Name:     "objects",
 					Type:     schema.FieldTypeJson,
 					Required: false,
 				},

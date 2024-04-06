@@ -94,10 +94,13 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			} else {
 				roomId = room.Id
 			}
+		// client provided a room id, check if room exists on server
+		} else if _, ok := server.Rooms[roomId]; ok {
+		// client provided a room id, check if room exists by db
 		} else {
-			// client provided a room id, check if room exists
 			room := struct {
-				Id string `db:"id" json:"id"`
+				Id string		`db:"id" json:"id"`
+				Objects string 	`db:"objects" json:"objects"`
 			}{}
 			err := pb.DB().
 				NewQuery(`
@@ -122,6 +125,9 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 				}
 			}
 		}
+
+		// try to populate room with saved objects
+		loadRoomFromDb(roomId)
 
 		// join our client to a room
 		peer.Join(roomId)

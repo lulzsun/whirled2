@@ -16,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/pocketbase/pocketbase/tools/types"
 	"github.com/spf13/cast"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
@@ -64,16 +65,17 @@ func Start(port int, app *pocketbase.PocketBase) {
 				if len(server.Rooms[roomId]) > 1 {
 					continue
 				}
+				// save objects in room to store in db
+				saveRoomToDb(roomId)
 				// check if objects exist in room
-				if _, ok := objects[roomId]; !ok {
-					continue
+				if _, ok := objects[roomId]; ok {
+					// clear out objects in rooms
+					for objectId := range(objects[roomId]) {
+						delete(objects[roomId], objectId)
+						log.Printf("Object '%s' has been deleted from room '%s'", objectId, roomId)
+					}
+					delete(objects, roomId)
 				}
-				// clear out objects in rooms
-				for objectId := range(objects[roomId]) {
-					delete(objects[roomId], objectId)
-					log.Printf("Object '%s' has been deleted from room '%s'", objectId, roomId)
-				}
-				delete(objects, roomId)
 			}
 			delete(usernameToPeerId, client.Username)
 			delete(clients, peer.Id)
@@ -184,6 +186,62 @@ func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 	})
 
 	return activeRooms[offset:int(math.Min(float64(offset+limit), float64(len(activeRooms))))]
+}
+
+// Saves room objects to db
+func saveRoomToDb(roomId string) {
+	record, err := pb.Dao().FindRecordById("rooms", roomId)
+	if err != nil {
+		log.Printf("%s", err)
+		return
+	}
+
+	objsToSave := []Object{}
+
+	for _, object := range objects[roomId] {
+		objsToSave = append(objsToSave, *object)
+	}
+
+	objsJson, err := json.Marshal(objsToSave)
+    if err != nil {
+        log.Println("Error marshaling JSON:", err)
+        return
+    }
+
+	record.Set("objects", string(objsJson))
+
+	if err := pb.Dao().SaveRecord(record); err != nil {
+		log.Printf("%s", err)
+		return
+	}
+}
+
+// Loads room objects from db
+func loadRoomFromDb(roomId string) {
+	// check if this room is empty of objects
+	if _, ok := objects[roomId]; ok {
+		return
+	}
+	objects[roomId] = make(map[string]*Object)
+
+	record, err := pb.Dao().FindRecordById("rooms", roomId)
+	if err != nil {
+		log.Printf("%s", err)
+		return
+	}
+
+	objsJsonRaw := record.Get("objects").(types.JsonRaw)
+	objsToLoad := []Object{}
+
+	err = json.Unmarshal(objsJsonRaw, &objsToLoad)
+	if err != nil {
+		log.Printf("%s", err)
+		return
+	}
+
+	for _, object := range objsToLoad {
+		objects[roomId][object.Id] = &object
+	}
 }
 
 // TODO: not secure, tie logic with secret key or something
