@@ -73,7 +73,7 @@ cte AS (
     ON c.id = li.parent_id 
     WHERE c.depth <= 4 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 4 levels
 )
-SELECT *
+SELECT *, {:auth_id} AS auth_id
 FROM cte
 WHERE id = {:parent_id}
 OR (CAST(SUBSTR(path_index, 1, INSTR(path_index || '.', '.') - 1) AS INTEGER) >= 1 + {:comment_offset} -- Start range (offset)

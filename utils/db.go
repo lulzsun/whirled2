@@ -116,7 +116,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 			Type:       models.CollectionTypeBase,
 			ListRule:   nil,
 			ViewRule:   nil,
-			CreateRule: types.Pointer("user_id = @request.auth.id"),
+			CreateRule: types.Pointer(""),
 			UpdateRule: nil,
 			DeleteRule: nil,
 			Schema: schema.NewSchema(

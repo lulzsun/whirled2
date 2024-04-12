@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/models"
 )
 
 var commentTmplFiles []string
@@ -24,11 +25,13 @@ var profileTmpl *template.Template
 var queryGetProfileComments string
 
 type Profile struct {
+	AuthId    string `db:"auth_id" json:"auth_id"`
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"id" json:"id"`
 	Nickname  string `db:"nickname" json:"nickname"`
 }
 type Comment struct {
+	AuthId    string `db:"auth_id" json:"auth_id"`
 	CommentId string `db:"id" json:"id"`
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"profile_id" json:"profile_id"`
@@ -100,6 +103,8 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err == nil {
 			commentsPage = commentsPage - 1
 		}
+		authUserId := apis.RequestInfo(c).AuthRecord.Id
+		log.Printf("%s", authUserId)
 
 		profile := Profile{}
 		comments := []Comment{}
@@ -111,12 +116,13 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		err = app.DB().
 			NewQuery(`
-				SELECT profiles.id, user_id, users.nickname
+				SELECT profiles.id, {:auth_id} as auth_id, users.nickname
 				FROM profiles 
 				INNER JOIN users ON profiles.user_id = users.id
 				WHERE users.username = {:username}
 			`).
 			Bind(dbx.Params{
+				"auth_id": authUserId,
 				"username": username,
 			}).One(&profile)
 
@@ -128,6 +134,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		err = app.DB().
 			NewQuery(queryGetProfileComments).
 			Bind(dbx.Params{
+				"auth_id": 		  authUserId,
 				"profile_id":     profile.ProfileId,
 				"parent_id":      parentCommentId,
 				"comment_offset": commentOffset + (commentsPage * 4),
@@ -139,8 +146,11 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		comments = list2tree(comments, parentCommentId, htmxEnabled)
-		// each page has a max of 4 parent comments, divide total by 4 and round up
-		commentPageLength := make([]int, int(math.Ceil(float64(comments[0].Total)/4)))
+		commentPageLength := make([]int, 0)
+		if len(comments) > 0 {
+			// each page has a max of 4 parent comments, divide total by 4 and round up
+			commentPageLength = make([]int, int(math.Ceil(float64(comments[0].Total)/4)))
+		}
 		for i := 0; i < len(commentPageLength); i++ {
 			commentPageLength[i] = i + 1
 		}
@@ -153,6 +163,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Followers int
 
 			CommentId string
+			AuthId    string
 			UserId    string
 			ProfileId string
 			ParentId  string
@@ -170,6 +181,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Followers: 420,
 
 			CommentId: "",
+			AuthId:    profile.AuthId,
 			UserId:    profile.UserId,
 			ProfileId: profile.ProfileId,
 			ParentId:  "",
@@ -199,6 +211,20 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/comments/records
+	// Before creating comment for a user's profile
+	//
+	// Set the user_id to be the currently auth'd user
+	// This should prevent impersonations as well 
+	app.OnRecordBeforeCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
+		authRecord, _ := e.HttpContext.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if authRecord == nil {
+			return apis.NewForbiddenError("Only authorized users can create a comment.", nil)
+		}
+		e.Record.Set("user_id", authRecord.Id)
+		return nil
+	})
+
+	// POST /api/collections/comments/records
 	// Successfully created comment for a user's profile
 	//
 	// If HTMX enabled, we will return html for the newly created comment
@@ -207,11 +233,12 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	app.OnRecordAfterCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
 		return utils.ProcessHXRequest(e, func() error {
 			user, err := app.Dao().FindRecordById("users", e.Record.GetString("user_id"))
-			username, nickname := "undefined", "undefined"
-			if err == nil {
-				username = user.GetString("username")
-				nickname = user.GetString("nickname")
+			if err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
 			}
+			username, nickname := user.GetString("username"), user.GetString("nickname")
+
 			data := struct {
 				Comments []Comment
 			}{
