@@ -12,7 +12,17 @@
 			<script id="app_js">
 				var script = document.createElement("script");
 				script.type = "module";
-				script.src = `http://${window.location.hostname}:6969/main.ts`;
+				script.onerror = function () {
+					var script = document.createElement("script");
+					script.type = "module";
+					script.src = `http://${window.location.hostname}:6969/main.ts`;
+					document
+						.getElementById("app_js")
+						.insertAdjacentElement("afterend", script);
+					document.getElementById("app_js").remove();
+					script.id = "app_js";
+				};
+				script.src = "/static/game.js";
 				document
 					.getElementById("app_js")
 					.insertAdjacentElement("afterend", script);

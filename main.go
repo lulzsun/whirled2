@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"strings"
 
 	"whirled2/api"
 	"whirled2/game/server"
@@ -17,12 +18,26 @@ import (
 )
 
 func main() {
-	localIPs, err := utils.GetLocalIP()
-	if err == nil {
-		os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://" + localIPs[0] + ":6969")
-	} else {
-		os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
-	}
+	args := os.Args[1:]
+
+    // Check if "--http" is present in the arguments
+    debug := true
+    for _, arg := range args {
+        if strings.HasPrefix(arg, "--http") {
+            debug = false
+            break
+        }
+    }
+
+    if debug {
+		log.Println("Debug mode enabled")
+		localIPs, err := utils.GetLocalIP()
+		if err == nil {
+			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://" + localIPs[0] + ":6969")
+		} else {
+			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
+		}
+    }
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,
@@ -78,7 +93,6 @@ func main() {
 
 		// start gecgos.io game server
 		server.Start(42069, app)
-		log.Println("Server started at http://127.0.0.1:42069")
 		return nil
 	})
 

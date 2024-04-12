@@ -1,0 +1,6 @@
+services:
+    whirled2:
+        build: .
+        ports:
+            - 42069:42069/tcp
+            - 42069:42069/udp

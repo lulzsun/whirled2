@@ -8,7 +8,9 @@
 		"dev-client": "vite serve ./game/client --host",
 		"dev-server": "nodemon -e go,json,gohtml,sql --exec go run . serve --signal SIGKILL",
 		"dev-watch": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css --watch",
-		"build": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css",
+		"build-css": "npx tailwindcss -i ./tailwind.css -o ./game/client/dist/styles.css",
+		"build-client": "vite build ./game/client && npm run build-css",
+		"build-server": "go build .",
 		"pretty": "prettier --write ."
 	},
 	"devDependencies": {
