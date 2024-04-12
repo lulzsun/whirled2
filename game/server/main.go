@@ -36,7 +36,9 @@ func Start(port int, app *pocketbase.PocketBase) {
 
 	server = gecgosio.Gecgos(&gecgosio.Options{
 		DisableHttpServer: true,
+		// TODO: hardcoded for a quick demo, but later make these .env configurable
 		BindAddress: "fly-global-services",
+		NAT1To1IPs: []string{"188.93.148.218"},
 	})
 
 	server.OnConnection(func(peer *gecgosio.Peer) {

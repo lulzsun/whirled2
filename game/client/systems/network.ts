@@ -79,7 +79,11 @@ export function createNetworkSystem(world: World) {
 		data: string | number | Object;
 	}[] = [];
 
-	const network = geckos({ port: 42069 });
+	const network = geckos({
+		url: API_URL,
+		//@ts-ignore
+		port: null,
+	});
 
 	world.network = {
 		getPlayer: (arg: number | string) => {
