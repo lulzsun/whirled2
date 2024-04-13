@@ -8,6 +8,10 @@ primary_region = 'sjc'
 
 [build]
 
+[mounts]
+  destination = "/app/pb_data"
+  source = "pb_data"
+
 [http_service]
   internal_port = 42069
   force_https = true
