@@ -9,6 +9,7 @@ COPY tailwind.config.ts tailwind.css ./
 RUN npm ci
 
 COPY ./game/client/ ./game/client/
+COPY ./web/ ./web/
 
 RUN npm run build-client
 
