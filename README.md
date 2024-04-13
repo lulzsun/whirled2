@@ -2,7 +2,7 @@
 
 welcome to the brave new whirled.
 
-visit the [live demo here](whirled.jimmyqua.ch).
+visit the [live demo here](https://whirled.jimmyqua.ch/).
 
 what is this? \<insert future blog post link here, or something\>
 
