@@ -103,8 +103,11 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err == nil {
 			commentsPage = commentsPage - 1
 		}
-		authUserId := apis.RequestInfo(c).AuthRecord.Id
-		log.Printf("%s", authUserId)
+		info := apis.RequestInfo(c)
+		authUserId := ""
+		if info.AuthRecord != nil {
+			authUserId = info.AuthRecord.Id
+		}
 
 		profile := Profile{}
 		comments := []Comment{}
