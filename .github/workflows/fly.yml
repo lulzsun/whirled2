@@ -11,10 +11,10 @@ jobs:
         steps:
             - uses: actions/checkout@v4
               with:
-                  submodules: "true"
+                  submodules: true
 
             - name: "Create production env file"
-            - run: |
+              run: |
                   touch .env
                   echo "VERSION=\"$(git rev-parse --short=7 HEAD)\"" >> .env
                   cat .env
