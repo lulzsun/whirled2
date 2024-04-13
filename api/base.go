@@ -33,6 +33,10 @@ func AppendToBaseData(c echo.Context, data any) any {
 		GameVersion: os.Getenv("VERSION"),
 	}
 
+	if data == nil {
+		return baseData
+	}
+
 	// Convert structs to maps
 	mapA := utils.StructToMap(data)
 	mapB := utils.StructToMap(baseData)
