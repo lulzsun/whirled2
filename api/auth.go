@@ -45,13 +45,13 @@ func parseSignupFiles() {
 
 func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/login", func(c echo.Context) error {
-		if err := loginTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), nil); err != nil {
+		if err := loginTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, nil)); err != nil {
 			return err
 		}
 		return nil
 	})
 	e.Router.GET("/signup", func(c echo.Context) error {
-		if err := signupTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), nil); err != nil {
+		if err := signupTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, nil)); err != nil {
 			return err
 		}
 		return nil

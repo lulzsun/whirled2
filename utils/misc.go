@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net"
+	"reflect"
 )
 
 func GetLocalIP() ([]string, error) {
@@ -32,4 +33,27 @@ func GetLocalIP() ([]string, error) {
 	}
 
 	return localIPs, nil
+}
+
+func StructToMap(s interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	val := reflect.ValueOf(s)
+	typ := reflect.TypeOf(s)
+
+	for i := 0; i < val.NumField(); i++ {
+		result[typ.Field(i).Name] = val.Field(i).Interface()
+	}
+
+	return result
+}
+
+// Merge two maps together
+func MergeMaps(maps ...map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = v
+		}
+	}
+	return result
 }

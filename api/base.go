@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"text/template"
 	"whirled2/utils"
@@ -23,6 +24,22 @@ func init() {
 	partialIndexTmpl, _ = template.ParseFiles("web/templates/pages/world.gohtml")
 	fullIndexTmpl = template.Must(partialIndexTmpl.ParseFiles(AppendToBaseTmplFiles()...))
 	errorTmpl = template.Must(template.ParseFiles(AppendToBaseTmplFiles("web/templates/pages/error.gohtml")...))
+}
+
+func AppendToBaseData(c echo.Context, data any) any {
+	baseData := struct {
+		GameVersion string
+	}{
+		GameVersion: os.Getenv("VERSION"),
+	}
+
+	// Convert structs to maps
+	mapA := utils.StructToMap(data)
+	mapB := utils.StructToMap(baseData)
+
+	// Merge maps
+	mergedMap := utils.MergeMaps(mapA, mapB)
+	return mergedMap
 }
 
 func AppendToBaseTmplFiles(files ...string) []string {
@@ -51,21 +68,21 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			// if the user is auth'd, we will return an "empty page",
 			// the client should handle this by hiding the "empty page" side panel
 			if htmxEnabled {
-				if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
+				if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", AppendToBaseData(c, nil)); err != nil {
 					return err
 				}
 				return nil
 			}
-			if err := fullIndexTmpl.ExecuteTemplate(c.Response().Writer, "base", struct{ NoJs bool }{true}); err != nil {
+
+			if err := fullIndexTmpl.ExecuteTemplate(c.Response().Writer, "base", AppendToBaseData(c, struct{ NoJs bool }{true})); err != nil {
 				return err
 			}
 			return nil
 		}
-		
 
 		// if the user is not auth'd, we will give them the initial load a redirect
 		if htmxEnabled {
-			if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
+			if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", AppendToBaseData(c, nil)); err != nil {
 				return err
 			}
 			return nil

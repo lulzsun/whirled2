@@ -195,13 +195,13 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		if htmxEnabled && parentCommentId != "" {
 			// User is viewing more comments under /profile/,
 			// so we will just send partial html (comments)
-			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", data); err != nil {
+			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", AppendToBaseData(c, data)); err != nil {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
 			}
 			return nil
 		}
-		if err := profileTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
+		if err := profileTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}

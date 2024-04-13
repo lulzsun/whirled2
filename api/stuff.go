@@ -107,7 +107,7 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		}
 
-		if err := stuffTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
+		if err := stuffTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}

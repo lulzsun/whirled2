@@ -67,7 +67,7 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			})
 		}
 
-		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), data); err != nil {
+		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
