@@ -31,15 +31,23 @@ var numOfGuests = 0;
 var usernameToPeerId = make(map[string]string)
 var pb *pocketbase.PocketBase
 
-func Start(port int, app *pocketbase.PocketBase) {
+func Start(port int, app *pocketbase.PocketBase, debug bool) {
 	pb = app
 
-	server = gecgosio.Gecgos(&gecgosio.Options{
-		DisableHttpServer: true,
-		// TODO: hardcoded for a quick demo, but later make these .env configurable
-		BindAddress: "fly-global-services",
-		NAT1To1IPs: []string{"188.93.148.218"},
-	})
+	// TODO: hardcoded cause lazy, but later make these .env configurable
+	if debug {
+		server = gecgosio.Gecgos(&gecgosio.Options{
+			DisableHttpServer: true,
+			BindAddress: "0.0.0.0",
+			NAT1To1IPs: []string{},
+		})
+	} else {
+		server = gecgosio.Gecgos(&gecgosio.Options{
+			DisableHttpServer: true,
+			BindAddress: "fly-global-services",
+			NAT1To1IPs: []string{"188.93.148.218"},
+		})
+	}
 
 	server.OnConnection(func(peer *gecgosio.Peer) {
 		log.Printf("Client '%s' has connected", peer.Id)
@@ -94,7 +102,13 @@ func Start(port int, app *pocketbase.PocketBase) {
 
 func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.POST("/.wrtc/v2/connections", func(c echo.Context) error {
-		server.CreateConnection(c.Response().Writer, c.Request())
+		r := c.Request()
+		ips := r.Header.Get("X-Forwarded-For")
+		if ips == "" {
+			ips = r.RemoteAddr
+		}
+		log.Println("Client attempting to connect from:", ips)
+		server.CreateConnection(c.Response().Writer, r)
 		return nil
 	})
 	e.Router.POST("/.wrtc/v2/connections/:id/remote-description", func(c echo.Context) error {

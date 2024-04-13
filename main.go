@@ -96,7 +96,7 @@ func main() {
 		})
 
 		// start gecgos.io game server
-		server.Start(42069, app)
+		server.Start(42069, app, debug)
 		return nil
 	})
 
