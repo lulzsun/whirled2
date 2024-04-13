@@ -123,7 +123,12 @@ export function createRenderSystem(world: World) {
 				nameplate.position.x =
 					nameplate.position.x * widthHalf + widthHalf + rect.left;
 				nameplate.position.y =
-					-nameplate.position.y * heightHalf + heightHalf + rect.top;
+					-nameplate.position.y * heightHalf +
+					heightHalf +
+					rect.top +
+					(rect.height -
+						((window.innerHeight * window.devicePixelRatio) | 0)) /
+						2;
 
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
