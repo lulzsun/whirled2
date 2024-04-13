@@ -40,14 +40,8 @@ const exitOutlineObjectQuery = exitQuery(
 );
 
 export function createRenderSystem(world: World) {
-	world.renderer.setPixelRatio(window.devicePixelRatio);
+	// world.renderer.setPixelRatio(window.devicePixelRatio);
 	world.renderer.setSize(window.innerWidth, window.innerHeight);
-	setTimeout(function () {
-		world.renderer.setSize(
-			window.innerWidth,
-			world.renderer.domElement.parentElement!.clientHeight,
-		);
-	}, 1);
 
 	const composer = new EffectComposer(world.renderer);
 
@@ -66,30 +60,45 @@ export function createRenderSystem(world: World) {
 
 	world.composer = composer;
 
-	window.addEventListener("resize", () => {
-		const aspect = window.innerWidth / window.innerHeight;
-		if (world.camera instanceof THREE.PerspectiveCamera) {
-			world.camera.aspect = aspect;
-			world.camera.updateProjectionMatrix();
-		} else if (world.camera instanceof THREE.OrthographicCamera) {
-			//@ts-ignore
-			const fov = world.camera.fov ?? 1000;
-			world.camera.left = (-fov * aspect) / 2;
-			world.camera.right = (fov * aspect) / 2;
-			world.camera.top = fov / 2;
-			world.camera.bottom = -fov / 2;
-			world.camera.updateProjectionMatrix();
-		}
+	const setGameSize = () => {
+		{
+			const aspect =
+				((window.innerWidth * window.devicePixelRatio) | 0) /
+				((world.renderer.domElement.parentElement!.clientHeight *
+					window.devicePixelRatio) |
+					0);
+			if (world.camera instanceof THREE.PerspectiveCamera) {
+				world.camera.aspect = aspect;
+				world.camera.updateProjectionMatrix();
+			} else if (world.camera instanceof THREE.OrthographicCamera) {
+				//@ts-ignore
+				const fov = world.camera.fov ?? 1000;
+				world.camera.left = (-fov * aspect) / 2;
+				world.camera.right = (fov * aspect) / 2;
+				world.camera.top = fov / 2;
+				world.camera.bottom = -fov / 2;
+				world.camera.updateProjectionMatrix();
+			}
 
-		world.renderer.setSize(
-			window.innerWidth,
-			world.renderer.domElement.parentElement!.clientHeight,
-		);
-		world.composer?.setSize(
-			window.innerWidth,
-			world.renderer.domElement.parentElement!.clientHeight,
-		);
-	});
+			world.renderer.setSize(
+				(window.innerWidth * window.devicePixelRatio) | 0,
+				(world.renderer.domElement.parentElement!.clientHeight *
+					window.devicePixelRatio) |
+					0,
+			);
+			world.composer?.setSize(
+				(window.innerWidth * window.devicePixelRatio) | 0,
+				(world.renderer.domElement.parentElement!.clientHeight *
+					window.devicePixelRatio) |
+					0,
+			);
+		}
+	};
+
+	window.addEventListener("resize", setGameSize);
+	setTimeout(function () {
+		setGameSize();
+	}, 1);
 
 	return defineSystem((world: World) => {
 		// handle player nameplates
