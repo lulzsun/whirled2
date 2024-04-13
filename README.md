@@ -1,25 +1,21 @@
-# New Whirled
+# whirled2
 
-brave new whirled
+welcome to the brave new whirled.
 
-# development
+visit the [live demo here](whirled.jimmyqua.ch).
+
+what is this? \<insert future blog post link here, or something\>
+
+## development
+
+requires node 18.14.2+ and go 1.21+
+
+clone repo with submodules and run the following to get you started.
 
 ```bash
-npm ci & npm run dev
+go mod download && npm ci && npm run dev
 ```
 
-# helpful refs
+## license
 
-Old branch
-
--   https://github.com/lulzsun/whirled2/blob/715570214ccb2ba995913b28aeb9a6272063dadd/
-
-PocketBase Auth using cookie/sessions
-
--   https://github.com/pocketbase/pocketbase/discussions/3051
--   https://github.com/pocketbase/pocketbase/discussions/1670
--   https://github.com/pocketbase/pocketbase/issues/718
-
-Helpful Pocketbase docs
-
--   https://pocketbase.io/docs/api-records
+all rights reserved, until i decide on a license in the near future
