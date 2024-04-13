@@ -56,6 +56,8 @@ COPY --from=build-server ./build/whirled2 ./
 COPY ./web/ ./web/
 COPY ./sql/ ./sql/
 
+COPY ./.env ./
+
 RUN find .
 
 # start whirled2

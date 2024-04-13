@@ -12,6 +12,13 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   submodules: "true"
+
+            - name: "Create production env file"
+            - run: |
+                  touch .env
+                  echo "VERSION=\"$(git rev-parse --short=7 HEAD)\"" >> .env
+                  cat .env
+
             - uses: superfly/flyctl-actions/setup-flyctl@master
             - run: flyctl deploy --remote-only
               env:
