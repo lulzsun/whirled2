@@ -40,8 +40,9 @@ const exitOutlineObjectQuery = exitQuery(
 );
 
 export function createRenderSystem(world: World) {
+	// https://stackoverflow.com/a/60506772
 	// world.renderer.setPixelRatio(window.devicePixelRatio);
-	world.renderer.setSize(window.innerWidth, window.innerHeight);
+	// world.renderer.setSize(window.innerWidth, window.innerHeight);
 
 	const composer = new EffectComposer(world.renderer);
 
