@@ -11,6 +11,7 @@ import (
 	"whirled2/game/server"
 	"whirled2/utils"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -22,22 +23,25 @@ func main() {
 
     // Check if "--http" is present in the arguments
     debug := true
-    for _, arg := range args {
-        if strings.HasPrefix(arg, "--http") {
-            debug = false
-            break
-        }
-    }
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "--http") {
+			debug = false
+			break
+		}
+	}
 
-    if debug {
+	if debug {
 		log.Println("Debug mode enabled")
+		godotenv.Load(".env.local")
 		localIPs, err := utils.GetLocalIP()
 		if err == nil {
 			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://" + localIPs[0] + ":6969")
 		} else {
 			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
 		}
-    }
+	} else {
+		godotenv.Load()
+	}
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,

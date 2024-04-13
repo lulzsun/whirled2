@@ -47,3 +47,6 @@ go.work
 go.work.sum
 web/static/styles.css
 web/templates/pages/test.gohtml
+
+# Do not ignore our .env.local for local dev (should not contain any real secrets)
+!.env.local
