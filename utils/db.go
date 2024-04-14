@@ -364,7 +364,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					Required: true,
 					Options: &schema.FileOptions{
 						MaxSelect: 1,
-						MaxSize: 100000000, //100 MB in bytes
+						MaxSize: 50000000, //50 MB in bytes
 						Protected: false,
 					},
 				},
