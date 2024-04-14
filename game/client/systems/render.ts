@@ -44,6 +44,8 @@ export function createRenderSystem(world: World) {
 	// world.renderer.setPixelRatio(window.devicePixelRatio);
 	// world.renderer.setSize(window.innerWidth, window.innerHeight);
 
+	const devicePixelRatio = window.devicePixelRatio || 1;
+
 	const composer = new EffectComposer(world.renderer);
 
 	const renderPass = new RenderPass(world.scene, world.camera);
@@ -64,10 +66,10 @@ export function createRenderSystem(world: World) {
 	const setGameSize = () => {
 		{
 			const canvas = world.renderer.domElement;
-			const rect = canvas.getBoundingClientRect();
+
 			const aspect =
-				((window.innerWidth * window.devicePixelRatio) | 0) /
-				((rect.height * window.devicePixelRatio) | 0);
+				(window.innerWidth * window.devicePixelRatio) /
+				(canvas.parentElement!.clientHeight * window.devicePixelRatio);
 			if (world.camera instanceof THREE.PerspectiveCamera) {
 				world.camera.aspect = aspect;
 				world.camera.updateProjectionMatrix();
@@ -82,12 +84,12 @@ export function createRenderSystem(world: World) {
 			}
 
 			world.renderer.setSize(
-				(window.innerWidth * window.devicePixelRatio) | 0,
-				(rect.height * window.devicePixelRatio) | 0,
+				window.innerWidth * window.devicePixelRatio,
+				canvas.parentElement!.clientHeight * window.devicePixelRatio,
 			);
 			world.composer?.setSize(
-				(window.innerWidth * window.devicePixelRatio) | 0,
-				(rect.height * window.devicePixelRatio) | 0,
+				window.innerWidth * window.devicePixelRatio,
+				canvas.parentElement!.clientHeight * window.devicePixelRatio,
 			);
 		}
 	};
@@ -122,7 +124,8 @@ export function createRenderSystem(world: World) {
 					-nameplate.position.y * heightHalf +
 					heightHalf +
 					rect.top -
-					(window.innerHeight - rect.height);
+					(window.innerHeight * window.devicePixelRatio -
+						rect.height);
 
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
