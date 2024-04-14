@@ -248,7 +248,7 @@ func loadRoomFromDb(roomId string) {
 	}
 
 	objsJsonRaw := record.Get("objects").(types.JsonRaw)
-	objsToLoad := []Object{}
+	objsToLoad := []*Object{}
 
 	err = json.Unmarshal(objsJsonRaw, &objsToLoad)
 	if err != nil {
@@ -257,7 +257,7 @@ func loadRoomFromDb(roomId string) {
 	}
 
 	for _, object := range objsToLoad {
-		objects[roomId][object.Id] = &object
+		objects[roomId][object.Id] = object
 	}
 }
 
