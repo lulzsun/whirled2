@@ -8,6 +8,7 @@ import { World } from "./world";
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { API_URL } from "../constants";
 
 export type Object = THREE.Group & { eid: number };
 
@@ -129,7 +130,7 @@ export const createObject = (
 
 	const loader = new GLTFLoader();
 	loader.load(
-		`${fileUrl}`,
+		`${API_URL}${fileUrl}`,
 		function (gltf) {
 			let model: THREE.Group | THREE.Object3D = gltf.scene;
 			model.scale.set(
@@ -155,6 +156,7 @@ export const createObject = (
 		},
 		undefined,
 		function (e) {
+			console.warn("Error loading gltf:", `${API_URL}${fileUrl}`);
 			console.error(e);
 		},
 	);
