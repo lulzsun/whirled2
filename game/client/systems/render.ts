@@ -63,11 +63,11 @@ export function createRenderSystem(world: World) {
 
 	const setGameSize = () => {
 		{
+			const canvas = world.renderer.domElement;
+			const rect = canvas.getBoundingClientRect();
 			const aspect =
 				((window.innerWidth * window.devicePixelRatio) | 0) /
-				((world.renderer.domElement.parentElement!.clientHeight *
-					window.devicePixelRatio) |
-					0);
+				((rect.height * window.devicePixelRatio) | 0);
 			if (world.camera instanceof THREE.PerspectiveCamera) {
 				world.camera.aspect = aspect;
 				world.camera.updateProjectionMatrix();
@@ -83,15 +83,11 @@ export function createRenderSystem(world: World) {
 
 			world.renderer.setSize(
 				(window.innerWidth * window.devicePixelRatio) | 0,
-				(world.renderer.domElement.parentElement!.clientHeight *
-					window.devicePixelRatio) |
-					0,
+				(rect.height * window.devicePixelRatio) | 0,
 			);
 			world.composer?.setSize(
 				(window.innerWidth * window.devicePixelRatio) | 0,
-				(world.renderer.domElement.parentElement!.clientHeight *
-					window.devicePixelRatio) |
-					0,
+				(rect.height * window.devicePixelRatio) | 0,
 			);
 		}
 	};
@@ -125,10 +121,8 @@ export function createRenderSystem(world: World) {
 				nameplate.position.y =
 					-nameplate.position.y * heightHalf +
 					heightHalf +
-					rect.top +
-					(rect.height -
-						((window.innerHeight * window.devicePixelRatio) | 0)) /
-						2;
+					rect.top -
+					(window.innerHeight - rect.height);
 
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
