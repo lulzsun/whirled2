@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
@@ -298,8 +299,9 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (creator_id) REFERENCES users (id)
 	);
 	*/
-	if _, err := app.Dao().FindCollectionByNameOrId("furniture"); err != nil {
-		furnitureCollection := &models.Collection{
+	furnitureCollection, err := app.Dao().FindCollectionByNameOrId("furniture")
+	if err != nil {
+		furnitureCollection = &models.Collection{
 			Name:       "furniture",
 			Type:       models.CollectionTypeBase,
 			ListRule:   nil,
@@ -379,24 +381,55 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err := app.Dao().SaveCollection(furnitureCollection); err != nil {
 			log.Fatalln(err)
 		}
+	}
 
-		// add some default furniture
-		record := models.NewRecord(furnitureCollection)
-		form := forms.NewRecordUpsert(app, record)
+	// add some default furniture
 
+	// add chair
+	record := models.Record{}
+	err = app.Dao().RecordQuery("furniture").
+		AndWhere(dbx.HashExp{"name": "Chair"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(furnitureCollection))
 		form.LoadData(map[string]any{
 			"name": "Chair",
 			"description": "Test furniture",
 			"scale": 5,
 		})
-
-		// manually upload file(s)
 		file, err := filesystem.NewFileFromPath("./web/static/assets/furniture/SheenChair.glb")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		form.AddFiles("file", file)
+	
+		if err := form.Submit(); err != nil {
+			log.Fatalln(err)
+		}
+	}
 
+	// add sofa
+	record = models.Record{}
+	err = app.Dao().RecordQuery("furniture").
+		AndWhere(dbx.HashExp{"name": "Sofa"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(furnitureCollection))
+		form.LoadData(map[string]any{
+			"name": "Sofa",
+			"description": "Test furniture",
+			"scale": 5,
+		})
+		file, err := filesystem.NewFileFromPath("./web/static/assets/furniture/GlamVelvetSofa.glb")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+	
 		if err := form.Submit(); err != nil {
 			log.Fatalln(err)
 		}
