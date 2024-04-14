@@ -228,6 +228,9 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					Name:     "objects",
 					Type:     schema.FieldTypeJson,
 					Required: false,
+					Options: &schema.JsonOptions{
+						MaxSize: 5000000, //5 MB in bytes
+					},
 				},
 			),
 		}
