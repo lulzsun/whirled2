@@ -40,12 +40,7 @@ const exitOutlineObjectQuery = exitQuery(
 );
 
 export function createRenderSystem(world: World) {
-	// https://stackoverflow.com/a/60506772
-	// world.renderer.setPixelRatio(window.devicePixelRatio);
-	// world.renderer.setSize(window.innerWidth, window.innerHeight);
-
-	const devicePixelRatio = window.devicePixelRatio || 1;
-
+	const canvas = world.renderer.domElement;
 	const composer = new EffectComposer(world.renderer);
 
 	const renderPass = new RenderPass(world.scene, world.camera);
@@ -65,11 +60,10 @@ export function createRenderSystem(world: World) {
 
 	const setGameSize = () => {
 		{
-			const canvas = world.renderer.domElement;
+			// https://stackoverflow.com/a/60506772
+			const dpr = window.devicePixelRatio || 1;
+			const aspect = canvas.clientWidth / canvas.clientHeight;
 
-			const aspect =
-				(window.innerWidth * window.devicePixelRatio) /
-				(canvas.parentElement!.clientHeight * window.devicePixelRatio);
 			if (world.camera instanceof THREE.PerspectiveCamera) {
 				world.camera.aspect = aspect;
 				world.camera.updateProjectionMatrix();
@@ -84,12 +78,21 @@ export function createRenderSystem(world: World) {
 			}
 
 			world.renderer.setSize(
-				window.innerWidth * window.devicePixelRatio,
-				canvas.parentElement!.clientHeight * window.devicePixelRatio,
+				Math.floor(window.innerWidth * dpr),
+				Math.floor(canvas.parentElement!.clientHeight * dpr),
+				false,
 			);
 			world.composer?.setSize(
-				window.innerWidth * window.devicePixelRatio,
-				canvas.parentElement!.clientHeight * window.devicePixelRatio,
+				Math.floor(window.innerWidth * dpr),
+				Math.floor(canvas.parentElement!.clientHeight * dpr),
+			);
+
+			// https://stackoverflow.com/a/21809242
+			world.renderer.setViewport(
+				0,
+				0,
+				canvas.parentElement!.clientWidth,
+				canvas.parentElement!.clientHeight,
 			);
 		}
 	};
@@ -98,6 +101,10 @@ export function createRenderSystem(world: World) {
 	setTimeout(function () {
 		setGameSize();
 	}, 1);
+	var observer = new window.ResizeObserver(() => {
+		window.dispatchEvent(new Event("resize"));
+	});
+	observer.observe(canvas.parentElement!);
 
 	return defineSystem((world: World) => {
 		// handle player nameplates
@@ -121,11 +128,7 @@ export function createRenderSystem(world: World) {
 				nameplate.position.x =
 					nameplate.position.x * widthHalf + widthHalf + rect.left;
 				nameplate.position.y =
-					-nameplate.position.y * heightHalf +
-					heightHalf +
-					rect.top -
-					(window.innerHeight * window.devicePixelRatio -
-						rect.height);
+					-nameplate.position.y * heightHalf + heightHalf;
 
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
