@@ -43,6 +43,8 @@ export function createRenderSystem(world: World) {
 	const canvas = world.renderer.domElement;
 	const composer = new EffectComposer(world.renderer);
 
+	canvas.style.imageRendering = "optimizeSpeed";
+
 	const renderPass = new RenderPass(world.scene, world.camera);
 	composer.addPass(renderPass);
 
@@ -60,6 +62,7 @@ export function createRenderSystem(world: World) {
 
 	const setGameSize = () => {
 		{
+			// https://threejs.org/manual/#en/responsive
 			// https://stackoverflow.com/a/60506772
 			const dpr = window.devicePixelRatio || 1;
 			const aspect = canvas.clientWidth / canvas.clientHeight;
@@ -77,15 +80,11 @@ export function createRenderSystem(world: World) {
 				world.camera.updateProjectionMatrix();
 			}
 
-			world.renderer.setSize(
-				Math.floor(window.innerWidth * dpr),
-				Math.floor(canvas.parentElement!.clientHeight * dpr),
-				false,
-			);
-			world.composer?.setSize(
-				Math.floor(window.innerWidth * dpr),
-				Math.floor(canvas.parentElement!.clientHeight * dpr),
-			);
+			const width = Math.floor(window.innerWidth * dpr);
+			const height = Math.floor(canvas.parentElement!.clientHeight * dpr);
+
+			world.renderer.setSize(width, height, false);
+			world.composer?.setSize(width, height);
 
 			// https://stackoverflow.com/a/21809242
 			world.renderer.setViewport(
