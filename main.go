@@ -19,6 +19,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Llongfile)
 	args := os.Args[1:]
 
     // Check if "--http" is present in the arguments
