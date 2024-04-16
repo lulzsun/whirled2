@@ -33,7 +33,7 @@
 				<p class="mb-3 text-sm font-normal">
 					<a
 						hx-target="#page"
-						hx-push-url="false"
+						hx-push-url="true"
 						href="/profile/{{ .Username }}"
 						class="hover:underline"
 					>
@@ -67,7 +67,9 @@
 			<div data-popper-arrow></div>
 		</div>
 		<section class="w-full grid place-items-center p-2">
-			{{ template "pagination" . }}
+			{{ if .CommentPageLength }}
+				{{ template "pagination" . }}
+			{{ end }}
 		</section>
 		<section class="pb-2">
 			{{ template "commentBox" . }}
