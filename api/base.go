@@ -72,7 +72,7 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			// if the user is auth'd, we will return an "empty page",
 			// the client should handle this by hiding the "empty page" side panel
 			if htmxEnabled {
-				if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", AppendToBaseData(c, nil)); err != nil {
+				if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
 					return err
 				}
 				return nil
@@ -86,7 +86,7 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		// if the user is not auth'd, we will give them the initial load a redirect
 		if htmxEnabled {
-			if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", AppendToBaseData(c, nil)); err != nil {
+			if err := partialIndexTmpl.ExecuteTemplate(c.Response().Writer, "page", nil); err != nil {
 				return err
 			}
 			return nil
