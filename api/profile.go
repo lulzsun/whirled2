@@ -25,7 +25,6 @@ var profileTmpl *template.Template
 var queryGetProfileComments string
 
 type Profile struct {
-	AuthId    string `db:"auth_id" json:"auth_id"`
 	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"id" json:"id"`
 	Nickname  string `db:"nickname" json:"nickname"`
@@ -103,11 +102,6 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err == nil {
 			commentsPage = commentsPage - 1
 		}
-		info := apis.RequestInfo(c)
-		authUserId := ""
-		if info.AuthRecord != nil {
-			authUserId = info.AuthRecord.Id
-		}
 
 		profile := Profile{}
 		comments := []Comment{}
@@ -119,13 +113,12 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		err = app.DB().
 			NewQuery(`
-				SELECT profiles.id, {:auth_id} as auth_id, users.nickname
+				SELECT profiles.id, users.nickname
 				FROM profiles 
 				INNER JOIN users ON profiles.user_id = users.id
 				WHERE users.username = {:username}
 			`).
 			Bind(dbx.Params{
-				"auth_id": authUserId,
 				"username": username,
 			}).One(&profile)
 
@@ -137,7 +130,6 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		err = app.DB().
 			NewQuery(queryGetProfileComments).
 			Bind(dbx.Params{
-				"auth_id": 		  authUserId,
 				"profile_id":     profile.ProfileId,
 				"parent_id":      parentCommentId,
 				"comment_offset": commentOffset + (commentsPage * 4),
@@ -166,7 +158,6 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Followers int
 
 			CommentId string
-			AuthId    string
 			UserId    string
 			ProfileId string
 			ParentId  string
@@ -184,7 +175,6 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Followers: 420,
 
 			CommentId: "",
-			AuthId:    profile.AuthId,
 			UserId:    profile.UserId,
 			ProfileId: profile.ProfileId,
 			ParentId:  "",

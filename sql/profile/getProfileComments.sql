@@ -10,6 +10,7 @@ WITH list_orders AS (
         WHERE i2.parent_id = i1.parent_id
             AND (i2.created > i1.created 
                 OR (i2.created = i1.created AND i2.id > i1.id))
+            AND i2.profile_id = {:profile_id}
     ) AS list_order,
     (SELECT COUNT(*)
         FROM comments i2
@@ -73,7 +74,7 @@ cte AS (
     ON c.id = li.parent_id 
     WHERE c.depth <= 4 AND c._path LIKE '%' || li.id || '%' -- Limit depth to 4 levels
 )
-SELECT *, {:auth_id} AS auth_id
+SELECT *
 FROM cte
 WHERE id = {:parent_id}
 OR (CAST(SUBSTR(path_index, 1, INSTR(path_index || '.', '.') - 1) AS INTEGER) >= 1 + {:comment_offset} -- Start range (offset)

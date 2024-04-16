@@ -27,10 +27,26 @@ func init() {
 }
 
 func AppendToBaseData(c echo.Context, data any) any {
+	info := apis.RequestInfo(c)
+	authId, authUsername, authNickname := "", "", ""
+	if info.AuthRecord != nil {
+		authId = info.AuthRecord.Id
+		authNickname = info.AuthRecord.GetString("username")
+		authUsername = info.AuthRecord.GetString("nickname")
+	}
+
 	baseData := struct {
-		GameVersion string
+		GameVersion  string
+
+		AuthId 		 string
+		AuthUsername string
+		AuthNickname string
 	}{
 		GameVersion: os.Getenv("VERSION"),
+
+		AuthId: authId,
+		AuthUsername: authUsername,
+		AuthNickname: authNickname,
 	}
 
 	if data == nil {
