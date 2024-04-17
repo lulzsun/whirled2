@@ -16,16 +16,23 @@
 								hx-target="#page"
 								hx-push-url="true"
 								href="/profile/{{ .Username }}"
-								class="hover:underline"
+								class="group hover:underline"
 							>
-								{{ .Username }}
+								{{ .Nickname }}
+								<span
+									class="text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom group-hover:underline"
+								>
+									@{{ .Username }}
+								</span>
 							</a>
 						</div>
-						<p
-							class="mt-1 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom"
+						<span
+							title="{{ .Timestamp }}"
+							data-toggle="tooltip"
+							class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom"
 						>
-							{{ .Timestamp }}
-						</p>
+							{{ .RelativeTime }}
+						</span>
 					</div>
 				</div>
 			</div>

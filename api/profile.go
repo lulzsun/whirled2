@@ -42,6 +42,8 @@ type Comment struct {
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
 
+	RelativeTime string
+
 	Total       int
 	Depth       int
 	Count       int
@@ -244,6 +246,7 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 						Content:   e.Record.GetString("content"),
 						Timestamp: e.Record.GetString("created"),
 						IsDeleted: e.Record.GetBool("is_deleted"),
+						RelativeTime: utils.FormatRelativeTime(e.Record.GetString("created")),
 						Username:  username,
 						Nickname:  nickname,
 					},
@@ -267,6 +270,8 @@ func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool) []Co
 
 	// Step 1: Build a map of comments by their Id
 	for i := range flatComments {
+		// also format the time to be relative
+		flatComments[i].RelativeTime = utils.FormatRelativeTime(flatComments[i].Timestamp)
 		commentMap[flatComments[i].CommentId] = &flatComments[i]
 	}
 

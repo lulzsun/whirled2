@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"fmt"
 	"net"
 	"reflect"
+	"time"
 )
 
 func GetLocalIP() ([]string, error) {
@@ -56,4 +58,46 @@ func MergeMaps(maps ...map[string]interface{}) map[string]interface{} {
 		}
 	}
 	return result
+}
+
+func FormatRelativeTime(timestamp string) string {
+	t, err := time.Parse("2006-01-02 15:04:05.000Z", timestamp)
+	if err != nil {
+		return timestamp
+	}
+
+	now := time.Now()
+	diff := now.Sub(t)
+
+	switch {
+	case diff < time.Minute:
+		return "just now"
+	case diff < time.Hour:
+		minutes := int(diff.Minutes())
+		return fmt.Sprintf("%d minutes ago", minutes)
+	case diff < 24*time.Hour:
+		hours := int(diff.Hours())
+		if hours > 1 {
+			return fmt.Sprintf("%d hours ago", hours)
+		}
+		return fmt.Sprintf("%d hour ago", hours)
+	case diff < 30*24*time.Hour:
+		days := int(diff.Hours() / 24)
+		if days > 1 {
+			return fmt.Sprintf("%d days ago", days)
+		}
+		return fmt.Sprintf("%d day ago", days)
+	case diff < 365*24*time.Hour:
+		months := int(diff.Hours() / (24 * 30))
+		if months > 1 {
+			return fmt.Sprintf("%d months ago", months)
+		}
+		return fmt.Sprintf("%d month ago", months)
+	default:
+		years := int(diff.Hours() / (24 * 365))
+		if years > 1 {
+			return fmt.Sprintf("%d years ago", years)
+		}
+		return fmt.Sprintf("%d year ago", years)
+	}
 }
