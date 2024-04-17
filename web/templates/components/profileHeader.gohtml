@@ -26,8 +26,8 @@
 				class="mt-1 absolute z-10 invisible focus:outline-none group-focus:visible opacity-0 group-focus:opacity-100 ease-out duration-300 right-0 mr-2 bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
 			>
 				<div class="px-4 py-3 text-sm text-gray-900 dark:text-white">
-					<div>Display Name</div>
-					<div class="font-medium truncate">@username</div>
+					<div>{{ .AuthNickname }}</div>
+					<div class="font-medium truncate">@{{ .AuthUsername }}</div>
 				</div>
 				<ul
 					class="py-2 text-sm text-gray-700 dark:text-gray-200"

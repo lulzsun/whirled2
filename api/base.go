@@ -31,8 +31,8 @@ func AppendToBaseData(c echo.Context, data any) any {
 	authId, authUsername, authNickname := "", "", ""
 	if info.AuthRecord != nil {
 		authId = info.AuthRecord.Id
-		authNickname = info.AuthRecord.GetString("username")
-		authUsername = info.AuthRecord.GetString("nickname")
+		authUsername = info.AuthRecord.GetString("username")
+		authNickname = info.AuthRecord.GetString("nickname")
 	}
 
 	baseData := struct {
