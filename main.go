@@ -77,9 +77,9 @@ func main() {
 			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
 		})
+		e.Router.Pre(api.AuthMiddleware(app))
 		e.Router.Use(
 			api.FormMiddleware,
-			api.AuthMiddleware(app),
 			api.BaseMiddleware,
 		)
 		for _, AddRoutes := range routes {
