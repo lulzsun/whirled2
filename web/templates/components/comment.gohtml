@@ -19,11 +19,13 @@
 								class="group hover:underline"
 							>
 								{{ .Nickname }}
-								<span
-									class="text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom group-hover:underline"
-								>
-									@{{ .Username }}
-								</span>
+								{{ if ne .Nickname .Username }}
+									<span
+										class="text-xs text-gray-500 dark:text-gray-400 inline-block align-text-bottom group-hover:underline"
+									>
+										@{{ .Username }}
+									</span>
+								{{ end }}
 							</a>
 						</div>
 						<span
