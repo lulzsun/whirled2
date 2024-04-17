@@ -2,6 +2,7 @@ import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
 import { NetworkEvent } from "./systems/network";
+import { initializeHtmx } from "./htmx";
 
 const world = createWorld();
 declare global {
@@ -17,6 +18,8 @@ declare global {
 if (window.htmx === undefined) {
 	window.htmx = {};
 	window.htmx.process = () => {};
+} else {
+	initializeHtmx();
 }
 window.world = world;
 window.game = {

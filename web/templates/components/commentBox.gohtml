@@ -73,7 +73,8 @@
 			<button
 				hx-post="/api/collections/comments/records"
 				{{ if .CommentId }}
-					hx-target="#_{{ .CommentId }}_children" hx-swap="afterbegin"
+					hx-target="#_{{ .CommentId }}_comment_children"
+					hx-swap="afterbegin"
 				{{ else }}
 					hx-target="#_profile_comments" hx-swap="beforebegin"
 				{{ end }}

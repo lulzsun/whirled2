@@ -1,5 +1,5 @@
 {{ define "comment" }}
-	<section id="_{{ .CommentId }}_parent" class="flex">
+	<section id="_{{ .CommentId }}_comment_parent" class="flex">
 		<div class="mr-2 flex-shrink-0">
 			<img
 				class="w-10 h-10 rounded-full"
@@ -78,18 +78,18 @@
 					</svg>
 				</button>
 				<style>
-					[id='_{{ .CommentId }}_reply']:checked ~ [id='_{{ .CommentId }}_reply_box'] {
+					[id='_{{ .CommentId }}_comment_reply']:checked ~ [id='_{{ .CommentId }}_comment_reply_box'] {
 						display: block;
 					}
 				</style>
 				<input
 					type="checkbox"
-					id="_{{ .CommentId }}_reply"
+					id="_{{ .CommentId }}_comment_reply"
 					autocomplete="off"
 					class="hidden absolute"
 				/>
 				<label
-					for="_{{ .CommentId }}_reply"
+					for="_{{ .CommentId }}_comment_reply"
 					class="flex items-center space-x-1 cursor-pointer"
 				>
 					<span
@@ -106,7 +106,7 @@
 					</span>
 				</label>
 				<div
-					id="_{{ .CommentId }}_reply_box"
+					id="_{{ .CommentId }}_comment_reply_box"
 					class="hidden mt-2 w-full"
 				>
 					{{ template "commentBox" . }}
@@ -138,7 +138,7 @@
 			</form>
 		</section>
 	{{ else }}
-		<section id="_{{ .CommentId }}_children" class="ml-12">
+		<section id="_{{ .CommentId }}_comment_children" class="ml-12">
 			{{ range .Children }}
 				{{ template "comment" . }}
 			{{ end }}
