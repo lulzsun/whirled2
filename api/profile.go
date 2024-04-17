@@ -30,9 +30,7 @@ type Profile struct {
 	Nickname  string `db:"nickname" json:"nickname"`
 }
 type Comment struct {
-	AuthId    string `db:"auth_id" json:"auth_id"`
 	CommentId string `db:"id" json:"id"`
-	UserId    string `db:"user_id" json:"user_id"`
 	ProfileId string `db:"profile_id" json:"profile_id"`
 	ParentId  string `db:"parent_id" json:"parent_id"`
 	Content   string `db:"content" json:"content"`
@@ -240,7 +238,6 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 				Comments: []Comment{
 					{
 						CommentId: e.Record.Id,
-						UserId:    e.Record.GetString("user_id"),
 						ProfileId: e.Record.GetString("profile_id"),
 						ParentId:  e.Record.GetString("parent_id"),
 						Content:   e.Record.GetString("content"),

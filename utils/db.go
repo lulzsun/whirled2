@@ -124,7 +124,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 				&schema.SchemaField{
 					Name:     "user_id",
 					Type:     schema.FieldTypeRelation,
-					Required: true,
+					Required: false,
 					Options: &schema.RelationOptions{
 						MaxSelect:     types.Pointer(1),
 						CollectionId:  usersCollection.Id,

@@ -4,7 +4,6 @@
 		method="post"
 		hx-on::after-request="this.reset()"
 	>
-		<input type="hidden" name="user_id" value="{{ .AuthId }}" />
 		<input type="hidden" name="profile_id" value="{{ .ProfileId }}" />
 		<input type="hidden" name="parent_id" value="{{ .CommentId }}" />
 		<label for="chat" class="sr-only">Your message</label>
