@@ -211,7 +211,7 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 								Path:     "/",
 								HttpOnly: true,
 								MaxAge:   maxAge,
-								SameSite: http.SameSiteStrictMode,
+								SameSite: http.SameSiteLaxMode,
 							}
 							e.HttpContext.SetCookie(cookie)
 							if hxRequest == "true" {
