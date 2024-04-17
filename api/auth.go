@@ -63,7 +63,7 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			Path:     "/",
 			HttpOnly: true,
 			MaxAge:   -1,
-			SameSite: http.SameSiteStrictMode,
+			SameSite: http.SameSiteLaxMode,
 		}
 		c.SetCookie(cookie)
 		c.Redirect(302, "/")
