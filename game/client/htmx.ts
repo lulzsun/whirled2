@@ -18,4 +18,8 @@ function closeCommentReplyBox(evt: any) {
 	if (target !== null) {
 		(target as HTMLInputElement).checked = false;
 	}
+	const emptyPlaceholder = document.getElementById("msg_no_profile_comments");
+	if (emptyPlaceholder !== null) {
+		emptyPlaceholder.remove();
+	}
 }

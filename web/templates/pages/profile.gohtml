@@ -67,7 +67,7 @@
 			<div data-popper-arrow></div>
 		</div>
 		<section class="w-full grid place-items-center p-2">
-			{{ if .CommentPageLength }}
+			{{ if gt (len .CommentPageLength) 1 }}
 				{{ template "pagination" . }}
 			{{ end }}
 		</section>
@@ -77,6 +77,15 @@
 		<section id="_profile_comments">
 			{{ range .Comments }}
 				{{ template "comment" . }}
+			{{ else }}
+				<span
+					id="msg_no_profile_comments"
+					class="flex justify-center pt-4 italic text-gray-500 dark:text-gray-400"
+				>
+					This profile has no comments...
+					<span class="not-italic pr-1">😢</span>
+					Be the first to change that!
+				</span>
 			{{ end }}
 		</section>
 	</div>
