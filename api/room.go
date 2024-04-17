@@ -17,9 +17,10 @@ var roomTmplFiles []string
 var roomTmpl *template.Template
 
 type Room struct {
-	Id 			string `db:"id" json:"id"`
-	OwnerId		string `db:"owner_id" json:"owner_id"`
-	Name		string `db:"name" json:"name"`
+	Id 			string	`db:"id" json:"id"`
+	OwnerId		string	`db:"owner_id" json:"owner_id"`
+	Name		string	`db:"name" json:"name"`
+	IsFeatured	bool	`db:"is_featured" json:"is_featured"`
 
 	UsersCount	int
 }
@@ -31,6 +32,7 @@ func init() {
 func parseRoomFiles() {
 	roomTmplFiles = append(roomTmplFiles, AppendToBaseTmplFiles(
 		"web/templates/pages/room.gohtml",
+		"web/templates/components/room.gohtml",
 	)...)
 	roomTmpl = template.Must(template.ParseFiles(roomTmplFiles...))
 }
@@ -43,12 +45,17 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	e.Router.GET("/rooms", func(c echo.Context) error {
 		data := struct {
 			ActiveRooms []Room
+			FeaturedRooms []Room
 		}{
 			ActiveRooms: []Room{},
+			FeaturedRooms: []Room{},
 		}
 		rooms := server.GetActiveRooms(6, 0)
 
-		q := app.DB().NewQuery(`SELECT name FROM rooms WHERE id = {:id}`)
+		q := app.DB().NewQuery(`
+			SELECT name FROM rooms 
+			WHERE id = {:id}
+		`)
 		q.Prepare()
 		defer q.Close()
 
@@ -65,6 +72,25 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 				Name: dbRoom.Name,
 				UsersCount: room.UsersCount,
 			})
+		}
+
+		featuredRooms := []Room{}
+		err := app.DB().
+			NewQuery(`
+				SELECT * FROM rooms 
+				WHERE is_featured = true
+				ORDER BY updated DESC
+				LIMIT 6 OFFSET 0
+			`).All(&featuredRooms)
+
+		if err == nil {
+			for _, room := range featuredRooms {
+				data.FeaturedRooms = append(data.FeaturedRooms, Room{
+					Id: room.Id,
+					Name: room.Name,
+					UsersCount: server.GetActiveRoom(room.Id).UsersCount,
+				})
+			}
 		}
 
 		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {

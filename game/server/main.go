@@ -180,6 +180,13 @@ type ActiveRoom struct {
 	UsersCount	int
 }
 
+func GetActiveRoom(id string) ActiveRoom {
+	return ActiveRoom{
+		Id: id,
+		UsersCount: len(server.Rooms[id]),
+	}
+}
+
 func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 	rooms := server.Rooms
 	activeRooms := []ActiveRoom{}
@@ -188,14 +195,11 @@ func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 		return activeRooms
 	}
 
-	for key, value := range rooms {
-		if key == "@underwhirled" {
+	for id := range rooms {
+		if id == "@underwhirled" {
 			continue
 		}
-		activeRooms = append(activeRooms, ActiveRoom{
-			Id: key,
-			UsersCount: len(value),
-		})
+		activeRooms = append(activeRooms, GetActiveRoom(id))
 	}
 
 	sort.Slice(activeRooms, func(i, j int) bool {

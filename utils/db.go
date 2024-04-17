@@ -225,6 +225,11 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					Required: false,
 				},
 				&schema.SchemaField{
+					Name:     "is_featured",
+					Type:     schema.FieldTypeBool,
+					Required: false,
+				},
+				&schema.SchemaField{
 					Name:     "objects",
 					Type:     schema.FieldTypeJson,
 					Required: false,

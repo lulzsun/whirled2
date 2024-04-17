@@ -1,0 +1,105 @@
+{{ define "room" }}
+	{{ range $i, $room := . }}
+		<div
+			class="max-w-[12rem] @3xl/web:max-w-[14rem] @7xl/web:max-w-[16rem] bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700 
+            {{ if or (eq $i 6) (eq $i 7) }}
+				hidden @3xl/web:block @7xl/web:hidden
+			{{ end }}"
+		>
+			<a hx-disable href="/?room={{ $room.Id }}">
+				<img
+					class="rounded-t-lg h-auto max-w-full"
+					src="/static/assets/room.png"
+					alt="Room Image Preview"
+				/>
+			</a>
+			<div class="p-1 text-sm">
+				<a
+					hx-disable
+					class="hover:underline truncate"
+					href="/?room={{ $room.Id }}"
+				>
+					{{ $room.Name }}
+				</a>
+				<div class="flex place-content-between">
+					<div class="flex-none flex items-center text-xs">
+						<svg
+							class="w-3 h-3"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 16 16"
+						>
+							<path
+								d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"
+							/>
+						</svg>
+						<span>{{ $room.UsersCount }}</span>
+					</div>
+					<div class="flex items-center text-yellow-300">
+						<svg
+							class="w-3 h-3 me-1"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+						<svg
+							class="w-3 h-3 me-1"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+						<svg
+							class="w-3 h-3 me-1"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+						<svg
+							class="w-3 h-3 me-1"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+						<svg
+							class="w-3 h-3"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+					</div>
+				</div>
+			</div>
+		</div>
+	{{ else }}
+		<span class="italic text-gray-500 dark:text-gray-400">
+			No rooms found...
+			<span class="not-italic">😢</span>
+		</span>
+	{{ end }}
+{{ end }}
