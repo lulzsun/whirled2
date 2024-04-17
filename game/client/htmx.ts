@@ -6,7 +6,7 @@ export const initializeHtmx = () => {
 
 // Closes comment reply box after HTMX successfully makes a request
 function closeCommentReplyBox(evt: any) {
-	if (evt.detail.xhr.status !== 200) {
+	if (evt.detail.failed) {
 		return;
 	}
 	const target = document.getElementById(
