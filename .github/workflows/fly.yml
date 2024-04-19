@@ -17,6 +17,7 @@ jobs:
               run: |
                   touch .env
                   echo "VERSION=\"$(git rev-parse --short=7 HEAD)\"" >> .env
+                  echo "IDLE_MINUTES=\"30\"" >> .env
                   cat .env
 
             - uses: superfly/flyctl-actions/setup-flyctl@master

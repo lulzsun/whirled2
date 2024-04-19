@@ -44,6 +44,8 @@ func main() {
 		godotenv.Load()
 	}
 
+	utils.Start()
+
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		HideStartBanner: true,
 		// DefaultDebug: false
@@ -79,6 +81,7 @@ func main() {
 		})
 		e.Router.Pre(api.AuthMiddleware(app))
 		e.Router.Use(
+			utils.IdleMiddleware,
 			api.FormMiddleware,
 			api.BaseMiddleware,
 		)

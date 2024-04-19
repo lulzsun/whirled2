@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"whirled2/utils"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -56,14 +57,24 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 			Peer: peer,
 		}
 
-		peer.On(PlayerJoin, func(msg string) { peer.Emit(PlayerAuth, peer.Id) })
-		peer.On(PlayerAuth, func(msg string) { onPlayerAuth(peer, msg) })
-		peer.On(PlayerMove, func(msg string) { onPlayerMove(peer, msg) })
-		peer.On(PlayerChat, func(msg string) { onPlayerChat(peer, msg) })
-		peer.On(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
+		addEvent := func(eventName string, handler func(string)) {
+			peer.On(eventName, func(msg string) {
+				// everytime a event occurs, reset idle timer
+				utils.IdleTimerReset()
+				handler(msg)
+			})
+		}
+		
+		addEvent(PlayerJoin, func(msg string) { peer.Emit(PlayerAuth, peer.Id) })
+		addEvent(PlayerAuth, func(msg string) { onPlayerAuth(peer, msg) })
+		addEvent(PlayerMove, func(msg string) { onPlayerMove(peer, msg) })
+		addEvent(PlayerChat, func(msg string) { onPlayerChat(peer, msg) })
+		addEvent(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
 
-		peer.On(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
-		peer.On(ObjectTransform, func(msg string) { onObjectTransform(peer, msg) })
+		addEvent(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
+		addEvent(ObjectTransform, func(msg string) { onObjectTransform(peer, msg) })
+
+		utils.IdleTimerReset()
 	})
 
 	server.OnDisconnect(func(peer *gecgosio.Peer) {
