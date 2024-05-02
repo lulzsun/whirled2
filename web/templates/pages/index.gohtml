@@ -76,6 +76,10 @@
 						window._closeWebPanel();
 					window.addEventListener("resize", window._checkWindowSize);
 				});
+				document.addEventListener("htmx:afterSwap", function (evt) {
+					if (evt.detail.xhr.status !== 202)
+						document.getElementById("error-alert").innerHTML = "";
+				});
 			</script>
 			<title>New Whirled</title>
 		</head>
@@ -98,9 +102,10 @@
 							class="flex flex-col h-full w-full @container/web"
 							hx-history-elt
 						>
+							<div id="error-alert"></div>
 							<div
 								id="page"
-								class="w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 flex justify-center"
+								class="w-full h-full overflow-scroll bg-gray-50 dark:bg-gray-900 flex flex-col"
 							>
 								{{ template "page" . }}
 							</div>

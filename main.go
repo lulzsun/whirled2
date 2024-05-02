@@ -65,6 +65,7 @@ func main() {
 		api.AddRoomEventHooks,
 		api.AddStuffEventHooks,
 		// Add more event hooks here
+		api.AddBaseEventHooks, // keep last
 	}
 	for _, AddEventHooks := range customEventHooks {
 		AddEventHooks(app)

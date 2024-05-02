@@ -18,12 +18,14 @@ import (
 
 var partialIndexTmpl *template.Template
 var fullIndexTmpl *template.Template
-var errorTmpl *template.Template
+var partialErrTmpl *template.Template
+var fullErrTmpl *template.Template
 
 func init() {
 	partialIndexTmpl, _ = template.ParseFiles("web/templates/pages/world.gohtml")
 	fullIndexTmpl = template.Must(partialIndexTmpl.ParseFiles(AppendToBaseTmplFiles()...))
-	errorTmpl = template.Must(template.ParseFiles(AppendToBaseTmplFiles("web/templates/pages/error.gohtml")...))
+	partialErrTmpl, _ = template.ParseFiles("web/templates/components/error.gohtml")
+	fullErrTmpl = template.Must(partialErrTmpl.ParseFiles(AppendToBaseTmplFiles("web/templates/pages/error.gohtml")...))
 }
 
 func AppendToBaseData(c echo.Context, data any) any {
@@ -112,6 +114,58 @@ func AddBaseRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 	})
 }
 
+func AddBaseEventHooks(app *pocketbase.PocketBase) {
+	// Adds specific htmx error handling
+	// Will override pb's error json response if request was done by htmx
+	app.OnBeforeApiError().Add(func(e *core.ApiErrorEvent) error {
+		htmxEnabled := false
+		c := e.HttpContext
+
+		utils.ProcessHXRequest(c, func() error {
+			htmxEnabled = true
+			return nil
+		}, func() error {
+			return nil
+		})
+
+		if c.Request().Method == "POST" && c.PathParams().Get("collection", "") != "" &&
+			c.Request().Header.Get("Content-Type") == "application/json" {
+
+			apiErr := e.Error.(*apis.ApiError)
+			for k, v := range apiErr.Data {
+				vm, ok := v.(map[string]string)
+				if ok {
+					vm["key"] = k
+					apiErr.Data[k] = v
+				}
+			}
+			formatErr := map[string]interface{}{
+				"Code": apiErr.Code,
+				"Message": apiErr.Message,
+				"Data": apiErr.Data,
+			}
+
+			var page bytes.Buffer
+			if htmxEnabled {
+				c.Response().Header().Add("HX-Retarget", "#error-alert");
+				c.Response().Header().Add("HX-Reswap", "innerHTML");
+				
+				if err := CreateError(true).ExecuteTemplate(&page, "error", formatErr); err != nil {
+					return nil
+				}
+				return c.HTML(202, page.String())
+			} else {
+				formatErr["Redirect"] = "href='" + c.Request().Referer() + "'"
+				if err := CreateError(false).ExecuteTemplate(&page, "base", formatErr); err != nil {
+					return nil
+				}
+				return c.HTML(apiErr.Code, page.String())
+			}
+		}
+        return nil
+    })
+}
+
 func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().After(func() {
@@ -137,7 +191,7 @@ func BaseMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			formatErr := map[string]string{
 				"Error": "Page not found.",
 			}
-			if err := CreateError().ExecuteTemplate(c.Response().Writer, c.Get("name").(string), formatErr); err != nil {
+			if err := CreateError(false).ExecuteTemplate(c.Response().Writer, c.Get("name").(string), formatErr); err != nil {
 				return err
 			}
 			return nil
@@ -184,6 +238,9 @@ func FormMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func CreateError() *template.Template {
-	return errorTmpl
+func CreateError(partial bool) *template.Template {
+	if partial {
+		return partialErrTmpl
+	}
+	return fullErrTmpl
 }
