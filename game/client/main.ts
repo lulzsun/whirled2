@@ -2,13 +2,13 @@ import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
 import { NetworkEvent } from "./systems/network";
-import { initializeHtmx } from "./htmx";
+import { initializeHtmx, htmx } from "./htmx";
 
 const world = createWorld();
 declare global {
 	interface Window {
 		world: World;
-		htmx: any;
+		htmx: typeof htmx;
 		game: {
 			addStuff: (id: string, type: string) => void;
 			reconnect: () => void;
@@ -16,6 +16,7 @@ declare global {
 	}
 }
 if (window.htmx === undefined) {
+	//@ts-ignore
 	window.htmx = {};
 	window.htmx.process = () => {};
 } else {
