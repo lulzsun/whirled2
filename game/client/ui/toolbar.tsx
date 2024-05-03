@@ -10,7 +10,7 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 	const chatInput = createRef<HTMLInputElement>();
 
 	return (
-		<div class="relative">
+		<div class="relative w-72">
 			<div id="chatbox" class="pb-2 absolute bottom-[31px] left-0" />
 			<div class="relative">
 				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
@@ -54,18 +54,18 @@ export const createEditButton = () => {
 			id="openEditorBtn"
 			style="display: none"
 			type="button"
-			class="focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+			class="whitespace-nowrap focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
 			onClick={(e) => {
 				window.world.editor.enabled = !window.world.editor.enabled;
 
 				if (window.world.editor.enabled) {
 					window.world.editor.selectedTool = "translate";
 					e.currentTarget.className =
-						"focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg p-1.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900";
+						"whitespace-nowrap focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg p-1.5 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900";
 					e.currentTarget.innerText = "exit editor";
 				} else {
 					e.currentTarget.className =
-						"focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700";
+						"whitespace-nowrap focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700";
 					e.currentTarget.innerText = "enter editor";
 				}
 			}}

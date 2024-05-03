@@ -13,11 +13,10 @@ export const createChatMessage = (
 	message: string = "placeholder",
 ): ChatMessage => {
 	const eid = addEntity(world);
-	const entity = Object.assign(
-		world.renderer.domElement
-			.parentElement!.querySelector("#chatbox")!
-			.appendChild(createChatMessageUI(username, nickname, message)),
-		{ eid },
-	);
+	const ui = world.renderer.domElement
+		.parentElement!.querySelector("#chatbox")!
+		.appendChild(createChatMessageUI(username, nickname, message));
+	window.htmx.process(ui);
+	const entity = Object.assign(ui, { eid });
 	return entity;
 };
