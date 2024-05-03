@@ -27,7 +27,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 	if err != nil {
 		return
 	}
-	
+
 	if j["code"] != nil && client.Auth == j["code"] {
 		log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
 

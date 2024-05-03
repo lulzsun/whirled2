@@ -181,7 +181,10 @@ func onObjectLeave(peer *gecgosio.Peer, msg string) {
 	}
 
 	if isPlayer {
-		// TODO: kick player
+		// TODO: kick with parameters:
+		//	- prevent kicked player from rejoining after certain time period
+		peer.Room().Emit(PlayerLeave, id)
+		clients[usernameToPeerId[id]].Peer.Leave(roomId)
 		return
 	} else {
 		delete(objects[roomId], id)

@@ -338,6 +338,15 @@ export function createNetworkSystem(world: World) {
 						break;
 					}
 
+					if (player.isLocal) {
+						world.renderer.domElement.parentElement!.appendChild(
+							createDisconnectUI(
+								"You have been removed from the room",
+							),
+						);
+						break;
+					}
+
 					removeEntity(world, player.eid);
 					playersByUsername.delete(username);
 					playersByEid.delete(player.eid);
