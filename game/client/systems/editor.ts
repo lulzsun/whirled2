@@ -3,6 +3,7 @@ import {
 	addComponent,
 	defineQuery,
 	defineSystem,
+	entityExists,
 	exitQuery,
 	hasComponent,
 	removeComponent,
@@ -23,6 +24,7 @@ import { STATIC, UNIQUE } from "./imgui";
 import { NetworkEvent } from "./network";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
+const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
 
 export type Editor = {
 	enabled: boolean;
@@ -53,14 +55,22 @@ export function createEditorSystem(world: World) {
 			!force
 		)
 			return;
-		if (world.editor.selectedObject !== null) {
+		if (
+			world.editor.selectedObject !== null &&
+			entityExists(world, world.editor.selectedObject) &&
+			hasComponent(
+				world,
+				ObjectOutlineComponent,
+				world.editor.selectedObject,
+			)
+		) {
 			removeComponent(
 				world,
 				ObjectOutlineComponent,
 				world.editor.selectedObject,
 			);
-			world.editor.selectedObject = null;
 		}
+		world.editor.selectedObject = null;
 		transformControls.detach();
 	};
 
@@ -228,7 +238,17 @@ export function createEditorSystem(world: World) {
 				var obj = world.objects.get(objects[x]);
 				if (obj === undefined) continue;
 				if (world.editor.selectedObject === objects[x]) {
-					unselectObject();
+					selectObject(null, true);
+				}
+			}
+		}
+		{
+			const players = playerLeaveQuery(world);
+			for (let x = 0; x < players.length; x++) {
+				var obj = world.players.get(players[x])?.player;
+				if (obj === undefined) continue;
+				if (world.editor.selectedObject === players[x]) {
+					selectObject(null, true);
 				}
 			}
 		}
@@ -327,6 +347,18 @@ function renderInspector(world: World) {
 		ImGui.TextWrapped(`No selected object`);
 	} else {
 		ImGui.TextWrapped(`${object.name}`);
+		if (ImGui.Button("Remove from room")) {
+			let id: string | null = null;
+			let isPlayer = hasComponent(world, PlayerComponent, eid);
+			if (isPlayer) {
+				id = world.network.getPlayer(eid)?.username ?? null;
+			} else {
+				id = world.network.getObject(eid)?.id ?? null;
+			}
+			if (id === null) return;
+			world.network.emit(NetworkEvent.ObjectLeave, { id, isPlayer });
+		}
+		ImGui.NewLine();
 		if (
 			ImGui.CollapsingHeader(
 				"Transform Component",

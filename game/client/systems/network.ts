@@ -498,6 +498,31 @@ export function createNetworkSystem(world: World) {
 					world.scene.add(objectEntity);
 					break;
 				}
+				case NetworkEvent.ObjectLeave: {
+					const object: {
+						id: string;
+						isPlayer: boolean;
+					} = event.data as any;
+					console.log(object);
+					let eid = -1;
+					if (object.isPlayer) {
+						eid = world.network.getPlayer(object.id)?.eid ?? -1;
+						if (eid === -1) break;
+						const player = playersByEid.get(eid);
+						if (player === undefined) {
+							break;
+						}
+						playersByUsername.delete(player.username);
+						playersByEid.delete(eid);
+					} else {
+						eid = world.network.getObject(object.id)?.eid ?? -1;
+						if (eid === -1) break;
+						objectsById.delete(object.id);
+						objectsByEid.delete(eid);
+					}
+					removeEntity(world, eid);
+					break;
+				}
 				case NetworkEvent.ObjectTransform: {
 					const object: {
 						id: string;

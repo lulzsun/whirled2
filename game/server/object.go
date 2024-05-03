@@ -130,6 +130,66 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	peer.Room().Emit(ObjectJoin, string(newData))
 }
 
+// player removing an object (furniture) from a room
+func onObjectLeave(peer *gecgosio.Peer, msg string) {
+	client := clients[peer.Id]
+
+	// note: this assumes the client is only in a single room
+	roomId := peer.Rooms()[0]
+
+	// Parse the JSON string into a map
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(msg), &data)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	id, okId := data["id"].(string)
+	isPlayer, okIsPlayer := data["isPlayer"].(bool)
+	if !okId || !okIsPlayer {
+		return
+	}
+
+	// making sure this object or player exists
+	if isPlayer {
+		if _, ok := usernameToPeerId[id]; !ok {
+			return
+		}
+	} else {
+		if _, ok := objects[roomId][id]; !ok {
+			return
+		}
+	}
+
+	// check if client owns the current room they're in
+	err = pb.DB().
+		NewQuery(`
+			SELECT r.id
+			FROM rooms r
+			INNER JOIN users u ON r.owner_id = u.id
+			WHERE r.id = {:roomId} AND u.username = {:username}
+		`).
+		Bind(dbx.Params{
+			"roomId": roomId,
+			"username": client.Username,
+		}).One(&struct{}{})
+
+	if err != nil {
+		// user does not own this room, so do nothing
+		return
+	}
+
+	if isPlayer {
+		// TODO: kick player
+		return
+	} else {
+		delete(objects[roomId], id)
+		log.Printf("Object '%s' has been deleted from room '%s'", id, roomId)
+	}
+	peer.Room().Emit(ObjectLeave, string(msg))
+}
+
 func onObjectTransform(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 

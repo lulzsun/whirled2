@@ -23,6 +23,7 @@ import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 
 import { ImGui, ImGui_Impl } from "imgui-js";
 
+const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
 const nameplateQuery = defineQuery([NameplateComponent]);
 
@@ -155,6 +156,21 @@ export function createRenderSystem(world: World) {
 				nameplate.remove();
 			} else {
 				console.warn("Unable to cleanup player nameplate", player.eid);
+			}
+		}
+
+		// handle cleanup of object entities
+		const objectLeave = objectLeaveQuery(world);
+		for (let x = 0; x < objectLeave.length; x++) {
+			const object = {
+				eid: objectLeave[x],
+				entity: world.objects.get(objectLeave[x]),
+			};
+			if (object.entity !== undefined) {
+				// remove object entity
+				world.scene.remove(object.entity);
+			} else {
+				console.warn("Unable to cleanup object entity", object.eid);
 			}
 		}
 

@@ -72,6 +72,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 		addEvent(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
 
 		addEvent(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
+		addEvent(ObjectLeave, func(msg string) { onObjectLeave(peer, msg) })
 		addEvent(ObjectTransform, func(msg string) { onObjectTransform(peer, msg) })
 
 		utils.IdleTimerReset()
@@ -108,7 +109,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 		log.Fatal(err)
 	}
 
-	log.Printf("Gecgos.io signaling server is running on port at %d\n", port)
+	log.Printf("Gecgos.io server is listening on port at %d\n", port)
 }
 
 func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
