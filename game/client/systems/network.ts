@@ -188,6 +188,12 @@ export function createNetworkSystem(world: World) {
 			// console.log(peerConnection.connectionState);
 			switch (peerConnection.connectionState) {
 				case "failed":
+					world.renderer.domElement.parentElement!.appendChild(
+						createDisconnectUI(
+							"Something went wrong connecting to server",
+						),
+					);
+					break;
 				case "connected":
 					break;
 				default:
