@@ -24,7 +24,8 @@ export const createPlayer = (
 	name: string = "Unnamed",
 	local: boolean = false,
 	avatar: Avatar = Avatar.GLTF,
-	avatarName: string = "",
+	avatarFile: string = "",
+	initialScale: number = 1,
 ): Player => {
 	const eid = addEntity(world);
 	let entity = Object.assign(new THREE.Group(), { eid });
@@ -41,15 +42,15 @@ export const createPlayer = (
 	TransformComponent.scale.z[eid] = 1;
 
 	if (avatar === Avatar.Spine) {
-		if (avatarName === "") avatarName = "spineboy";
+		if (avatarFile === "") avatarFile = "spineboy";
 
-		world.spineAssetManager.loadText(`${avatarName}.json`);
+		world.spineAssetManager.loadText(`${avatarFile}.json`);
 		world.spineAssetManager.loadTextureAtlas(
-			`${avatarName}.atlas`,
+			`${avatarFile}.atlas`,
 			() => {
 				if (entity !== undefined)
 					entity.add(
-						createSpineMesh(world.spineAssetManager, avatarName),
+						createSpineMesh(world.spineAssetManager, avatarFile),
 					);
 				addComponent(world, SpineComponent, eid);
 				SpineComponent.timeScale[eid] = 1000;
@@ -59,17 +60,20 @@ export const createPlayer = (
 			},
 		);
 	} else if (avatar === Avatar.GLTF) {
-		if (avatarName === "") avatarName = "RobotExpressive";
+		if (avatarFile === "")
+			avatarFile = "/static/assets/avatars/RobotExpressive.glb";
+
+		console.log(`${API_URL}${avatarFile}`);
 
 		const loader = new GLTFLoader();
 		loader.load(
-			`${API_URL}/static/assets/avatar/${avatarName}.glb`,
+			`${API_URL}${avatarFile}`,
 			function (gltf) {
 				let model: THREE.Group | THREE.Object3D = gltf.scene;
 				model.scale.set(
-					1 * model.scale.x,
-					1 * model.scale.y,
-					1 * model.scale.z,
+					initialScale * model.scale.x,
+					initialScale * model.scale.y,
+					initialScale * model.scale.z,
 				);
 
 				entity.add(
@@ -202,11 +206,11 @@ export const createPlayer = (
 
 const createSpineMesh = (
 	assetManager: spine.AssetManager,
-	avatarName: string,
+	avatarFile: string,
 ) => {
 	// Load the texture atlas using name.atlas and name.png from the AssetManager.
 	// The function passed to TextureAtlas is used to resolve relative paths.
-	let atlas = assetManager.require(`${avatarName}.atlas`);
+	let atlas = assetManager.require(`${avatarFile}.atlas`);
 
 	// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
 	let atlasLoader = new spine.AtlasAttachmentLoader(atlas);
@@ -217,7 +221,7 @@ const createSpineMesh = (
 	// Set the scale to apply during parsing, parse the file, and create a new skeleton.
 	skeletonJson.scale = 0.3;
 	let skeletonData = skeletonJson.readSkeletonData(
-		assetManager.require(`${avatarName}.json`),
+		assetManager.require(`${avatarFile}.json`),
 	);
 
 	// Create a SkeletonMesh from the data and attach it to the scene

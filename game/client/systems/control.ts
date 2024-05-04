@@ -177,7 +177,7 @@ export function createControlSystem(world: World) {
 const createPointer = (world: World, pointerMesh: THREE.Group) => {
 	const fileLoader = new SVGLoader();
 	fileLoader.load(
-		`${API_URL}/static/assets/avatar/walkable.svg`,
+		`${API_URL}/static/assets/avatars/walkable.svg`,
 		function (data) {
 			pointerMesh.position.set(0, 0.01, 0);
 			pointerMesh.rotation.x = (Math.PI / 180) * -90;

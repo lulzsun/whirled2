@@ -7,11 +7,12 @@ type Client struct {
 	Auth string
 	Username string
 	Nickname string
+	File string
 
 	Position Position
 	Rotation Rotation
 	Scale Scale
-	InitialScale int
+	InitialScale float64
 }
 
 type Object struct {
@@ -24,7 +25,7 @@ type Object struct {
 	Position Position	`db:"position" json:"position"`
 	Rotation Rotation	`db:"rotation" json:"rotation"`
 	Scale Scale			`db:"scale" json:"scale"`
-	InitialScale int	`db:"initialScale" json:"initialScale"`
+	InitialScale float64`db:"initialScale" json:"initialScale"`
 }
 
 type Position struct {

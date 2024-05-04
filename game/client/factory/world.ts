@@ -61,7 +61,7 @@ export const createWorld = (): World => {
 	var textureLoader = new THREE.TextureLoader();
 
 	var textureEquirec = textureLoader.load(
-		`${API_URL}/static/assets/backdrop/clear_sky.png`,
+		`${API_URL}/static/assets/backdrops/clear_sky.png`,
 	);
 	textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
 	textureEquirec.colorSpace = THREE.SRGBColorSpace;
@@ -118,7 +118,7 @@ export const createWorld = (): World => {
 	world.time = { last: 0, delta: 0, elapsed: 0 };
 
 	world.spineAssetManager = new spine.AssetManager(
-		`${API_URL}/static/assets/avatar/`,
+		`${API_URL}/static/assets/avatars/`,
 	);
 
 	return world;

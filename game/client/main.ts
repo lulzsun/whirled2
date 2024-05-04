@@ -11,6 +11,7 @@ declare global {
 		htmx: typeof htmx;
 		game: {
 			addStuff: (id: string, type: string) => void;
+			wearAvatar: (id: string) => void;
 			reconnect: () => void;
 		};
 	}
@@ -29,6 +30,9 @@ window.game = {
 			id,
 			type: parseInt(type),
 		});
+	},
+	wearAvatar: (id) => {
+		console.log(id);
 	},
 	reconnect: () => {},
 };

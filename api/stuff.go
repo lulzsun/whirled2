@@ -2,7 +2,6 @@ package api
 
 import (
 	"log"
-	"strings"
 	"text/template"
 
 	"github.com/labstack/echo/v5"
@@ -71,12 +70,32 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		data := struct {
 			Category	string
 			Items		[]Stuff
-		}{Category: strings.Title(category)}
+		}{Category: category}
 
 		stuff := []Stuff{}
 
 		switch category := c.PathParam("category"); category {
 		case "avatars":
+			err := app.DB().
+			NewQuery(`
+				SELECT
+					s.id,
+					s.type,
+					s.stuff_id,
+					f.name
+				FROM stuff s
+				INNER JOIN avatars f ON f.id = s.stuff_id
+				WHERE s.owner_id = {:owner_id}
+			`).
+			Bind(dbx.Params{
+				"owner_id": userId,
+			}).All(&stuff)
+
+			if err != nil {
+				log.Println(err)
+			} else {
+				data.Items = stuff
+			}
 		case "furniture":
 			err := app.DB().
 			NewQuery(`

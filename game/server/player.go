@@ -38,6 +38,42 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		}
 		usernameToPeerId[client.Username] = peer.Id
 
+		// retrieve client's avatar from db
+		dbObject := struct {
+			Id string		`db:"id" json:"id"`
+			Type int		`db:"type" json:"type"`
+			StuffId string	`db:"stuff_id" json:"stuff_id"`
+
+			Name string		`db:"name" json:"name"`
+			File string		`db:"file" json:"file"`
+			Scale float64	`db:"scale" json:"scale"`
+		}{}
+		err = pb.DB().
+			NewQuery(`
+				SELECT
+					s.id, 
+					s.type, 
+					s.stuff_id, 
+					a.name,
+					a.file,
+					a.scale
+				FROM stuff s
+				INNER JOIN users u ON u.username = {:username}
+				INNER JOIN avatars a ON a.id = s.stuff_id
+				WHERE s.in_use != '' AND u.id == s.owner_id
+			`).Bind(dbx.Params{
+				"username": client.Username,
+			}).One(&dbObject)
+
+		if err != nil {
+			log.Println(err)
+			client.InitialScale = 1
+			client.File = "/static/assets/avatars/RobotExpressive.glb"
+		} else {
+			client.InitialScale = dbObject.Scale
+			client.File = "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File
+		}
+
 		client.Scale.X = 1
 		client.Scale.Y = 1
 		client.Scale.Z = 1
@@ -45,6 +81,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		player := map[string]interface{}{
 			"username": client.Username,
 			"nickname": client.Nickname,
+			"file": client.File,
 			"local": true,
 			"position": map[string]interface{}{
 				"x": client.Position.X,
@@ -62,6 +99,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 				"y": client.Scale.Y,
 				"z": client.Scale.Z,
 			},
+			"initialScale": client.InitialScale,
 		}
 
 		// verify client
@@ -149,6 +187,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			data, err := json.Marshal(map[string]interface{}{
 				"username": clients[p.Id].Username,
 				"nickname": clients[p.Id].Nickname,
+				"file": clients[p.Id].File,
 				"local": false,
 				"position": map[string]interface{}{
 					"x": clients[p.Id].Position.X,
@@ -166,6 +205,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 					"y": clients[p.Id].Scale.Y,
 					"z": clients[p.Id].Scale.Z,
 				},
+				"initialScale": clients[p.Id].InitialScale,
 			})
 			if err != nil {
 				log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)

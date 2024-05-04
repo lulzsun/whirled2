@@ -249,6 +249,7 @@ export function createNetworkSystem(world: World) {
 						nickname: string;
 						local: boolean;
 						owner: boolean;
+						file: string;
 						position: {
 							x: number;
 							y: number;
@@ -265,12 +266,16 @@ export function createNetworkSystem(world: World) {
 							y: number;
 							z: number;
 						};
+						initialScale: number;
 						eid: number;
 					} = event.data as any;
 					const playerEntity = createPlayer(
 						world,
 						player.username,
 						player.local ?? false,
+						undefined,
+						player.file ?? "",
+						player.initialScale ?? 1,
 					);
 					player.eid = playerEntity.eid;
 

@@ -61,7 +61,7 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 
 		Name string		`db:"name" json:"name"`
 		File string		`db:"file" json:"file"`
-		Scale int		`db:"scale" json:"scale"`
+		Scale float64	`db:"scale" json:"scale"`
 	}{}
 	err = pb.DB().
 		NewQuery(`

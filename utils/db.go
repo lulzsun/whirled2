@@ -251,6 +251,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		id TEXT PRIMARY KEY,
 		owner_id TEXT NOT NULL,
 		stuff_id TEXT NOT NULL,
+		in_use TEXT,
 		type INT NOT NULL,
 		created DATE NOT NULL,
 		updated DATE NOT NULL,
@@ -287,10 +288,163 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					Type:     schema.FieldTypeNumber,
 					Required: true,
 				},
+				&schema.SchemaField{
+					Name:     "in_use",
+					Type:     schema.FieldTypeText,
+					Required: false,
+				},
 			),
 		}
 
 		if err := app.Dao().SaveCollection(stuffCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Avatars collection / table
+	/* SQLITE equivalent:
+	CREATE TABLE furniture (
+		id TEXT PRIMARY KEY,
+		creator_id TEXT,
+		name TEXT,
+		description TEXT,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (creator_id) REFERENCES users (id)
+	);
+	*/
+	avatarsCollection, err := app.Dao().FindCollectionByNameOrId("avatars")
+	if err != nil {
+		avatarsCollection = &models.Collection{
+			Name:       "avatars",
+			Type:       models.CollectionTypeBase,
+			ListRule:   nil,
+			ViewRule:   nil,
+			CreateRule: nil,
+			UpdateRule: nil,
+			DeleteRule: nil,
+			Schema: schema.NewSchema(
+				&schema.SchemaField{
+					Name:     "creator_id",
+					Type:     schema.FieldTypeRelation,
+					Required: false,
+					Options: &schema.RelationOptions{
+						MaxSelect:     types.Pointer(1),
+						CollectionId:  usersCollection.Id,
+						CascadeDelete: true,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "name",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(3),
+						Max: types.Pointer(30),
+					},
+				},
+				&schema.SchemaField{
+					Name:     "description",
+					Type:     schema.FieldTypeText,
+					Required: false,
+					Options: &schema.TextOptions{
+						Min: types.Pointer(1),
+						Max: types.Pointer(280),
+					},
+				},
+				&schema.SchemaField{
+					Name:     "thumb",
+					Type:     schema.FieldTypeFile,
+					Required: false,
+					Options: &schema.FileOptions{
+						MimeTypes: []string{
+							"image/jpeg", 
+							"image/png", 
+							"image/gif", 
+							"image/bmp",
+							"image/webp",
+						},
+						MaxSelect: 1,
+						MaxSize: 5000000, //5 MB in bytes
+						Protected: false,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "file",
+					Type:     schema.FieldTypeFile,
+					Required: true,
+					Options: &schema.FileOptions{
+						MaxSelect: 1,
+						MaxSize: 50000000, //50 MB in bytes
+						Protected: false,
+					},
+				},
+				&schema.SchemaField{
+					Name:     "scale",
+					Type:     schema.FieldTypeNumber,
+					Required: false,
+					Options: &schema.NumberOptions{
+						Min: types.Pointer(0.001),
+						Max: types.Pointer(100.0),
+						NoDecimal: false,
+					},
+				},
+			),
+		}
+
+		if err := app.Dao().SaveCollection(avatarsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// add some default avatars
+
+	// add robot
+	record := models.Record{}
+	err = app.Dao().RecordQuery("avatars").
+		AndWhere(dbx.HashExp{"name": "Robot"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
+		form.LoadData(map[string]any{
+			"name": "Robot",
+			"description": "Test avatar",
+			"scale": 1,
+		})
+		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/RobotExpressive.glb")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+	
+		if err := form.Submit(); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// add fox
+	record = models.Record{}
+	err = app.Dao().RecordQuery("avatars").
+		AndWhere(dbx.HashExp{"name": "Fox"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
+		form.LoadData(map[string]any{
+			"name": "Fox",
+			"description": "Test avatar",
+			"scale": 1,
+		})
+		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/Fox.glb")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+	
+		if err := form.Submit(); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -394,7 +548,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	// add some default furniture
 
 	// add chair
-	record := models.Record{}
+	record = models.Record{}
 	err = app.Dao().RecordQuery("furniture").
 		AndWhere(dbx.HashExp{"name": "Chair"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).

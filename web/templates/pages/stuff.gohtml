@@ -124,7 +124,7 @@
 				class="flex place-content-between place-items-center space-x-2"
 			>
 				<div>
-					<span class="select-none font-bold text-base">
+					<span class="select-none font-bold text-base capitalize">
 						{{ .Category }}
 					</span>
 					<button
@@ -216,29 +216,39 @@
 					>
 						<a
 							hx-target="#page"
-							href="/stuff/furniture/{{ $item.StuffId }}"
+							href="/stuff/{{ $.Category }}/{{ $item.StuffId }}"
 						>
 							<img
 								class="rounded-t-lg h-auto max-w-full"
-								src="/static/assets/furniture/thumb.png"
-								alt="Furniture Thumbnail"
+								src="/static/assets/{{ $.Category }}/thumb.png"
+								alt="{{ $.Category }} thumbnail"
 							/>
 						</a>
 						<a
 							hx-target="#page"
-							href="/stuff/furniture/{{ $item.StuffId }}"
+							href="/stuff/{{ $.Category }}/{{ $item.StuffId }}"
 							class="font-bold w-full text-center truncate hover:underline"
 						>
 							{{ $item.Name }}
 						</a>
 						<button
 							class="hover:underline bg-gray-700 rounded-lg py-1 px-1.5 truncate"
-							onclick="(function(){
-							window.game.addStuff('{{ $item.Id }}', '{{ $item.Type }}');
-							return false;
-						})();return false;"
+							{{ if eq $.Category "furniture" }}
+								onclick="(function(){
+								window.game.addStuff('{{ $item.Id }}',
+								'{{ $item.Type }}'); return false; })();return
+								false;"
+							{{ else }}
+								onclick="(function(){
+								window.game.wearAvatar('{{ $item.Id }}'); return
+								false; })();return false;"
+							{{ end }}
 						>
-							Add to room
+							{{ if eq $.Category "furniture" }}
+								Add to room
+							{{ else }}
+								Wear
+							{{ end }}
 						</button>
 					</div>
 				{{ end }}
