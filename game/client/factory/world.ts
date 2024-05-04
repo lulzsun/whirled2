@@ -58,6 +58,16 @@ export const createWorld = (): World => {
 	gridHelper.ignoreIntersect = true;
 	gridHelper.position.y = 0.01;
 
+	var textureLoader = new THREE.TextureLoader();
+
+	var textureEquirec = textureLoader.load(
+		`${API_URL}/static/assets/backdrop/clear_sky.png`,
+	);
+	textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
+	textureEquirec.colorSpace = THREE.SRGBColorSpace;
+
+	world.scene.background = textureEquirec;
+
 	const planeMesh = new THREE.Mesh(
 		new THREE.PlaneGeometry(20, 20),
 		new THREE.MeshBasicMaterial({
