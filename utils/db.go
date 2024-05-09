@@ -436,7 +436,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		form.LoadData(map[string]any{
 			"name": "Fox",
 			"description": "Test avatar",
-			"scale": 1,
+			"scale": 0.05,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/Fox.glb")
 		if err != nil {
