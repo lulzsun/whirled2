@@ -117,18 +117,30 @@ export function createRenderSystem(world: World) {
 			const nameplate = ent?.nameplate;
 
 			if (player !== undefined && nameplate !== undefined) {
-				nameplate.position.setFromMatrixPosition(player.matrixWorld);
-				nameplate.position.project(world.camera);
+				// Get the player's bounding box
+				const boundingBox = new THREE.Box3().setFromObject(player);
+				const playerHeight = boundingBox.max.y - boundingBox.min.y;
 
+				// Start with the player's world position
+				const nameplateWorldPos = new THREE.Vector3();
+				nameplateWorldPos.setFromMatrixPosition(player.matrixWorld);
+
+				// Offset upward by the player's height (to get to top)
+				nameplateWorldPos.y += playerHeight + 0.5;
+
+				// Project to screen space
+				nameplateWorldPos.project(world.camera);
+
+				// Convert to screen coordinates
 				const canvas = world.renderer.domElement;
 				const rect = canvas.getBoundingClientRect();
 				const widthHalf = rect.width / 2;
 				const heightHalf = rect.height / 2;
 
 				nameplate.position.x =
-					nameplate.position.x * widthHalf + widthHalf + rect.left;
+					nameplateWorldPos.x * widthHalf + widthHalf + rect.left;
 				nameplate.position.y =
-					-nameplate.position.y * heightHalf + heightHalf;
+					-nameplateWorldPos.y * heightHalf + heightHalf;
 
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
