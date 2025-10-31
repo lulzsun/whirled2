@@ -1,4 +1,4 @@
-import React, { createElement } from "jsx-dom";
+import { createElement } from "jsx-dom";
 
 export const createNameplateUI = (name: string) => {
 	const element = createElement("nameplate", {}, <>{name}</>);

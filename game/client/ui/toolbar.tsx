@@ -1,4 +1,4 @@
-import React, { createRef } from "jsx-dom";
+import { createRef } from "jsx-dom";
 
 export const createToolbarContainer = () => {
 	return (

@@ -1,4 +1,4 @@
-import React, { createElement } from "jsx-dom";
+import { createElement } from "jsx-dom";
 
 export type HTMLContextMenu = HTMLElement & {
 	open: (event: MouseEvent | PointerEvent) => void;

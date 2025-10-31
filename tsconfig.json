@@ -5,7 +5,8 @@
 		"module": "ESNext",
 		"lib": ["ES2020", "DOM", "DOM.Iterable"],
 		"skipLibCheck": true,
-		"jsx": "react",
+		"jsx": "react-jsx",
+		"jsxImportSource": "jsx-dom",
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",

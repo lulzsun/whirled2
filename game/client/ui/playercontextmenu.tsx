@@ -1,5 +1,5 @@
-import React from "jsx-dom";
 import { World } from "../factory/world";
+import { MouseEventHandler } from "jsx-dom";
 import {
 	getActionNames,
 	getStateNames,
@@ -26,9 +26,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	};
 
 	const statesAnimMenu = createContextMenuUI(true);
-	const onStatesMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
-		event,
-	) => {
+	const onStatesMenuOpen: MouseEventHandler<HTMLButtonElement> = (event) => {
 		event.currentTarget.parentElement!.appendChild(statesAnimMenu);
 		statesAnimMenu.setItem(
 			createAnimationMenu(
@@ -44,9 +42,7 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 	};
 
 	const actionsAnimMenu = createContextMenuUI(true);
-	const onActionsMenuOpen: React.MouseEventHandler<HTMLButtonElement> = (
-		event,
-	) => {
+	const onActionsMenuOpen: MouseEventHandler<HTMLButtonElement> = (event) => {
 		event.currentTarget.parentElement!.appendChild(actionsAnimMenu);
 		actionsAnimMenu.setItem(
 			createAnimationMenu(

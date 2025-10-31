@@ -1,5 +1,3 @@
-import React from "jsx-dom";
-
 export const createDisconnectUI = (reason: string) => {
 	return (
 		<div className="absolute w-full h-full flex items-center justify-center bg-black bg-opacity-50">

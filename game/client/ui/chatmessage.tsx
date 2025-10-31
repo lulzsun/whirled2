@@ -1,4 +1,4 @@
-import React, { createElement, createRef } from "jsx-dom";
+import { createElement, createRef } from "jsx-dom";
 import { API_URL } from "../constants";
 
 export const createChatMessageUI = (
