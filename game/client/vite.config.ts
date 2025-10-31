@@ -15,4 +15,8 @@ export default defineConfig({
 		strictPort: true,
 		port: 6969,
 	},
+	esbuild: {
+		jsx: "automatic",
+		jsxImportSource: "jsx-dom",
+	},
 });
