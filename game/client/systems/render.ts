@@ -62,51 +62,73 @@ export function createRenderSystem(world: World) {
 	world.composer = composer;
 
 	const setGameSize = () => {
-		{
-			// https://threejs.org/manual/#en/responsive
-			// https://stackoverflow.com/a/60506772
-			const dpr = window.devicePixelRatio || 1;
-			const aspect = canvas.clientWidth / canvas.clientHeight;
+		// https://threejs.org/manual/#en/responsive
+		// https://stackoverflow.com/a/60506772
+		const dpr = window.devicePixelRatio || 1;
+		const parent = canvas.parentElement!;
+		const aspect = parent.clientWidth / parent.clientHeight;
 
-			if (world.camera instanceof THREE.PerspectiveCamera) {
-				world.camera.aspect = aspect;
-				world.camera.updateProjectionMatrix();
-			} else if (world.camera instanceof THREE.OrthographicCamera) {
-				//@ts-ignore
-				const fov = world.camera.fov ?? 1000;
-				world.camera.left = (-fov * aspect) / 2;
-				world.camera.right = (fov * aspect) / 2;
-				world.camera.top = fov / 2;
-				world.camera.bottom = -fov / 2;
-				world.camera.updateProjectionMatrix();
-			}
-
-			const width = Math.floor(window.innerWidth * dpr);
-			const height = Math.floor(canvas.parentElement!.clientHeight * dpr);
-
-			world.renderer.setSize(width, height, false);
-			world.composer?.setSize(width, height);
-
-			// https://stackoverflow.com/a/21809242
-			world.renderer.setViewport(
-				0,
-				0,
-				canvas.parentElement!.clientWidth,
-				canvas.parentElement!.clientHeight,
-			);
+		if (world.camera instanceof THREE.PerspectiveCamera) {
+			world.camera.aspect = aspect;
+			world.camera.updateProjectionMatrix();
+		} else if (world.camera instanceof THREE.OrthographicCamera) {
+			//@ts-ignore
+			const fov = world.camera.fov ?? 1000;
+			world.camera.left = (-fov * aspect) / 2;
+			world.camera.right = (fov * aspect) / 2;
+			world.camera.top = fov / 2;
+			world.camera.bottom = -fov / 2;
+			world.camera.updateProjectionMatrix();
 		}
+
+		const width = Math.floor(canvas.parentElement!.clientWidth * dpr);
+		const height = Math.floor(canvas.parentElement!.clientHeight * dpr);
+		world.renderer.setSize(width, height, false);
+		world.composer?.setSize(width, height);
+		world.renderer.setViewport(0, 0, width, height);
 	};
 
-	window.addEventListener("resize", setGameSize);
-	setTimeout(function () {
-		setGameSize();
-	}, 1);
 	var observer = new window.ResizeObserver(() => {
-		window.dispatchEvent(new Event("resize"));
+		requestAnimationFrame(setGameSize);
 	});
 	observer.observe(canvas.parentElement!);
+	let isDragging = false;
+	document.addEventListener("mousedown", (e) => {
+		if ((e.target as HTMLElement).classList.contains("gutter")) {
+			isDragging = true;
+		}
+	});
+
+	document.addEventListener("mouseup", () => {
+		if (isDragging) {
+			isDragging = false;
+			setGameSize();
+		}
+	});
+
+	let isZooming = false;
+	let zoomTimeout: number | undefined;
+	document.addEventListener(
+		"wheel",
+		(e) => {
+			if (e.ctrlKey || e.metaKey) {
+				isZooming = true;
+				if (zoomTimeout !== undefined) {
+					clearTimeout(zoomTimeout);
+				}
+				zoomTimeout = window.setTimeout(() => {
+					isZooming = false;
+				}, 100);
+			}
+		},
+		{ passive: true },
+	);
 
 	return defineSystem((world: World) => {
+		if (isDragging || isZooming) {
+			setGameSize();
+		}
+
 		// handle player nameplates
 		const nameplates = nameplateQuery(world);
 		for (let x = 0; x < nameplates.length; x++) {
