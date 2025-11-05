@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	publicDir: "../../web/static/",
 	build: {
 		lib: {
 			entry: "./main.ts",
