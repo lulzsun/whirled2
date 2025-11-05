@@ -17,7 +17,6 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 
 	const firstModelAnims = world.players.get(player.eid)?.player.children[0]
 		.animations;
-
 	if (firstModelAnims === undefined) throw `No animations for eid: ${eid}`;
 
 	const animations = {
@@ -33,7 +32,6 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 				world,
 				player.eid,
 				animations.states,
-				firstModelAnims,
 				statesAnimMenu.close,
 			),
 		);
@@ -49,7 +47,6 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 				world,
 				player.eid,
 				animations.actions,
-				firstModelAnims,
 				actionsAnimMenu.close,
 			),
 		);
@@ -141,7 +138,6 @@ export const createAnimationMenu = (
 	world: World,
 	eid: number,
 	names: string[],
-	anims: THREE.AnimationClip[],
 	close: (all?: boolean) => void,
 ) => {
 	return (
@@ -156,11 +152,11 @@ export const createAnimationMenu = (
 									type="button"
 									class="block w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
 									onClick={(_) => {
-										playAnimation(world, eid, name, anims);
+										playAnimation(world, eid, name);
 										close(true);
 									}}
 								>
-									{name.replace(/_(action|state)$/i, "")}
+									{name.replace(/^(action|state)_/i, "")}
 								</button>
 							</li>
 						);

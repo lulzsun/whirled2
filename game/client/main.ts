@@ -7,6 +7,7 @@ import { initializeHtmx, htmx } from "./htmx";
 const world = createWorld();
 declare global {
 	interface Window {
+		RufflePlayer: any;
 		world: World;
 		htmx: typeof htmx;
 		game: {
@@ -35,6 +36,15 @@ window.game = {
 		console.log(id);
 	},
 	reconnect: () => {},
+};
+// Config for Ruffle player which handles swf emulation
+window.RufflePlayer.config = {
+	autoplay: "on",
+	splashScreen: false,
+	unmuteOverlay: "hidden",
+	letterbox: "off",
+	wmode: "transparent",
+	preferredRenderer: "canvas",
 };
 
 const systems = createSystems(world);

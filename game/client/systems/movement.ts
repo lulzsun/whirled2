@@ -2,11 +2,12 @@ import * as THREE from "three";
 
 import { defineQuery, defineSystem, removeComponent } from "bitecs";
 import {
-	GltfComponent,
+	AnimationComponent,
 	MoveTowardsComponent,
 	TransformComponent,
 } from "../components";
 import { World } from "../factory/world";
+import { playAnimation } from "./animation";
 
 const movementQuery = defineQuery([MoveTowardsComponent]);
 
@@ -24,8 +25,6 @@ export function createMovementSystem() {
 			if (player === undefined) continue;
 
 			//@ts-ignore
-			const mixer: THREE.AnimationMixer = player.children[0].mixer;
-			const animations = player.children[0].animations;
 			const speed = 0.01;
 
 			const initialPosition = new THREE.Vector3(
@@ -84,23 +83,16 @@ export function createMovementSystem() {
 				TransformComponent.position.z[e] = newPosition.z;
 
 				// Play default walking animation
-				const clip =
-					animations.find((animation) =>
-						/walking_state$|walk_state$/i.test(animation.name),
-					) ?? animations[0];
-				mixer.clipAction(clip).play();
+				playAnimation(
+					world,
+					e,
+					/^state_walking|^state_walk|^walking_|^walk_/i,
+				);
 			} else {
 				removeComponent(world, MoveTowardsComponent, e);
 
 				// Play default state animation
-				const clip =
-					animations[GltfComponent.animState[e]] ??
-					animations.find((animation) =>
-						/idle_state$/i.test(animation.name),
-					) ??
-					animations[0];
-				mixer.stopAllAction();
-				mixer.clipAction(clip).play();
+				playAnimation(world, e, AnimationComponent.prevAnimState[e]);
 			}
 		}
 		return world;

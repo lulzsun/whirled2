@@ -30,9 +30,14 @@ export const TransformComponent = defineComponent({
 	scale: Vector3Schema,
 });
 
-export const SpineComponent = defineComponent({ timeScale: f32 });
+export const SpineComponent = defineComponent();
 
-export const GltfComponent = defineComponent({
+export const GltfComponent = defineComponent();
+
+export const SwfComponent = defineComponent();
+
+export const AnimationComponent = defineComponent({
+	prevAnimState: i8,
 	animState: i8,
 	animAction: i8,
 	timeScale: f32,

@@ -14,6 +14,7 @@ import {
 	NameplateComponent,
 	ChatMessageComponent,
 	GltfComponent,
+	AnimationComponent,
 } from "../components";
 import { API_URL } from "../constants";
 import { playAnimation } from "./animation";
@@ -433,15 +434,8 @@ export function createNetworkSystem(world: World) {
 					if (eid === undefined) {
 						break;
 					}
-					const player = world.players.get(eid)?.player;
-					const anims = player?.children[0].animations;
-					if (anims && hasComponent(world, GltfComponent, eid)) {
-						playAnimation(
-							world,
-							eid,
-							d.action ?? d.state ?? -1,
-							anims,
-						);
+					if (hasComponent(world, AnimationComponent, eid)) {
+						playAnimation(world, eid, d.action ?? d.state ?? -1);
 					}
 					break;
 				}

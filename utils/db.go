@@ -399,8 +399,58 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	// add some default avatars
 
-	// add robot
+	// add guest (ghost)
 	record := models.Record{}
+	err = app.Dao().RecordQuery("avatars").
+		AndWhere(dbx.HashExp{"name": "Ghost"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
+		form.LoadData(map[string]any{
+			"name": "Ghost",
+			"description": "Ghost!",
+			"scale": 1,
+		})
+		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/guest.swf")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+	
+		if err := form.Submit(); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// add member (tofu)
+	record = models.Record{}
+	err = app.Dao().RecordQuery("avatars").
+		AndWhere(dbx.HashExp{"name": "Tofu"}).
+		AndWhere(dbx.HashExp{"creator_id": ""}).
+		One(&record)
+
+	if err != nil && !record.HasId() {
+		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
+		form.LoadData(map[string]any{
+			"name": "Tofu",
+			"description": "Tofu!",
+			"scale": 1,
+		})
+		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/member.swf")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		form.AddFiles("file", file)
+	
+		if err := form.Submit(); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// add robot
+	record = models.Record{}
 	err = app.Dao().RecordQuery("avatars").
 		AndWhere(dbx.HashExp{"name": "Robot"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).

@@ -1,5 +1,6 @@
 import { addComponent, addEntity } from "bitecs";
 import {
+	AnimationComponent,
 	GltfComponent,
 	ObjectComponent,
 	TransformComponent,
@@ -148,9 +149,10 @@ export const createObject = (
 			model = entity.children[0];
 
 			addComponent(world, GltfComponent, eid);
-			GltfComponent.timeScale[eid] = 1000;
-			GltfComponent.animState[eid] = -1;
-			GltfComponent.animAction[eid] = -1;
+			addComponent(world, AnimationComponent, eid);
+			AnimationComponent.timeScale[eid] = 1000;
+			AnimationComponent.animState[eid] = -1;
+			AnimationComponent.animAction[eid] = -1;
 
 			console.log("Created GLTF mesh", model);
 		},
