@@ -7,8 +7,8 @@
 		"dev": "concurrently --kill-other --kill-signal SIGKILL -n dev: npm:dev-*",
 		"dev-client": "vite serve ./game/client --host",
 		"dev-server": "nodemon -e go,json,gohtml,sql --exec go run . serve --signal SIGKILL",
-		"dev-watch": "npx tailwindcss -i ./tailwind.css -o ./web/static/styles.css --watch",
-		"build-css": "npx tailwindcss -i ./tailwind.css -o ./game/client/dist/styles.css",
+		"dev-watch": "npx @tailwindcss/cli -i ./tailwind.css -o ./web/static/styles.css --watch",
+		"build-css": "npx @tailwindcss/cli -i ./tailwind.css -o ./game/client/dist/styles.css",
 		"build-client": "vite build ./game/client && npm run build-css",
 		"build-server": "go build .",
 		"pretty": "prettier --write ."
@@ -24,14 +24,14 @@
 		"nodemon": "^3.0.1",
 		"prettier": "^3.2.2",
 		"prettier-plugin-go-template": "^0.0.15",
-		"tailwindcss": "^3.3.3",
+		"tailwindcss": "^4.1.16",
 		"typescript": "^5.2.2",
 		"vite": "^5.0.8"
 	},
 	"dependencies": {
 		"@esotericsoftware/spine-threejs": "^4.2.35",
 		"@geckos.io/client": "^3.0.0",
-		"@tailwindcss/container-queries": "^0.1.1",
+		"@tailwindcss/vite": "^4.1.16",
 		"bitecs": "^0.3.40",
 		"imgui-js": "github:Schiznitz/imgui-js",
 		"jsx-dom": "^8.1.2",

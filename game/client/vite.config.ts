@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -20,4 +21,5 @@ export default defineConfig({
 		jsx: "automatic",
 		jsxImportSource: "jsx-dom",
 	},
+	plugins: [tailwindcss()],
 });
