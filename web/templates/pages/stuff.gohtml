@@ -2,13 +2,12 @@
 	<script>
 		if (window._openWebPanel) window._openWebPanel();
 	</script>
-	<div class="p-2 flex flex-col gap-2 w-full @4xl/web:w-3/4">
-		<aside
-			id="default-sidebar"
-			class="fixed top-0 left-0 z-40 w-32 h-full transition-transform -translate-x-full sm:translate-x-0"
-		>
+	<div
+		class="gap-2 flex h-full w-full @7xl/web:w-3/4 bg-gray-50 dark:bg-gray-800"
+	>
+		<div id="default-sidebar">
 			<div
-				class="h-full pr-2 py-2 overflow-y-auto bg-gray-50 dark:bg-gray-800 text-sm"
+				class="h-full p-2 overflow-y-auto bg-gray-50 dark:bg-gray-800 text-sm"
 			>
 				<ul class="space-y-2 font-medium">
 					<li>
@@ -118,10 +117,10 @@
 					</li>
 				</ul>
 			</div>
-		</aside>
-		<div class="p-4 sm:ml-32 space-y-4">
+		</div>
+		<div class="p-2 w-full bg-gray-50 dark:bg-gray-900">
 			<div
-				class="flex place-content-between place-items-center space-x-2"
+				class="flex place-content-between place-items-center space-x-2 py-2"
 			>
 				<div>
 					<span class="select-none font-bold text-base capitalize">
@@ -207,9 +206,7 @@
 					</div>
 				</form>
 			</div>
-			<div
-				class="text-xs grid grid-cols-3 @3xl/web:grid-cols-4 @7xl/web:grid-cols-6 gap-4"
-			>
+			<div class="text-xs grid grid-cols-3 @3xl/web:grid-cols-4 gap-4">
 				{{ range $i, $item := .Items }}
 					<div
 						class="flex flex-col p-4 gap-2 border-2 border-gray-200 rounded-lg dark:border-gray-700 items-center justify-center"
