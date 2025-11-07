@@ -1,7 +1,8 @@
-import { defineQuery, defineSystem, hasComponent } from "bitecs";
+import { defineQuery, defineSystem, enterQuery, hasComponent } from "bitecs";
 import { World } from "../factory/world";
 import {
 	AnimationComponent,
+	AvatarComponent,
 	GltfComponent,
 	LocalPlayerComponent,
 	PlayerComponent,
@@ -18,6 +19,7 @@ import { Object } from "../factory/object";
 import { Player } from "../factory/player";
 import { Editor } from "./editor";
 
+const avatarEnterQuery = enterQuery(defineQuery([AvatarComponent]));
 const spineAvatarQuery = defineQuery([SpineComponent, PlayerComponent]);
 const gltfAvatarQuery = defineQuery([GltfComponent, PlayerComponent]);
 const swfAvatarQuery = defineQuery([SwfComponent, PlayerComponent]);
@@ -47,6 +49,36 @@ export function createAnimationSystem() {
 				let mesh = player.children[y];
 				if (mesh instanceof spine.SkeletonMesh) {
 					mesh.update(delta / AnimationComponent.timeScale[eid]);
+				}
+			}
+		}
+
+		// handle initializing steps for avatar animations
+		const newAvatars = avatarEnterQuery(world);
+		for (let x = 0; x < newAvatars.length; x++) {
+			const eid = newAvatars[x];
+			const player = world.players.get(eid)?.player;
+
+			if (!player) continue;
+
+			// initialize gltf animations
+			if (hasComponent(world, GltfComponent, eid)) {
+				for (let y = 0; y < player.children.length; y++) {
+					//@ts-ignore: createPlayer() adds a mixer component to the model
+					let mixer = player.children[y].mixer;
+					if (!(mixer instanceof THREE.AnimationMixer)) continue;
+
+					const clip =
+						player.children[y].animations.find((animation) =>
+							/^state_idle/i.test(animation.name),
+						) ?? player.children[y].animations[0];
+					const clipIndex =
+						player.children[y].animations.indexOf(clip);
+					const action = mixer.clipAction(clip).play();
+					action.time = Math.random() * clip.duration;
+					AnimationComponent.timeScale[eid] = 1000;
+					AnimationComponent.animState[eid] = clipIndex;
+					AnimationComponent.animAction[eid] = -1;
 				}
 			}
 		}

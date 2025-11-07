@@ -1,6 +1,7 @@
 import { addComponent, addEntity } from "bitecs";
 import {
 	AnimationComponent,
+	AvatarComponent,
 	GltfComponent,
 	LocalPlayerComponent,
 	PlayerComponent,
@@ -23,14 +24,14 @@ export enum Avatar {
 	SWF,
 }
 
-export const createPlayer = (
+export const createPlayer = async (
 	world: World,
 	name: string = "Unnamed",
 	local: boolean = false,
 	avatar: Avatar = Avatar.None,
 	avatarFile: string = "",
 	initialScale: number = 1,
-): Player => {
+): Promise<Player> => {
 	if (avatar === Avatar.None) {
 		const extension = avatarFile.split(".").pop();
 		switch (extension) {
@@ -92,99 +93,14 @@ export const createPlayer = (
 			);
 			break;
 		case Avatar.GLTF:
-			if (avatarFile === "")
-				avatarFile = "/static/assets/avatars/RobotExpressive.glb";
-
-			const loader = new GLTFLoader();
-			loader.load(
-				`${API_URL}${avatarFile}`,
-				function (gltf) {
-					let model: THREE.Group | THREE.Object3D = gltf.scene;
-					model.scale.set(
-						initialScale * model.scale.x,
-						initialScale * model.scale.y,
-						initialScale * model.scale.z,
-					);
-
-					entity.add(
-						Object.assign(model, {
-							mixer: new THREE.AnimationMixer(model),
-						}),
-					);
-
-					model = entity.children[0];
-					//@ts-ignore: this is probably a bad idea for the future...
-					const mixer: THREE.AnimationMixer = model.mixer;
-					model.animations = gltf.animations;
-					const clip =
-						model.animations.find((animation) =>
-							/^state_idle/i.test(animation.name),
-						) ?? model.animations[0];
-					const clipIndex = model.animations.indexOf(clip);
-					const action = mixer.clipAction(clip).play();
-					action.time = Math.random() * clip.duration;
-
-					addComponent(world, GltfComponent, eid);
-					addComponent(world, AnimationComponent, eid);
-					AnimationComponent.timeScale[eid] = 1000;
-					AnimationComponent.animState[eid] = clipIndex;
-					AnimationComponent.animAction[eid] = -1;
-
-					console.log("Created GLTF mesh", model);
-				},
-				undefined,
-				function (e) {
-					console.error(e);
-				},
+			entity.add(
+				await createGtlfAvatar(world, eid, avatarFile, initialScale),
 			);
 			break;
 		case Avatar.SWF:
-			if (avatarFile === "")
-				avatarFile = "/static/assets/avatars/guest.swf";
-
-			let ruffle = window.RufflePlayer.newest();
-			let player = ruffle.createPlayer();
-			let container = document.getElementById("ruffle");
-			container!.appendChild(player);
-			player
-				.ruffle()
-				.load(`${API_URL}${avatarFile}`)
-				.finally(() => {
-					var swfTexture = new THREE.CanvasTexture(
-						player.shadowRoot!.querySelector("canvas")!,
-					);
-
-					const geometry = new THREE.PlaneGeometry(10, 10);
-					const material = new THREE.MeshBasicMaterial({
-						map: swfTexture,
-						alphaTest: 0.5,
-						side: THREE.DoubleSide,
-						depthWrite: true,
-						depthTest: true,
-					});
-					const box = new THREE.Mesh(geometry, material);
-					box.material.needsUpdate;
-					box.position.y = geometry.parameters.height / 2;
-					entity.add(box);
-
-					player.addEventListener("loadedmetadata", () => {
-						// this is overriding THREE.AnimationClip[], could cause unintentional behavior
-						// TODO: have a generic way of storing animations across all avatar types
-						// 		 maybe storing it in AnimationComponent?
-						box.animations = player.metadata.frameList.map(
-							(item: [number, string][]) => ({
-								frame: item[0],
-								name: item[1],
-							}),
-						);
-						// @ts-ignore: adding a ref to the ruffle player to make life easier
-						//			is there a better way of doing this...?
-						box.ruffle = player;
-					});
-				});
-
-			addComponent(world, SwfComponent, eid);
-			addComponent(world, AnimationComponent, eid);
+			entity.add(
+				await createSwfAvatar(world, eid, avatarFile, initialScale),
+			);
 			break;
 		default:
 			console.error("Unknown avatar loaded! This can't be happening!");
@@ -285,6 +201,114 @@ export const createPlayer = (
 	});
 
 	return entity;
+};
+
+export const createGtlfAvatar = async (
+	world: World,
+	eid: number,
+	avatarFile: string,
+	initialScale: number = 1,
+) => {
+	if (avatarFile === "")
+		avatarFile = "/static/assets/avatars/RobotExpressive.glb";
+
+	const loader = new GLTFLoader();
+	const mesh:
+		| THREE.Group<THREE.Object3DEventMap>
+		| THREE.Object3D<THREE.Object3DEventMap> = await new Promise(
+		(resolve) => {
+			loader.load(
+				`${API_URL}${avatarFile}`,
+				function (gltf) {
+					let model: THREE.Group | THREE.Object3D = gltf.scene;
+					model.scale.set(
+						initialScale * model.scale.x,
+						initialScale * model.scale.y,
+						initialScale * model.scale.z,
+					);
+
+					let m = Object.assign(model, {
+						mixer: new THREE.AnimationMixer(model),
+						animations: gltf.animations,
+					});
+
+					console.log("Created GLTF mesh", m);
+					resolve(m);
+				},
+				undefined,
+				function (e) {
+					console.error("Error loading GLTF file:", e);
+					resolve(new THREE.Mesh());
+				},
+			);
+		},
+	);
+
+	addComponent(world, GltfComponent, eid);
+	addComponent(world, AnimationComponent, eid);
+	addComponent(world, AvatarComponent, eid);
+	return mesh;
+};
+
+export const createSwfAvatar = async (
+	world: World,
+	eid: number,
+	avatarFile: string,
+	initialScale: number = 1,
+) => {
+	if (avatarFile === "") avatarFile = "/static/assets/avatars/guest.swf";
+
+	let mesh: THREE.Mesh<
+		THREE.PlaneGeometry,
+		THREE.MeshBasicMaterial,
+		THREE.Object3DEventMap
+	> = new THREE.Mesh();
+	let ruffle = window.RufflePlayer.newest();
+	let player = ruffle.createPlayer();
+	let container = document.getElementById("ruffle");
+	container!.appendChild(player);
+	await new Promise<void>((resolve) => {
+		player
+			.ruffle()
+			.load(`${API_URL}${avatarFile}`)
+			.finally(() => {
+				var swfTexture = new THREE.CanvasTexture(
+					player.shadowRoot!.querySelector("canvas")!,
+				);
+
+				const geometry = new THREE.PlaneGeometry(10, 10);
+				const material = new THREE.MeshBasicMaterial({
+					map: swfTexture,
+					alphaTest: 0.5,
+					side: THREE.DoubleSide,
+					depthWrite: true,
+					depthTest: true,
+				});
+				mesh = new THREE.Mesh(geometry, material);
+				mesh.material.needsUpdate;
+				mesh.position.y = geometry.parameters.height / 2;
+
+				player.addEventListener("loadedmetadata", () => {
+					// this is overriding THREE.AnimationClip[], could cause unintentional behavior
+					// TODO: have a generic way of storing animations across all avatar types
+					// 		 maybe storing it in AnimationComponent?
+					mesh.animations = player.metadata.frameList.map(
+						(item: [number, string][]) => ({
+							frame: item[0],
+							name: item[1],
+						}),
+					);
+					// @ts-ignore: adding a ref to the ruffle player to make life easier
+					//			is there a better way of doing this...?
+					mesh.ruffle = player;
+				});
+				resolve();
+			});
+	});
+	addComponent(world, SwfComponent, eid);
+	addComponent(world, AnimationComponent, eid);
+	addComponent(world, AvatarComponent, eid);
+	return mesh;
 };
 
 const createSpineMesh = (

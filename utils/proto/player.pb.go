@@ -350,6 +350,77 @@ func (x *PlayerAnim) GetAnim() string {
 	return ""
 }
 
+type PlayerWear struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Username string  `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Id       string  `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	File     string  `protobuf:"bytes,3,opt,name=file,proto3" json:"file,omitempty"`
+	Scale    float64 `protobuf:"fixed64,4,opt,name=scale,proto3" json:"scale,omitempty"`
+}
+
+func (x *PlayerWear) Reset() {
+	*x = PlayerWear{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_player_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PlayerWear) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlayerWear) ProtoMessage() {}
+
+func (x *PlayerWear) ProtoReflect() protoreflect.Message {
+	mi := &file_player_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlayerWear.ProtoReflect.Descriptor instead.
+func (*PlayerWear) Descriptor() ([]byte, []int) {
+	return file_player_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *PlayerWear) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *PlayerWear) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PlayerWear) GetFile() string {
+	if x != nil {
+		return x.File
+	}
+	return ""
+}
+
+func (x *PlayerWear) GetScale() float64 {
+	if x != nil {
+		return x.Scale
+	}
+	return 0
+}
+
 var File_player_proto protoreflect.FileDescriptor
 
 var file_player_proto_rawDesc = []byte{
@@ -382,9 +453,15 @@ var file_player_proto_rawDesc = []byte{
 	0x0a, 0x0a, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x41, 0x6e, 0x69, 0x6d, 0x12, 0x1a, 0x0a, 0x08,
 	0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
 	0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x61, 0x6e, 0x69, 0x6d,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x6e, 0x69, 0x6d, 0x42, 0x16, 0x5a, 0x14,
-	0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69, 0x6c, 0x73, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x61, 0x6e, 0x69, 0x6d, 0x22, 0x62, 0x0a, 0x0a,
+	0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x57, 0x65, 0x61, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x63,
+	0x61, 0x6c, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x05, 0x73, 0x63, 0x61, 0x6c, 0x65,
+	0x42, 0x16, 0x5a, 0x14, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69,
+	0x6c, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -399,7 +476,7 @@ func file_player_proto_rawDescGZIP() []byte {
 	return file_player_proto_rawDescData
 }
 
-var file_player_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_player_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_player_proto_goTypes = []interface{}{
 	(*PlayerJoin)(nil),  // 0: whirled2.PlayerJoin
 	(*PlayerLeave)(nil), // 1: whirled2.PlayerLeave
@@ -407,14 +484,15 @@ var file_player_proto_goTypes = []interface{}{
 	(*PlayerChat)(nil),  // 3: whirled2.PlayerChat
 	(*PlayerMove)(nil),  // 4: whirled2.PlayerMove
 	(*PlayerAnim)(nil),  // 5: whirled2.PlayerAnim
-	(*Player)(nil),      // 6: whirled2.Player
-	(*Position)(nil),    // 7: whirled2.Position
-	(*Rotation)(nil),    // 8: whirled2.Rotation
+	(*PlayerWear)(nil),  // 6: whirled2.PlayerWear
+	(*Player)(nil),      // 7: whirled2.Player
+	(*Position)(nil),    // 8: whirled2.Position
+	(*Rotation)(nil),    // 9: whirled2.Rotation
 }
 var file_player_proto_depIdxs = []int32{
-	6, // 0: whirled2.PlayerJoin.player:type_name -> whirled2.Player
-	7, // 1: whirled2.PlayerMove.position:type_name -> whirled2.Position
-	8, // 2: whirled2.PlayerMove.rotation:type_name -> whirled2.Rotation
+	7, // 0: whirled2.PlayerJoin.player:type_name -> whirled2.Player
+	8, // 1: whirled2.PlayerMove.position:type_name -> whirled2.Position
+	9, // 2: whirled2.PlayerMove.rotation:type_name -> whirled2.Rotation
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -501,6 +579,18 @@ func file_player_proto_init() {
 				return nil
 			}
 		}
+		file_player_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PlayerWear); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -508,7 +598,7 @@ func file_player_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_player_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

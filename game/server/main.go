@@ -81,6 +81,8 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 				onPlayerMove(peer, e.PlayerMove.Position, e.PlayerMove.Rotation)
 			case *buf.WhirledEvent_PlayerAnim:
 				onPlayerAnim(peer, e.PlayerAnim.Anim)
+			case *buf.WhirledEvent_PlayerWear:
+				onPlayerWear(peer, e.PlayerWear.Id)
 			case *buf.WhirledEvent_ObjectJoin:
 				onObjectJoin(peer, e.ObjectJoin.Object)
 			case *buf.WhirledEvent_ObjectLeave:

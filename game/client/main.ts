@@ -1,7 +1,7 @@
 import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
-import { emitObjectJoin } from "./systems/network";
+import { emitObjectJoin, emitPlayerWear } from "./systems/network";
 import { initializeHtmx, htmx } from "./htmx";
 
 const world = createWorld();
@@ -30,7 +30,7 @@ window.game = {
 		emitObjectJoin(world, id, parseInt(type));
 	},
 	wearAvatar: (id) => {
-		console.log(id);
+		emitPlayerWear(world, id);
 	},
 	reconnect: () => {},
 };

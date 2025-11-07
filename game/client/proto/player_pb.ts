@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file player.proto.
  */
 export const file_player: GenFile = /*@__PURE__*/
-  fileDesc("CgxwbGF5ZXIucHJvdG8SCHdoaXJsZWQyIi4KClBsYXllckpvaW4SIAoGcGxheWVyGAEgASgLMhAud2hpcmxlZDIuUGxheWVyIh8KC1BsYXllckxlYXZlEhAKCHVzZXJuYW1lGAEgASgJIjQKClBsYXllckF1dGgSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRyb29tGAMgASgJIi8KClBsYXllckNoYXQSEAoIdXNlcm5hbWUYASABKAkSDwoHbWVzc2FnZRgCIAEoCSJqCgpQbGF5ZXJNb3ZlEhAKCHVzZXJuYW1lGAEgASgJEiQKCHBvc2l0aW9uGAIgASgLMhIud2hpcmxlZDIuUG9zaXRpb24SJAoIcm90YXRpb24YAyABKAsyEi53aGlybGVkMi5Sb3RhdGlvbiIsCgpQbGF5ZXJBbmltEhAKCHVzZXJuYW1lGAEgASgJEgwKBGFuaW0YAiABKAlCFloUd2hpcmxlZDIvdXRpbHMvcHJvdG9iBnByb3RvMw", [file_common]);
+  fileDesc("CgxwbGF5ZXIucHJvdG8SCHdoaXJsZWQyIi4KClBsYXllckpvaW4SIAoGcGxheWVyGAEgASgLMhAud2hpcmxlZDIuUGxheWVyIh8KC1BsYXllckxlYXZlEhAKCHVzZXJuYW1lGAEgASgJIjQKClBsYXllckF1dGgSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIMCgRyb29tGAMgASgJIi8KClBsYXllckNoYXQSEAoIdXNlcm5hbWUYASABKAkSDwoHbWVzc2FnZRgCIAEoCSJqCgpQbGF5ZXJNb3ZlEhAKCHVzZXJuYW1lGAEgASgJEiQKCHBvc2l0aW9uGAIgASgLMhIud2hpcmxlZDIuUG9zaXRpb24SJAoIcm90YXRpb24YAyABKAsyEi53aGlybGVkMi5Sb3RhdGlvbiIsCgpQbGF5ZXJBbmltEhAKCHVzZXJuYW1lGAEgASgJEgwKBGFuaW0YAiABKAkiRwoKUGxheWVyV2VhchIQCgh1c2VybmFtZRgBIAEoCRIKCgJpZBgCIAEoCRIMCgRmaWxlGAMgASgJEg0KBXNjYWxlGAQgASgBQhZaFHdoaXJsZWQyL3V0aWxzL3Byb3RvYgZwcm90bzM", [file_common]);
 
 /**
  * @generated from message whirled2.PlayerJoin
@@ -145,4 +145,36 @@ export type PlayerAnim = Message<"whirled2.PlayerAnim"> & {
  */
 export const PlayerAnimSchema: GenMessage<PlayerAnim> = /*@__PURE__*/
   messageDesc(file_player, 5);
+
+/**
+ * @generated from message whirled2.PlayerWear
+ */
+export type PlayerWear = Message<"whirled2.PlayerWear"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string file = 3;
+   */
+  file: string;
+
+  /**
+   * @generated from field: double scale = 4;
+   */
+  scale: number;
+};
+
+/**
+ * Describes the message whirled2.PlayerWear.
+ * Use `create(PlayerWearSchema)` to create a new message.
+ */
+export const PlayerWearSchema: GenMessage<PlayerWear> = /*@__PURE__*/
+  messageDesc(file_player, 6);
 

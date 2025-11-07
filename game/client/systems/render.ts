@@ -3,14 +3,20 @@ import {
 	defineSystem,
 	enterQuery,
 	exitQuery,
+	removeComponent,
 	removeEntity,
 } from "bitecs";
 import { World } from "../factory/world";
 import {
+	AnimationComponent,
+	AvatarComponent,
+	GltfComponent,
 	NameplateComponent,
 	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
+	SpineComponent,
+	SwfComponent,
 } from "../components";
 
 import * as THREE from "three";
@@ -25,6 +31,7 @@ import { ImGui, ImGui_Impl } from "imgui-js";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
+const avatarLeaveQuery = exitQuery(defineQuery([AvatarComponent]));
 const nameplateQuery = defineQuery([NameplateComponent]);
 
 const enterOutlinePlayerQuery = enterQuery(
@@ -206,6 +213,26 @@ export function createRenderSystem(world: World) {
 			} else {
 				console.warn("Unable to cleanup object entity", object.eid);
 			}
+		}
+
+		// handle cleanup of avatars
+		const avatarLeave = avatarLeaveQuery(world);
+		for (let x = 0; x < avatarLeave.length; x++) {
+			const eid = avatarLeave[x];
+			const player = world.players.get(eid)?.player;
+
+			removeComponent(world, SpineComponent, eid);
+			removeComponent(world, GltfComponent, eid);
+			removeComponent(world, SwfComponent, eid);
+			removeComponent(world, AnimationComponent, eid);
+
+			if (player === undefined) {
+				continue;
+			}
+
+			// this is under the assumption that the first child is the avatar mesh
+			const avatar = player.children[0];
+			player.remove(avatar);
 		}
 
 		if (!world.composer) {

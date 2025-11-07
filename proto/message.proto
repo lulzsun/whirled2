@@ -15,9 +15,10 @@ message WhirledEvent {
         PlayerChat playerChat = 4;
         PlayerMove playerMove = 5;
         PlayerAnim playerAnim = 6;
+        PlayerWear playerWear = 7;
 
-        ObjectJoin objectJoin = 7;
-        ObjectLeave objectLeave = 8;
-        ObjectTransform objectTransform = 9;
+        ObjectJoin objectJoin = 8;
+        ObjectLeave objectLeave = 9;
+        ObjectTransform objectTransform = 10;
     }
 }

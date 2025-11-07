@@ -70,7 +70,7 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 				FROM stuff s
 				INNER JOIN users u ON u.username = {:username}
 				INNER JOIN avatars a ON a.id = s.stuff_id
-				WHERE s.in_use != '' AND u.id == s.owner_id
+				WHERE s.in_use != '' AND u.id = s.owner_id
 			`).Bind(dbx.Params{
 				"username": client.Username,
 			}).One(&dbObject)
@@ -361,4 +361,116 @@ func onPlayerAnim(peer *gecgosio.Peer, name string) {
 	}
 
 	peer.Broadcast().Emit(updatedMsg);
+}
+
+func onPlayerWear(peer *gecgosio.Peer, id string) {
+	// we need to check if client owns this avatar by id
+	client := clients[peer.Id]
+	
+	dbObject := struct {
+		Id string		`db:"id" json:"id"`
+		Type int		`db:"type" json:"type"`
+		StuffId string	`db:"stuff_id" json:"stuff_id"`
+
+		Name string		`db:"name" json:"name"`
+		File string		`db:"file" json:"file"`
+		Scale float64	`db:"scale" json:"scale"`
+	}{}
+
+	// find the avatar that the user owns which matches the sent id and is not in_use
+	err := pb.DB().Transactional(func(txDao *dbx.Tx) error {
+		// First query
+		var updateResult struct {
+			StuffId string `db:"stuff_id"`
+		}
+
+		// this query will update the avatar to be in_use and return the stuff_id
+		err := txDao.NewQuery(`
+			UPDATE stuff
+			SET in_use = 'True'
+			WHERE stuff_id IN (
+				SELECT s.stuff_id
+				FROM stuff s
+				INNER JOIN users u ON u.username = {:username}
+				INNER JOIN avatars a ON a.id = s.stuff_id
+				WHERE s.in_use = '' AND u.id = s.owner_id AND s.id = {:id}
+				LIMIT 1
+			)
+			RETURNING stuff_id
+		`).Bind(dbx.Params{
+			"username": client.Username,
+			"id": id,
+		}).One(&updateResult)
+
+		if err != nil {
+			return err
+		}
+
+		// find avatar(s) that have are marked in_use and unmark them
+		// (except for the one we want marked)
+		_, err = txDao.NewQuery(`
+			UPDATE stuff
+			SET in_use = ''
+			WHERE stuff_id IN (
+				SELECT s.stuff_id
+				FROM stuff s
+				INNER JOIN users u ON u.username = {:username}
+				INNER JOIN avatars a ON a.id = s.stuff_id
+				WHERE s.in_use != '' AND u.id = s.owner_id AND s.id != {:id}
+			)
+		`).Bind(dbx.Params{
+			"username": client.Username,
+			"id": id,
+		}).
+		Execute()
+
+		if err != nil {
+			return err
+		}
+
+		// this query will take the stuff_id from previous query to select all necessary fields
+		// so we can craft our playerWear event
+		return txDao.NewQuery(`
+			SELECT 
+				s.id, 
+				s.type, 
+				s.stuff_id, 
+				a.name,
+				a.file,
+				a.scale
+			FROM stuff s
+			INNER JOIN avatars a ON a.id = s.stuff_id
+			WHERE s.stuff_id = {:stuff_id}
+		`).Bind(dbx.Params{
+			"stuff_id": updateResult.StuffId,
+		}).One(&dbObject)
+	})
+
+	if err != nil {
+		// could not find avatar or some lookup issue?
+		log.Println(err)
+		return
+	}
+
+	p := &buf.WhirledEvent{
+        Event: &buf.WhirledEvent_PlayerWear{
+            PlayerWear: &buf.PlayerWear{
+				Username: client.Username,
+                Id: id,
+				File: "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File,
+				Scale: dbObject.Scale,
+            },
+        },
+    }
+
+	client.InitialScale = dbObject.Scale
+	client.File = "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File
+
+	updatedMsg, err := proto.Marshal(p)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	peer.Room().Emit(updatedMsg);
 }

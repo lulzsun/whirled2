@@ -35,3 +35,10 @@ message PlayerAnim {
     string username = 1;
     string anim = 2;
 }
+
+message PlayerWear {
+    string username = 1;
+    string id = 2;
+    string file = 3;
+    double scale = 4;
+}

@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { PlayerAnim, PlayerAuth, PlayerChat, PlayerJoin, PlayerLeave, PlayerMove } from "./player_pb";
+import type { PlayerAnim, PlayerAuth, PlayerChat, PlayerJoin, PlayerLeave, PlayerMove, PlayerWear } from "./player_pb";
 import { file_player } from "./player_pb";
 import type { ObjectJoin, ObjectLeave, ObjectTransform } from "./object_pb";
 import { file_object } from "./object_pb";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file message.proto.
  */
 export const file_message: GenFile = /*@__PURE__*/
-  fileDesc("Cg1tZXNzYWdlLnByb3RvEgh3aGlybGVkMiKxAwoMV2hpcmxlZEV2ZW50EioKCnBsYXllckF1dGgYASABKAsyFC53aGlybGVkMi5QbGF5ZXJBdXRoSAASKgoKcGxheWVySm9pbhgCIAEoCzIULndoaXJsZWQyLlBsYXllckpvaW5IABIsCgtwbGF5ZXJMZWF2ZRgDIAEoCzIVLndoaXJsZWQyLlBsYXllckxlYXZlSAASKgoKcGxheWVyQ2hhdBgEIAEoCzIULndoaXJsZWQyLlBsYXllckNoYXRIABIqCgpwbGF5ZXJNb3ZlGAUgASgLMhQud2hpcmxlZDIuUGxheWVyTW92ZUgAEioKCnBsYXllckFuaW0YBiABKAsyFC53aGlybGVkMi5QbGF5ZXJBbmltSAASKgoKb2JqZWN0Sm9pbhgHIAEoCzIULndoaXJsZWQyLk9iamVjdEpvaW5IABIsCgtvYmplY3RMZWF2ZRgIIAEoCzIVLndoaXJsZWQyLk9iamVjdExlYXZlSAASNAoPb2JqZWN0VHJhbnNmb3JtGAkgASgLMhkud2hpcmxlZDIuT2JqZWN0VHJhbnNmb3JtSABCBwoFZXZlbnRCFloUd2hpcmxlZDIvdXRpbHMvcHJvdG9iBnByb3RvMw", [file_player, file_object]);
+  fileDesc("Cg1tZXNzYWdlLnByb3RvEgh3aGlybGVkMiLdAwoMV2hpcmxlZEV2ZW50EioKCnBsYXllckF1dGgYASABKAsyFC53aGlybGVkMi5QbGF5ZXJBdXRoSAASKgoKcGxheWVySm9pbhgCIAEoCzIULndoaXJsZWQyLlBsYXllckpvaW5IABIsCgtwbGF5ZXJMZWF2ZRgDIAEoCzIVLndoaXJsZWQyLlBsYXllckxlYXZlSAASKgoKcGxheWVyQ2hhdBgEIAEoCzIULndoaXJsZWQyLlBsYXllckNoYXRIABIqCgpwbGF5ZXJNb3ZlGAUgASgLMhQud2hpcmxlZDIuUGxheWVyTW92ZUgAEioKCnBsYXllckFuaW0YBiABKAsyFC53aGlybGVkMi5QbGF5ZXJBbmltSAASKgoKcGxheWVyV2VhchgHIAEoCzIULndoaXJsZWQyLlBsYXllcldlYXJIABIqCgpvYmplY3RKb2luGAggASgLMhQud2hpcmxlZDIuT2JqZWN0Sm9pbkgAEiwKC29iamVjdExlYXZlGAkgASgLMhUud2hpcmxlZDIuT2JqZWN0TGVhdmVIABI0Cg9vYmplY3RUcmFuc2Zvcm0YCiABKAsyGS53aGlybGVkMi5PYmplY3RUcmFuc2Zvcm1IAEIHCgVldmVudEIWWhR3aGlybGVkMi91dGlscy9wcm90b2IGcHJvdG8z", [file_player, file_object]);
 
 /**
  * @generated from message whirled2.WhirledEvent
@@ -61,19 +61,25 @@ export type WhirledEvent = Message<"whirled2.WhirledEvent"> & {
     case: "playerAnim";
   } | {
     /**
-     * @generated from field: whirled2.ObjectJoin objectJoin = 7;
+     * @generated from field: whirled2.PlayerWear playerWear = 7;
+     */
+    value: PlayerWear;
+    case: "playerWear";
+  } | {
+    /**
+     * @generated from field: whirled2.ObjectJoin objectJoin = 8;
      */
     value: ObjectJoin;
     case: "objectJoin";
   } | {
     /**
-     * @generated from field: whirled2.ObjectLeave objectLeave = 8;
+     * @generated from field: whirled2.ObjectLeave objectLeave = 9;
      */
     value: ObjectLeave;
     case: "objectLeave";
   } | {
     /**
-     * @generated from field: whirled2.ObjectTransform objectTransform = 9;
+     * @generated from field: whirled2.ObjectTransform objectTransform = 10;
      */
     value: ObjectTransform;
     case: "objectTransform";

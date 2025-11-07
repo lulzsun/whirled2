@@ -72,3 +72,21 @@ export function emitPlayerAnim(world: World, anim: string) {
 	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
 	world.network.rawEmit(bytes);
 }
+
+/**
+ * Emits to server that the player is changing avatars
+ *
+ * @param {string} id - Avatar ID that is represented in database
+ */
+export function emitPlayerWear(world: World, id: string) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "playerWear",
+		value: create(buf.PlayerWearSchema, {
+			id,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}

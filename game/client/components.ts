@@ -30,6 +30,8 @@ export const TransformComponent = defineComponent({
 	scale: Vector3Schema,
 });
 
+export const AvatarComponent = defineComponent();
+
 export const SpineComponent = defineComponent();
 
 export const GltfComponent = defineComponent();

@@ -234,7 +234,7 @@
 								{{ $item.Name }}
 							</a>
 							<button
-								class="hover:underline bg-gray-700 rounded-lg py-1 px-1.5 truncate"
+								class="hover:cursor-pointer hover:underline bg-gray-700 rounded-lg py-1 px-1.5 truncate"
 								{{ if eq $.Category "furniture" }}
 									onclick="(function(){
 									window.game.addStuff('{{ $item.Id }}',

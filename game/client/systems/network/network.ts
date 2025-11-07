@@ -14,10 +14,15 @@ import {
 	NameplateComponent,
 	ChatMessageComponent,
 	AnimationComponent,
+	AvatarComponent,
 } from "../../components";
 import { API_URL } from "../../constants";
 import { playAnimation } from "../animation";
-import { createPlayer } from "../../factory/player";
+import {
+	createGtlfAvatar,
+	createPlayer,
+	createSwfAvatar,
+} from "../../factory/player";
 import { createDisconnectUI } from "../../ui/disconnect";
 import { createNameplate } from "../../factory/nameplate";
 import { createChatMessage } from "../../factory/chatmessage";
@@ -257,87 +262,89 @@ export function createNetworkSystem(world: World) {
 					if (player === undefined) {
 						break;
 					}
-					const playerEntity = createPlayer(
-						world,
-						player.username,
-						player.local ?? false,
-						undefined,
-						player.file ?? "",
-						player.initialScale ?? 1,
-					);
-					const eid = playerEntity.eid;
+					(async () => {
+						const playerEntity = await createPlayer(
+							world,
+							player.username,
+							player.local ?? false,
+							undefined,
+							player.file ?? "",
+							player.initialScale ?? 1,
+						);
+						const eid = playerEntity.eid;
 
-					if (player.position === undefined) {
-						player.position = create(buf.PositionSchema, {
-							x: 0.0,
-							y: 0.0,
-							z: 0.0,
+						if (player.position === undefined) {
+							player.position = create(buf.PositionSchema, {
+								x: 0.0,
+								y: 0.0,
+								z: 0.0,
+							});
+						}
+
+						TransformComponent.position.x[eid] = player.position.x;
+						TransformComponent.position.y[eid] = player.position.y;
+						TransformComponent.position.z[eid] = player.position.z;
+
+						if (player.rotation === undefined) {
+							player.rotation = create(buf.RotationSchema, {
+								x: 0.0,
+								y: 0.0,
+								z: 0.0,
+							});
+						}
+
+						TransformComponent.rotation.x[eid] = player.rotation.x;
+						TransformComponent.rotation.y[eid] = player.rotation.y;
+						TransformComponent.rotation.z[eid] = player.rotation.z;
+						TransformComponent.rotation.w[eid] = player.rotation.w;
+						playerEntity.rotation._onChangeCallback();
+
+						if (player.scale === undefined) {
+							player.scale = create(buf.ScaleSchema, {
+								x: 0.0,
+								y: 0.0,
+								z: 0.0,
+							});
+						}
+
+						TransformComponent.scale.x[eid] = player.scale.x;
+						TransformComponent.scale.y[eid] = player.scale.y;
+						TransformComponent.scale.z[eid] = player.scale.z;
+
+						const nameplateEntity = createNameplate(
+							world,
+							player.nickname,
+						);
+						addComponent(
+							world,
+							NameplateComponent,
+							nameplateEntity.eid,
+						);
+						NameplateComponent.owner[nameplateEntity.eid] = eid;
+
+						const networkPlayer: NetworkPlayer = {
+							eid: eid,
+							username: player.username,
+							nickname: player.nickname,
+							isLocal: player.local,
+							isOwner: player.owner,
+						};
+
+						if (player.local && player.owner) {
+							document
+								.getElementById("openEditorBtn")
+								?.setAttribute("style", "");
+						}
+
+						playersByUsername.set(player.username, networkPlayer);
+						playersByEid.set(eid, networkPlayer);
+
+						world.players.set(eid, {
+							player: playerEntity,
+							nameplate: nameplateEntity,
 						});
-					}
-
-					TransformComponent.position.x[eid] = player.position.x;
-					TransformComponent.position.y[eid] = player.position.y;
-					TransformComponent.position.z[eid] = player.position.z;
-
-					if (player.rotation === undefined) {
-						player.rotation = create(buf.RotationSchema, {
-							x: 0.0,
-							y: 0.0,
-							z: 0.0,
-						});
-					}
-
-					TransformComponent.rotation.x[eid] = player.rotation.x;
-					TransformComponent.rotation.y[eid] = player.rotation.y;
-					TransformComponent.rotation.z[eid] = player.rotation.z;
-					TransformComponent.rotation.w[eid] = player.rotation.w;
-					playerEntity.rotation._onChangeCallback();
-
-					if (player.scale === undefined) {
-						player.scale = create(buf.ScaleSchema, {
-							x: 0.0,
-							y: 0.0,
-							z: 0.0,
-						});
-					}
-
-					TransformComponent.scale.x[eid] = player.scale.x;
-					TransformComponent.scale.y[eid] = player.scale.y;
-					TransformComponent.scale.z[eid] = player.scale.z;
-
-					const nameplateEntity = createNameplate(
-						world,
-						player.nickname,
-					);
-					addComponent(
-						world,
-						NameplateComponent,
-						nameplateEntity.eid,
-					);
-					NameplateComponent.owner[nameplateEntity.eid] = eid;
-
-					const networkPlayer: NetworkPlayer = {
-						eid: eid,
-						username: player.username,
-						nickname: player.nickname,
-						isLocal: player.local,
-						isOwner: player.owner,
-					};
-
-					if (player.local && player.owner) {
-						document
-							.getElementById("openEditorBtn")
-							?.setAttribute("style", "");
-					}
-
-					playersByUsername.set(player.username, networkPlayer);
-					playersByEid.set(eid, networkPlayer);
-
-					world.players.set(eid, {
-						player: playerEntity,
-						nameplate: nameplateEntity,
-					});
-					world.scene.add(playerEntity);
+						world.scene.add(playerEntity);
+					})();
 					break;
 				}
 				case "playerLeave": {
@@ -428,6 +435,51 @@ export function createNetworkSystem(world: World) {
 					console.log(event.anim ?? -1);
 					if (hasComponent(world, AnimationComponent, eid)) {
 						playAnimation(world, eid, event.anim ?? -1);
+					}
+					break;
+				}
+				case "playerWear": {
+					const object = whirledEvent.event.value;
+					const eid = playersByUsername.get(object.username)?.eid;
+					if (eid === undefined) break;
+					const player = world.players.get(eid)?.player;
+					if (player === undefined) break;
+
+					removeComponent(world, AvatarComponent, eid);
+
+					const extension = object.file.split(".").pop();
+					switch (extension) {
+						case "spine":
+							break;
+						case "glb":
+							(async () => {
+								player.add(
+									await createGtlfAvatar(
+										world,
+										eid,
+										object.file,
+										object.scale,
+									),
+								);
+							})();
+							break;
+						case "swf":
+							(async () => {
+								player.add(
+									await createSwfAvatar(
+										world,
+										eid,
+										object.file,
+										object.scale,
+									),
+								);
+							})();
+							break;
+						default:
+							console.error(
+								`Unknown avatar file extension: ${extension}`,
+							);
+							break;
 					}
 					break;
 				}
