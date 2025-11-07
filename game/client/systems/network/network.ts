@@ -1,6 +1,6 @@
 import { Data, geckos } from "@geckos.io/client";
 import { EmitOptions } from "@geckos.io/common/lib/types.js";
-import { World } from "../factory/world";
+import { World } from "../../factory/world";
 import {
 	addComponent,
 	defineSystem,
@@ -14,16 +14,19 @@ import {
 	NameplateComponent,
 	ChatMessageComponent,
 	AnimationComponent,
-} from "../components";
-import { API_URL } from "../constants";
-import { playAnimation } from "./animation";
-import { createPlayer } from "../factory/player";
-import { createDisconnectUI } from "../ui/disconnect";
-import { createNameplate } from "../factory/nameplate";
-import { createChatMessage } from "../factory/chatmessage";
-import { createObject } from "../factory/object";
-import * as buf from "../proto";
+} from "../../components";
+import { API_URL } from "../../constants";
+import { playAnimation } from "../animation";
+import { createPlayer } from "../../factory/player";
+import { createDisconnectUI } from "../../ui/disconnect";
+import { createNameplate } from "../../factory/nameplate";
+import { createChatMessage } from "../../factory/chatmessage";
+import { createObject } from "../../factory/object";
+import * as buf from "../../proto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import { emitPlayerJoin } from "./player";
+export * from "./player.ts";
+export * from "./object.ts";
 
 export type NetworkPlayer = {
 	eid: number;
@@ -544,147 +547,4 @@ export function createNetworkSystem(world: World) {
 		}
 		return world;
 	});
-}
-
-/**
- * Emits to server that the player is trying to join (for the first time)
- *
- * There should be no reason to call this more than once, or expose this
- * to be called outside of this file.
- */
-function emitPlayerJoin(world: World) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "playerJoin",
-		value: create(buf.PlayerJoinSchema),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that the player is trying to send a message
- */
-export function emitPlayerChat(world: World, message: string) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "playerChat",
-		value: create(buf.PlayerChatSchema, {
-			message,
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that the player is trying to move their avatar
- */
-export function emitPlayerMove(
-	world: World,
-	position: THREE.Vector3,
-	rotation: THREE.Euler,
-) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "playerMove",
-		value: create(buf.PlayerMoveSchema, {
-			position,
-			rotation,
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that the player is trying to play an action/state
- * animation with their avatar
- */
-export function emitPlayerAnim(world: World, anim: string) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "playerAnim",
-		value: create(buf.PlayerAnimSchema, {
-			anim,
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that an object is trying to join
- *
- * Ideally this would be a player having ownership of the object to
- * be able to do this (ex: room owner adding furniture)
- */
-export function emitObjectJoin(world: World, id: string, type: number) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "objectJoin",
-		value: create(buf.ObjectJoinSchema, {
-			object: create(buf.ObjectSchema, {
-				id,
-				type,
-			}),
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that an object is moving (by the player)
- *
- * Ideally this would be a player having ownership of the object to
- * be able to do this (ex: room owner moving furniture)
- */
-export function emitObjectTransform(
-	world: World,
-	id: string,
-	isPlayer: boolean,
-	position: THREE.Vector3,
-	rotation: THREE.Euler,
-	scale: THREE.Vector3,
-) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "objectTransform",
-		value: create(buf.ObjectTransformSchema, {
-			id,
-			isPlayer,
-			position,
-			rotation,
-			scale,
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
-}
-
-/**
- * Emits to server that an object is leaving the room
- *
- * Ideally this would be a player having ownership of the object to
- * be able to do this (ex: room owner removing furniture)
- */
-export function emitObjectLeave(world: World, id: string, isPlayer: boolean) {
-	const whirledEvent = create(buf.WhirledEventSchema);
-	whirledEvent.event = {
-		case: "objectLeave",
-		value: create(buf.ObjectLeaveSchema, {
-			id,
-			isPlayer,
-		}),
-	};
-
-	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
-	world.network.rawEmit(bytes);
 }
