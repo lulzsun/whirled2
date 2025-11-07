@@ -1,20 +1,36 @@
 package server
 
 import (
-	"encoding/json"
 	"log"
+
+	buf "whirled2/utils/proto"
+
+	"google.golang.org/protobuf/proto"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
 	"github.com/pocketbase/dbx"
 )
+
+// Prepares a player to join by sending them to go auth themselves
+func onPlayerJoin(peer *gecgosio.Peer) {
+	p := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_PlayerAuth{
+			PlayerAuth: &buf.PlayerAuth{
+				Id: peer.Id,
+			},
+		},
+	}
+	data, _ := proto.Marshal(p)
+	peer.Emit(data)
+}
 
 // Authorize a peer as user or guest when they join a room
 //
 // After successful authorization, send "Join" event to all peers in room and
 // let our peer know about existing peers in the room ("Join" event for each peer)
 //
-// If 'msg' does not provide a room, then join default room (bravenewwhirled)
-func onPlayerAuth(peer *gecgosio.Peer, msg string) {
+// If room is not provided, then join default room (bravenewwhirled)
+func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 	client := clients[peer.Id]
 
 	if client.Auth == "" {
@@ -22,13 +38,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	var j map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &j)
-	if err != nil {
-		return
-	}
-
-	if j["code"] != nil && client.Auth == j["code"] {
+	if code != "" && client.Auth == code {
 		log.Printf("Successfully authorized '%s' as '%s'", peer.Id, client.Username)
 
 		// check if peer already auth'd, if so we perform a "reconnect"
@@ -48,7 +58,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			File string		`db:"file" json:"file"`
 			Scale float64	`db:"scale" json:"scale"`
 		}{}
-		err = pb.DB().
+		err := pb.DB().
 			NewQuery(`
 				SELECT
 					s.id, 
@@ -74,37 +84,41 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			client.File = "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File
 		}
 
-		client.Scale.X = 1
-		client.Scale.Y = 1
-		client.Scale.Z = 1
+		client.Position = &buf.Position{}
+		client.Rotation = &buf.Rotation{}
+		client.Scale = &buf.Scale{
+			X: 1,
+			Y: 1,
+			Z: 1,
+		}
 
-		player := map[string]interface{}{
-			"username": client.Username,
-			"nickname": client.Nickname,
-			"file": client.File,
-			"local": true,
-			"position": map[string]interface{}{
-				"x": client.Position.X,
-				"y": client.Position.Y,
-				"z": client.Position.Z,
+		player := &buf.Player{
+			Username: client.Username,
+			Nickname: client.Nickname,
+			File: client.File,
+			Local: true,
+			Owner: false,
+			Position: &buf.Position{
+				X: client.Position.X,
+				Y: client.Position.Y,
+				Z: client.Position.Z,
 			},
-			"rotation": map[string]interface{}{
-				"x": client.Rotation.X,
-				"y": client.Rotation.Y,
-				"z": client.Rotation.Z,
-				"w": client.Rotation.W,
+			Rotation: &buf.Rotation{
+				X: client.Rotation.X,
+				Y: client.Rotation.Y,
+				Z: client.Rotation.Z,
+				W: client.Rotation.W,
 			},
-			"scale": map[string]interface{}{
-				"x": client.Scale.X,
-				"y": client.Scale.Y,
-				"z": client.Scale.Z,
+			Scale: &buf.Scale{
+				X: client.Scale.X,
+				Y: client.Scale.Y,
+				Z: client.Scale.Z,
 			},
-			"initialScale": client.InitialScale,
+			InitialScale: client.InitialScale,
 		}
 
 		// verify client
-		roomId, ok := j["room"].(string)
-		if !ok || (ok && roomId == "") {
+		if roomId == "" {
 			// client did not provide a room id, check if client has a home room
 			room := struct {
 				Id string `db:"id" json:"id"`
@@ -123,7 +137,7 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 			if err != nil {
 				roomId = "@underwhirled"
 			} else {
-				player["owner"] = true;
+				player.Owner = true;
 				roomId = room.Id
 			}
 		// client provided a room id, check if room exists on server
@@ -153,15 +167,22 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 				roomId = "@underwhirled"
 			} else {
 				if room.Owner == client.Username {
-					player["owner"] = true;
+					player.Owner = true;
 				}
 			}
 		}
 
 		// prepare client (player) data
-		data, err := json.Marshal(player)
+		p := &buf.WhirledEvent{
+			Event: &buf.WhirledEvent_PlayerJoin{
+				PlayerJoin: &buf.PlayerJoin{
+					Player: player,
+				},
+			},
+		}
+		data, err := proto.Marshal(p)
 		if err != nil {
-			log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+			log.Printf("Failed to join user '%s', unable to marshal protobuf.", client.Username)
 			return
 		}
 
@@ -170,58 +191,81 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 
 		// join our client to a room
 		peer.Join(roomId)
-		peer.Emit(PlayerJoin, string(data))
+		peer.Emit(data)
 		log.Printf("User '%s' is joining room '%s'", client.Username, roomId)
 
 		// announce client to all other clients in the room
-		player["local"] = false
-		data, _ = json.Marshal(player)
+		player.Local = false
+
+		// re-prepare client (player) data
+		p = &buf.WhirledEvent{
+			Event: &buf.WhirledEvent_PlayerJoin{
+				PlayerJoin: &buf.PlayerJoin{
+					Player: player,
+				},
+			},
+		}
+		data, _ = proto.Marshal(p)
 		peers := peer.Broadcast(roomId)
-		peers.Emit(PlayerJoin, string(data))
+		peers.Emit(data)
 
 		// let our client know about existing clients in the room
 		for _, p := range peers {
 			if clients[p.Id].Username == client.Username {
 				continue
 			}
-			data, err := json.Marshal(map[string]interface{}{
-				"username": clients[p.Id].Username,
-				"nickname": clients[p.Id].Nickname,
-				"file": clients[p.Id].File,
-				"local": false,
-				"position": map[string]interface{}{
-					"x": clients[p.Id].Position.X,
-					"y": clients[p.Id].Position.Y,
-					"z": clients[p.Id].Position.Z,
+			data, err := proto.Marshal(&buf.WhirledEvent{
+				Event: &buf.WhirledEvent_PlayerJoin{
+					PlayerJoin: &buf.PlayerJoin{
+						Player: &buf.Player{
+							Username: clients[p.Id].Username,
+							Nickname: clients[p.Id].Nickname,
+							File: clients[p.Id].File,
+							Local: false,
+							// Owner: false,
+							Position: &buf.Position{
+								X: clients[p.Id].Position.X,
+								Y: clients[p.Id].Position.Y,
+								Z: clients[p.Id].Position.Z,
+							},
+							Rotation: &buf.Rotation{
+								X: clients[p.Id].Rotation.X,
+								Y: clients[p.Id].Rotation.Y,
+								Z: clients[p.Id].Rotation.Z,
+								W: clients[p.Id].Rotation.W,
+							},
+							Scale: &buf.Scale{
+								X: clients[p.Id].Scale.X,
+								Y: clients[p.Id].Scale.Y,
+								Z: clients[p.Id].Scale.Z,
+							},
+							InitialScale: clients[p.Id].InitialScale,
+						},
+					},
 				},
-				"rotation": map[string]interface{}{
-					"x": clients[p.Id].Rotation.X,
-					"y": clients[p.Id].Rotation.Y,
-					"z": clients[p.Id].Rotation.Z,
-					"w": clients[p.Id].Rotation.W,
-				},
-				"scale": map[string]interface{}{
-					"x": clients[p.Id].Scale.X,
-					"y": clients[p.Id].Scale.Y,
-					"z": clients[p.Id].Scale.Z,
-				},
-				"initialScale": clients[p.Id].InitialScale,
 			})
 			if err != nil {
-				log.Printf("Failed to join user '%s', unable to marshal json.", client.Username)
+				log.Printf("Failed to join user '%s', unable to marshal protobuf.", client.Username)
 				continue
 			}
-			peer.Emit(PlayerJoin, string(data))
+			peer.Emit(data)
 		}
 
 		// let our client know about existing objects in the room
 		for _, object := range objects[roomId] {
-			data, err := json.Marshal(object)
+			p := &buf.WhirledEvent{
+				Event: &buf.WhirledEvent_ObjectJoin{
+					ObjectJoin: &buf.ObjectJoin{
+						Object: object,
+					},
+				},
+			}
+			data, err := proto.Marshal(p)
 			if err != nil {
 				log.Printf("Failed to join object '%s', unable to marshal json.", client.Username)
 				return
 			}
-			peer.Emit(ObjectJoin, string(data))
+			peer.Emit(data)
 		}
 		
 		client.Auth = ""
@@ -232,113 +276,89 @@ func onPlayerAuth(peer *gecgosio.Peer, msg string) {
 	clients[peer.Id] = client
 }
 
-func onPlayerMove(peer *gecgosio.Peer, msg string) {
-	client := clients[peer.Id]
-
-	// Parse the JSON string into a map
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &data)
-	if err != nil {
-		log.Println("Error:", err)
+func onPlayerLeave(peer *gecgosio.Peer) {
+	client, ok := clients[peer.Id]
+	if !ok {
 		return
 	}
+	p := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_PlayerLeave{
+			PlayerLeave: &buf.PlayerLeave{
+				Username: client.Username,
+			},
+		},
+	}
+	data, _ := proto.Marshal(p)
+	peer.Room().Emit(data)
+}
 
-	// Add the username property to the map
-	data["username"] = client.Username
+func onPlayerMove(peer *gecgosio.Peer, pos *buf.Position, rot *buf.Rotation) {
+	client := clients[peer.Id]
 
-	pos, posOk := data["position"].(map[string]interface{})
-
-	if !posOk {
-        log.Println("Error: Invalid or missing type for position")
-        return
-    }
-
-    pos_x, xOk := pos["x"].(float64)
-    pos_y, yOk := pos["y"].(float64)
-    pos_z, zOk := pos["z"].(float64)
-
-    if !xOk || !yOk || !zOk {
-        log.Println("Error: Invalid type or missing type for x, y, or z")
-        return
+	data := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_PlayerMove{
+			PlayerMove: &buf.PlayerMove{
+				Username: client.Username,
+				Position: pos,
+				Rotation: rot,
+			},
+		},
     }
 
 	// Save position on the server
-	client.Position.X = pos_x
-	client.Position.Y = pos_y
-	client.Position.Z = pos_z
-
-	rot, rotOk := data["rotation"].(map[string]interface{})
-
-	if !rotOk {
-        log.Println("Error: Invalid or missing type for rotation")
-        return
-    }
-
-    rot_x, xOk := rot["x"].(float64)
-    rot_y, yOk := rot["y"].(float64)
-    rot_z, zOk := rot["z"].(float64)
-	rot_w, wOk := rot["w"].(float64)
-
-    if !xOk || !yOk || !zOk || !wOk {
-        log.Println("Error: Invalid type or missing type for x, y, or z")
-        return
-    }
+	client.Position.X = pos.X
+	client.Position.Y = pos.Y
+	client.Position.Z = pos.Z
 
 	// Save rotation on the server
-	client.Rotation.X = rot_x
-	client.Rotation.Y = rot_y
-	client.Rotation.Z = rot_z
-	client.Rotation.W = rot_w
+	client.Rotation.X = rot.X
+	client.Rotation.Y = rot.Y
+	client.Rotation.Z = rot.Z
+	client.Rotation.W = rot.W
 
 	// Marshal the map back into a JSON string
-	updatedMsg, err := json.Marshal(data)
+	updatedMsg, err := proto.Marshal(data)
 	if err != nil {
 		log.Println("Error:", err)
 		return
 	}
 
-	peer.Room().Emit(PlayerMove, string(updatedMsg));
+	peer.Room().Emit(updatedMsg);
 }
 
 func onPlayerChat(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
-	// Create a new msg map (JSON)
-	var data map[string]interface{} = map[string]interface{}{
-		"username": client.Username,
-		"message": msg[1:len(msg)-1],
-	}
+	p := &buf.WhirledEvent{
+        Event: &buf.WhirledEvent_PlayerChat{
+            PlayerChat: &buf.PlayerChat{
+                Username: client.Username,
+                Message:  msg,
+            },
+        },
+    }
+    data, _ := proto.Marshal(p)
 
-	// Marshal the map back into a JSON string
-	updatedMsg, err := json.Marshal(data)
-	if err != nil {
-		log.Println("Error:", err)
-		return
-	}
-
-	peer.Room().Emit(PlayerChat, string(updatedMsg));
+	peer.Room().Emit(data);
 }
 
-func onPlayerAnim(peer *gecgosio.Peer, msg string) {
+func onPlayerAnim(peer *gecgosio.Peer, name string) {
 	client := clients[peer.Id]
 
-	// Parse the JSON string into a map
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &data)
+	p := &buf.WhirledEvent{
+        Event: &buf.WhirledEvent_PlayerAnim{
+            PlayerAnim: &buf.PlayerAnim{
+                Username: client.Username,
+                Anim:  name,
+            },
+        },
+    }
+
+	updatedMsg, err := proto.Marshal(p)
 	if err != nil {
 		log.Println("Error:", err)
 		return
 	}
 
-	// Add the username property to the map
-	data["username"] = client.Username
-
-	// Marshal the map back into a JSON string
-	updatedMsg, err := json.Marshal(data)
-	if err != nil {
-		log.Println("Error:", err)
-		return
-	}
-
-	peer.Broadcast().Emit(PlayerAnim, string(updatedMsg));
+	peer.Broadcast().Emit(updatedMsg);
 }

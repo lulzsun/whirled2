@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package whirled2;
+
+option go_package = "whirled2/utils/proto";
+
+message Player {
+    string username = 1;
+    string nickname = 2;
+    string file = 3;
+    bool local = 4;
+    // is owner of current room
+    bool owner = 5;
+    Position position = 6;
+    Rotation rotation = 7;
+    Scale scale = 8;
+    double initialScale = 9;
+}
+
+message Object {
+    string id = 1;
+    Type type = 2;
+    string stuffId = 3;
+    string name = 4;
+    string file = 5;
+    Position position = 6;
+    Rotation rotation = 7;
+    Scale scale = 8;
+    double initialScale = 9;
+}
+
+enum Type {
+    None = 0;
+    Avatar = 1;
+    Furniture = 2;
+}
+
+message Position {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Rotation {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
+
+message Scale {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}

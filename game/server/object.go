@@ -1,42 +1,33 @@
 package server
 
 import (
-	"encoding/json"
 	"log"
+	buf "whirled2/utils/proto"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
 	"github.com/pocketbase/dbx"
+	"google.golang.org/protobuf/proto"
 )
 
 // player spawning an object (furniture) into a room
-func onObjectJoin(peer *gecgosio.Peer, msg string) {
+func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	client := clients[peer.Id]
 
 	// note: this assumes the client is only in a single room
 	roomId := peer.Rooms()[0]
 
-	// Parse the JSON string into a map
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &data)
-	if err != nil {
-		log.Println("Error:", err)
-		return
-	}
-
-	// making sure client payload contains these fields
-	objectId, okId := data["id"].(string)
-	objectType, okType := data["type"].(float64) // int no worky
-	if !okId || !okType || objectType != 2 {
+	// making sure this object is of type 2 (furniture)
+	if obj.Type != 2 {
 		return
 	}
 
 	// making sure this object does not already exist
-	if _, ok := objects[roomId][objectId]; ok {
+	if _, ok := objects[roomId][obj.Id]; ok {
 		return
 	}
 
 	// check if client owns the current room they're in
-	err = pb.DB().
+	err := pb.DB().
 		NewQuery(`
 			SELECT r.id
 			FROM rooms r
@@ -79,7 +70,7 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 			WHERE s.id = {:id}
 		`).
 		Bind(dbx.Params{
-			"id": objectId,
+			"id": obj.Id,
 		}).One(&dbObject)
 
 	if err != nil {
@@ -89,24 +80,24 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 	dbObject.File = "/api/files/furniture/" + dbObject.StuffId + "/" + dbObject.File
 
 	// prepare object (furniture) data
-	object := &Object{
+	object := &buf.Object{
 		Id: dbObject.Id,
-		Type: dbObject.Type,
+		Type: buf.Type(dbObject.Type),
 		StuffId: dbObject.StuffId,
 		Name: dbObject.Name,
 		File: dbObject.File,
-		Position: Position{
+		Position: &buf.Position{
 			X: 0,
 			Y: 0,
 			Z: 0,
 		},
-		Rotation: Rotation{
+		Rotation: &buf.Rotation{
 			X: 0,
 			Y: 0,
 			Z: 0,
 			W: 0,
 		},
-		Scale: Scale{
+		Scale: &buf.Scale{
 			X: 1,
 			Y: 1,
 			Z: 1,
@@ -114,42 +105,35 @@ func onObjectJoin(peer *gecgosio.Peer, msg string) {
 		InitialScale: dbObject.Scale,
 	}
 
-	newData, err := json.Marshal(object)
+	p := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_ObjectJoin{
+			ObjectJoin: &buf.ObjectJoin{
+				Object: object,
+			},
+		},
+	}
+	newData, err := proto.Marshal(p)
 	if err != nil {
-		log.Printf("Failed to join object '%s', unable to marshal json.", client.Username)
+		log.Printf("Failed to join object '%s', unable to marshal protobuf.", client.Username)
 		return
 	}
 
 	// prepare to store as server object
 	if _, ok := objects[roomId]; !ok {
-		objects[roomId] = make(map[string]*Object)
+		objects[roomId] = make(map[string]*buf.Object)
 	}
-	objects[roomId][objectId] = object
-	log.Printf("Object '%s' is joining room '%s'", objectId, roomId)
+	objects[roomId][obj.Id] = object
+	log.Printf("Object '%s' is joining room '%s'", obj.Id, roomId)
 
-	peer.Room().Emit(ObjectJoin, string(newData))
+	peer.Room().Emit(newData)
 }
 
 // player removing an object (furniture) from a room
-func onObjectLeave(peer *gecgosio.Peer, msg string) {
+func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 	client := clients[peer.Id]
 
 	// note: this assumes the client is only in a single room
 	roomId := peer.Rooms()[0]
-
-	// Parse the JSON string into a map
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &data)
-	if err != nil {
-		log.Println("Error:", err)
-		return
-	}
-
-	id, okId := data["id"].(string)
-	isPlayer, okIsPlayer := data["isPlayer"].(bool)
-	if !okId || !okIsPlayer {
-		return
-	}
 
 	// making sure this object or player exists
 	if isPlayer {
@@ -163,7 +147,7 @@ func onObjectLeave(peer *gecgosio.Peer, msg string) {
 	}
 
 	// check if client owns the current room they're in
-	err = pb.DB().
+	err := pb.DB().
 		NewQuery(`
 			SELECT r.id
 			FROM rooms r
@@ -183,49 +167,51 @@ func onObjectLeave(peer *gecgosio.Peer, msg string) {
 	if isPlayer {
 		// TODO: kick with parameters:
 		//	- prevent kicked player from rejoining after certain time period
-		peer.Room().Emit(PlayerLeave, id)
+		p := &buf.WhirledEvent{
+			Event: &buf.WhirledEvent_PlayerLeave{
+				PlayerLeave: &buf.PlayerLeave{
+					Username: id,
+				},
+			},
+		}
+		data, _ := proto.Marshal(p)
+		peer.Room().Emit(data)
 		clients[usernameToPeerId[id]].Peer.Leave(roomId)
 		return
 	} else {
 		delete(objects[roomId], id)
 		log.Printf("Object '%s' has been deleted from room '%s'", id, roomId)
 	}
-	peer.Room().Emit(ObjectLeave, string(msg))
+	p := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_ObjectLeave{
+			ObjectLeave: &buf.ObjectLeave{
+				Id: id,
+			},
+		},
+	}
+	newData, _ := proto.Marshal(p)
+	peer.Room().Emit(newData)
 }
 
-func onObjectTransform(peer *gecgosio.Peer, msg string) {
+func onObjectTransform(peer *gecgosio.Peer, obj *buf.ObjectTransform) {
 	client := clients[peer.Id]
 
 	// note: this assumes the client is only in a single room
 	roomId := peer.Rooms()[0]
 
-	// Parse the JSON string into a map
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(msg), &data)
-	if err != nil {
-		log.Println("Error:", err)
-		return
-	}
-
-	id, okId := data["id"].(string)
-	isPlayer, okIsPlayer := data["isPlayer"].(bool)
-	if !okId || !okIsPlayer {
-		return
-	}
-
 	// making sure this object or player exists
-	if isPlayer {
-		if _, ok := usernameToPeerId[id]; !ok {
+	if obj.IsPlayer {
+		if _, ok := usernameToPeerId[obj.Id]; !ok {
 			return
 		}
 	} else {
-		if _, ok := objects[roomId][id]; !ok {
+		if _, ok := objects[roomId][obj.Id]; !ok {
 			return
 		}
 	}
 
 	// check if client owns the current room they're in
-	err = pb.DB().
+	err := pb.DB().
 		NewQuery(`
 			SELECT r.id
 			FROM rooms r
@@ -242,47 +228,21 @@ func onObjectTransform(peer *gecgosio.Peer, msg string) {
 		return
 	}
 
-	posData, okPos := data["position"].(map[string]interface{})
-	rotData, okRot := data["rotation"].(map[string]interface{})
-	scaData, okSca := data["scale"].(map[string]interface{})
-
-	position := Position{}
-	rotation := Rotation{}
-	scale := Scale{}
-
-	if okPos {
-		s, _ := json.Marshal(posData)
-		err = json.Unmarshal([]byte(s), &position)
-		if err == nil {
-			if isPlayer {
-				clients[usernameToPeerId[id]].Position = position
-			} else {
-				objects[roomId][id].Position = position
-			}
-		}
-	}
-	if okRot {
-		s, _ := json.Marshal(rotData)
-		err = json.Unmarshal([]byte(s), &rotation)
-		if err == nil {
-			if isPlayer {
-				clients[usernameToPeerId[id]].Rotation = rotation
-			} else {
-				objects[roomId][id].Rotation = rotation
-			}
-		}
-	}
-	if okSca {
-		s, _ := json.Marshal(scaData)
-		err = json.Unmarshal([]byte(s), &scale)
-		if err == nil {
-			if isPlayer {
-				clients[usernameToPeerId[id]].Scale = scale
-			} else {
-				objects[roomId][id].Scale = scale
-			}
-		}
+	if obj.IsPlayer {
+		clients[usernameToPeerId[obj.Id]].Position = obj.Position
+		clients[usernameToPeerId[obj.Id]].Rotation = obj.Rotation
+		clients[usernameToPeerId[obj.Id]].Scale = obj.Scale
+	} else {
+		objects[roomId][obj.Id].Position = obj.Position
+		objects[roomId][obj.Id].Rotation = obj.Rotation
+		objects[roomId][obj.Id].Scale = obj.Scale
 	}
 
-	peer.Broadcast().Emit(ObjectTransform, string(msg))
+	p := &buf.WhirledEvent{
+		Event: &buf.WhirledEvent_ObjectTransform{
+			ObjectTransform: obj,
+		},
+	}
+	newData, _ := proto.Marshal(p)
+	peer.Broadcast().Emit(newData)
 }

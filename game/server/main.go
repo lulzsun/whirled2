@@ -19,6 +19,9 @@ import (
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/pocketbase/pocketbase/tools/types"
 	"github.com/spf13/cast"
+	"google.golang.org/protobuf/proto"
+
+	buf "whirled2/utils/proto"
 
 	gecgosio "github.com/lulzsun/gecgos.io"
 )
@@ -26,7 +29,7 @@ import (
 var server *gecgosio.Server
 
 var clients = make(map[string]*Client)
-var objects = make(map[string]map[string]*Object)
+var objects = make(map[string]map[string]*buf.Object)
 
 var numOfGuests = 0;
 var usernameToPeerId = make(map[string]string)
@@ -57,23 +60,37 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 			Peer: peer,
 		}
 
-		addEvent := func(eventName string, handler func(string)) {
-			peer.On(eventName, func(msg string) {
-				// everytime a event occurs, reset idle timer
-				utils.IdleTimerReset()
-				handler(msg)
-			})
-		}
-		
-		addEvent(PlayerJoin, func(msg string) { peer.Emit(PlayerAuth, peer.Id) })
-		addEvent(PlayerAuth, func(msg string) { onPlayerAuth(peer, msg) })
-		addEvent(PlayerMove, func(msg string) { onPlayerMove(peer, msg) })
-		addEvent(PlayerChat, func(msg string) { onPlayerChat(peer, msg) })
-		addEvent(PlayerAnim, func(msg string) { onPlayerAnim(peer, msg) })
-
-		addEvent(ObjectJoin, func(msg string) { onObjectJoin(peer, msg) })
-		addEvent(ObjectLeave, func(msg string) { onObjectLeave(peer, msg) })
-		addEvent(ObjectTransform, func(msg string) { onObjectTransform(peer, msg) })
+		peer.OnRaw(func(bytes []byte) {
+			// everytime a event occurs, reset idle timer
+			utils.IdleTimerReset()
+			event := &buf.WhirledEvent{}
+			err := proto.Unmarshal(bytes, event)
+			if err != nil {
+				log.Printf("Failed to unmarshal: %v", err)
+				return
+			}
+			
+			switch e := event.Event.(type) {
+			case *buf.WhirledEvent_PlayerJoin:
+				onPlayerJoin(peer)
+			case *buf.WhirledEvent_PlayerAuth:
+				onPlayerAuth(peer, e.PlayerAuth.Code, e.PlayerAuth.Room)
+			case *buf.WhirledEvent_PlayerChat:
+				onPlayerChat(peer, e.PlayerChat.Message)
+			case *buf.WhirledEvent_PlayerMove:
+				onPlayerMove(peer, e.PlayerMove.Position, e.PlayerMove.Rotation)
+			case *buf.WhirledEvent_PlayerAnim:
+				onPlayerAnim(peer, e.PlayerAnim.Anim)
+			case *buf.WhirledEvent_ObjectJoin:
+				onObjectJoin(peer, e.ObjectJoin.Object)
+			case *buf.WhirledEvent_ObjectLeave:
+				onObjectLeave(peer, e.ObjectLeave.Id, e.ObjectLeave.IsPlayer)
+			case *buf.WhirledEvent_ObjectTransform:
+				onObjectTransform(peer, e.ObjectTransform)
+			default:
+				log.Printf("Unknown event type '%s", e)
+			}
+		})
 
 		utils.IdleTimerReset()
 	})
@@ -82,7 +99,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 		log.Printf("Client '%s' has disconnected", peer.Id)
 		client, ok := clients[peer.Id]
 		if ok {
-			peer.Room().Emit(PlayerLeave, client.Username)
+			onPlayerLeave(peer)
 			for _, roomId := range(peer.Rooms()) {
 				// check if room is empty (of players)
 				if len(server.Rooms[roomId]) > 1 {
@@ -229,10 +246,10 @@ func saveRoomToDb(roomId string) {
 		return
 	}
 
-	objsToSave := []Object{}
+	objsToSave := []*buf.Object{}
 
 	for _, object := range objects[roomId] {
-		objsToSave = append(objsToSave, *object)
+		objsToSave = append(objsToSave, object)
 	}
 
 	objsJson, err := json.Marshal(objsToSave)
@@ -255,7 +272,7 @@ func loadRoomFromDb(roomId string) {
 	if _, ok := objects[roomId]; ok {
 		return
 	}
-	objects[roomId] = make(map[string]*Object)
+	objects[roomId] = make(map[string]*buf.Object)
 
 	record, err := pb.Dao().FindRecordById("rooms", roomId)
 	if err != nil {
@@ -264,7 +281,7 @@ func loadRoomFromDb(roomId string) {
 	}
 
 	objsJsonRaw := record.Get("objects").(types.JsonRaw)
-	objsToLoad := []*Object{}
+	objsToLoad := []*buf.Object{}
 
 	err = json.Unmarshal(objsJsonRaw, &objsToLoad)
 	if err != nil {

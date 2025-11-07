@@ -1,7 +1,7 @@
 import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
-import { NetworkEvent } from "./systems/network";
+import { emitObjectJoin } from "./systems/network";
 import { initializeHtmx, htmx } from "./htmx";
 
 const world = createWorld();
@@ -27,10 +27,7 @@ if (window.htmx === undefined) {
 window.world = world;
 window.game = {
 	addStuff: (id, type) => {
-		world.network.emit(NetworkEvent.ObjectJoin, {
-			id,
-			type: parseInt(type),
-		});
+		emitObjectJoin(world, id, parseInt(type));
 	},
 	wearAvatar: (id) => {
 		console.log(id);

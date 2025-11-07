@@ -1,6 +1,6 @@
 import { defineSystem } from "bitecs";
 import { World } from "../factory/world";
-import { NetworkEvent } from "./network";
+import { emitPlayerChat } from "./network";
 import {
 	createChatUI,
 	createEditButton,
@@ -13,7 +13,7 @@ export function createUISystem(world: World) {
 		world.renderer.domElement.parentElement!.appendChild(toolbar);
 
 	const chatUI = createChatUI((msg) => {
-		world.network.emit(NetworkEvent.PlayerChat, msg);
+		emitPlayerChat(world, msg);
 	});
 	container.appendChild(chatUI);
 	container.appendChild(createEditButton());

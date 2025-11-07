@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package whirled2;
+
+option go_package = "whirled2/utils/proto";
+
+import "common.proto";
+
+message ObjectJoin {
+    Object object = 1;
+}
+
+message ObjectLeave {
+    string id = 1;
+    bool isPlayer = 2;
+}
+
+message ObjectTransform {
+    string id = 1;
+    bool isPlayer = 2;
+    Position position = 3;
+    Rotation rotation = 4;
+    Scale scale = 5;
+}

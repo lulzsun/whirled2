@@ -13,7 +13,6 @@ import {
 	MoveTowardsComponent,
 	NameplateComponent,
 	ChatMessageComponent,
-	GltfComponent,
 	AnimationComponent,
 } from "../components";
 import { API_URL } from "../constants";
@@ -23,19 +22,8 @@ import { createDisconnectUI } from "../ui/disconnect";
 import { createNameplate } from "../factory/nameplate";
 import { createChatMessage } from "../factory/chatmessage";
 import { createObject } from "../factory/object";
-
-export enum NetworkEvent {
-	PlayerAuth,
-	PlayerJoin,
-	PlayerLeave,
-	PlayerMove,
-	PlayerChat,
-	PlayerAnim,
-
-	ObjectJoin,
-	ObjectLeave,
-	ObjectTransform,
-}
+import * as buf from "../proto";
+import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 
 export type NetworkPlayer = {
 	eid: number;
@@ -62,11 +50,12 @@ export type Network = {
 	};
 	emit: {
 		(
-			eventType: NetworkEvent,
+			event: string,
 			data?: Data | null | undefined,
 			options?: EmitOptions | undefined,
 		): void;
 	};
+	rawEmit(bytes: Uint8Array<ArrayBuffer>): void;
 };
 
 export function createNetworkSystem(world: World) {
@@ -75,10 +64,7 @@ export function createNetworkSystem(world: World) {
 	const objectsById = new Map<string, NetworkObject>();
 	const objectsByEid = new Map<number, NetworkObject>();
 
-	let events: {
-		type: NetworkEvent;
-		data: string | number | Object;
-	}[] = [];
+	const eventQueue: buf.WhirledEvent[] = [];
 
 	const network = geckos({
 		url: API_URL,
@@ -128,11 +114,14 @@ export function createNetworkSystem(world: World) {
 			}
 		},
 		emit: (
-			event: NetworkEvent,
+			event: string,
 			data?: Data | null | undefined,
 			options?: EmitOptions | undefined,
 		) => {
 			network.emit(event + "", data, options);
+		},
+		rawEmit: (bytes: Uint8Array<ArrayBuffer>) => {
+			network.raw.emit(bytes);
 		},
 	};
 
@@ -146,21 +135,31 @@ export function createNetworkSystem(world: World) {
 
 		console.log("connected");
 
-		Object.keys(NetworkEvent)
-			.filter((v) => isNaN(Number(v)))
-			.forEach((event, i) => {
-				network.on(i + "", (data) => {
-					const isEmpty =
-						typeof data === "string" && data.length === 0;
-					console.log(
-						`Server sent event '${event}' ${isEmpty ? "" : "with data:"}`,
-						data,
-					);
-					events.push({ type: i, data });
-				});
-			});
+		emitPlayerJoin(world);
+		network.onRaw((data) => {
+			if (!(data instanceof ArrayBuffer)) {
+				console.error(
+					`Expected raw data to be ArrayBuffer, is actually ${typeof data}:`,
+					data,
+				);
+				return;
+			}
 
-		world.network.emit(NetworkEvent.PlayerJoin);
+			const bytes = new Uint8Array(data as unknown as ArrayBuffer);
+			try {
+				const whirledEvent: buf.WhirledEvent = fromBinary(
+					buf.WhirledEventSchema,
+					bytes,
+				);
+				if (whirledEvent.event.value === undefined) {
+					return;
+				}
+				const type = whirledEvent.event.value.$typeName;
+				const data = whirledEvent.event.value;
+				console.log(`Server sent event '${type}' with data:`, data);
+				eventQueue.push(whirledEvent);
+			} catch (error) {}
+		});
 	});
 
 	network.onDisconnect((error) => {
@@ -205,11 +204,11 @@ export function createNetworkSystem(world: World) {
 	})();
 
 	return defineSystem((world: World) => {
-		for (let i = 0; i < events.length; i++) {
-			let event = events[i];
-			switch (event.type) {
-				case NetworkEvent.PlayerAuth:
-					const id = event.data;
+		for (let i = 0; i < eventQueue.length; i++) {
+			let whirledEvent = eventQueue[i];
+			switch (whirledEvent.event.case) {
+				case "playerAuth": {
+					const id = whirledEvent.event.value.id;
 					// Make a request to get auth code
 					fetch(`${API_URL}/game/${id}/auth`, {
 						method: "GET",
@@ -230,46 +229,31 @@ export function createNetworkSystem(world: World) {
 								);
 								room = params.get("room") ?? "";
 							}
-							world.network.emit(
-								NetworkEvent.PlayerAuth,
-								{ code, room },
-								{
-									reliable: true,
-									interval: 150,
-									runs: 10,
-								},
+							const whirledEvent = create(buf.WhirledEventSchema);
+							whirledEvent.event = {
+								case: "playerAuth",
+								value: create(buf.PlayerAuthSchema, {
+									code,
+									room,
+								}),
+							};
+
+							const bytes = toBinary(
+								buf.WhirledEventSchema,
+								whirledEvent,
 							);
+							world.network.rawEmit(bytes);
 						})
 						.catch((e) => {
 							console.error(e);
 						});
 					break;
-				case NetworkEvent.PlayerJoin: {
-					const player: {
-						username: string;
-						nickname: string;
-						local: boolean;
-						owner: boolean;
-						file: string;
-						position: {
-							x: number;
-							y: number;
-							z: number;
-						};
-						rotation: {
-							x: number;
-							y: number;
-							z: number;
-							w: number;
-						};
-						scale: {
-							x: number;
-							y: number;
-							z: number;
-						};
-						initialScale: number;
-						eid: number;
-					} = event.data as any;
+				}
+				case "playerJoin": {
+					const player = whirledEvent.event.value.player;
+					if (player === undefined) {
+						break;
+					}
 					const playerEntity = createPlayer(
 						world,
 						player.username,
@@ -278,28 +262,45 @@ export function createNetworkSystem(world: World) {
 						player.file ?? "",
 						player.initialScale ?? 1,
 					);
-					player.eid = playerEntity.eid;
+					const eid = playerEntity.eid;
 
-					TransformComponent.position.x[player.eid] =
-						player.position.x;
-					TransformComponent.position.y[player.eid] =
-						player.position.y;
-					TransformComponent.position.z[player.eid] =
-						player.position.z;
+					if (player.position === undefined) {
+						player.position = create(buf.PositionSchema, {
+							x: 0.0,
+							y: 0.0,
+							z: 0.0,
+						});
+					}
 
-					TransformComponent.rotation.x[player.eid] =
-						player.rotation.x;
-					TransformComponent.rotation.y[player.eid] =
-						player.rotation.y;
-					TransformComponent.rotation.z[player.eid] =
-						player.rotation.z;
-					TransformComponent.rotation.w[player.eid] =
-						player.rotation.w;
+					TransformComponent.position.x[eid] = player.position.x;
+					TransformComponent.position.y[eid] = player.position.y;
+					TransformComponent.position.z[eid] = player.position.z;
+
+					if (player.rotation === undefined) {
+						player.rotation = create(buf.RotationSchema, {
+							x: 0.0,
+							y: 0.0,
+							z: 0.0,
+						});
+					}
+
+					TransformComponent.rotation.x[eid] = player.rotation.x;
+					TransformComponent.rotation.y[eid] = player.rotation.y;
+					TransformComponent.rotation.z[eid] = player.rotation.z;
+					TransformComponent.rotation.w[eid] = player.rotation.w;
 					playerEntity.rotation._onChangeCallback();
 
-					TransformComponent.scale.x[player.eid] = player.scale.x;
-					TransformComponent.scale.y[player.eid] = player.scale.y;
-					TransformComponent.scale.z[player.eid] = player.scale.z;
+					if (player.scale === undefined) {
+						player.scale = create(buf.ScaleSchema, {
+							x: 0.0,
+							y: 0.0,
+							z: 0.0,
+						});
+					}
+
+					TransformComponent.scale.x[eid] = player.scale.x;
+					TransformComponent.scale.y[eid] = player.scale.y;
+					TransformComponent.scale.z[eid] = player.scale.z;
 
 					const nameplateEntity = createNameplate(
 						world,
@@ -310,10 +311,10 @@ export function createNetworkSystem(world: World) {
 						NameplateComponent,
 						nameplateEntity.eid,
 					);
-					NameplateComponent.owner[nameplateEntity.eid] = player.eid;
+					NameplateComponent.owner[nameplateEntity.eid] = eid;
 
 					const networkPlayer: NetworkPlayer = {
-						eid: player.eid,
+						eid: eid,
 						username: player.username,
 						nickname: player.nickname,
 						isLocal: player.local,
@@ -327,17 +328,18 @@ export function createNetworkSystem(world: World) {
 					}
 
 					playersByUsername.set(player.username, networkPlayer);
-					playersByEid.set(player.eid, networkPlayer);
+					playersByEid.set(eid, networkPlayer);
 
-					world.players.set(player.eid, {
+					world.players.set(eid, {
 						player: playerEntity,
 						nameplate: nameplateEntity,
 					});
 					world.scene.add(playerEntity);
 					break;
 				}
-				case NetworkEvent.PlayerLeave: {
-					const username = event.data as string;
+				case "playerLeave": {
+					const username = whirledEvent.event.value.username;
+					console.log("huh");
 					const player = playersByUsername.get(username);
 
 					if (player === undefined) {
@@ -358,35 +360,28 @@ export function createNetworkSystem(world: World) {
 					playersByEid.delete(player.eid);
 					break;
 				}
-				case NetworkEvent.PlayerMove: {
+				case "playerMove": {
+					const event = whirledEvent.event.value;
 					const player = Object.assign(
-						playersByUsername.get((event.data as any).username) as {
+						playersByUsername.get(event.username) as {
 							eid: number;
 							nickname: string;
-						},
-						event.data as any as {
-							username: string;
-							position: {
-								x: number;
-								y: number;
-								z: number;
-							};
-							rotation: {
-								x: number;
-								y: number;
-								z: number;
-								w: number;
-							};
 						},
 					);
 
 					if (player === undefined) {
 						console.error(
 							"Could not find player:",
-							(event.data as any).username,
+							player.username,
 						);
 						break;
 					}
+
+					if (event.position === undefined) {
+						console.error(`Invalid movement by ${player.username}`);
+						break;
+					}
+
 					if (hasComponent(world, MoveTowardsComponent, player.eid)) {
 						removeComponent(
 							world,
@@ -395,27 +390,24 @@ export function createNetworkSystem(world: World) {
 						);
 					}
 					addComponent(world, MoveTowardsComponent, player.eid);
-					MoveTowardsComponent.x[player.eid] = player.position.x;
-					MoveTowardsComponent.y[player.eid] = player.position.y;
-					MoveTowardsComponent.z[player.eid] = player.position.z;
+					MoveTowardsComponent.x[player.eid] = event.position.x;
+					MoveTowardsComponent.y[player.eid] = event.position.y;
+					MoveTowardsComponent.z[player.eid] = event.position.z;
 					break;
 				}
-				case NetworkEvent.PlayerChat: {
+				case "playerChat": {
+					const event = whirledEvent.event.value;
 					const player = Object.assign(
-						playersByUsername.get((event.data as any).username) as {
+						playersByUsername.get(event.username) as {
 							eid: number;
 							nickname: string;
-						},
-						event.data as any as {
-							username: string;
-							message: string;
 						},
 					);
 					const chatMessageEntity = createChatMessage(
 						world,
 						player.username,
 						player.nickname,
-						player.message,
+						event.message,
 					);
 					addComponent(
 						world,
@@ -424,45 +416,22 @@ export function createNetworkSystem(world: World) {
 					);
 					break;
 				}
-				case NetworkEvent.PlayerAnim: {
-					const d: {
-						username: string;
-						action: number;
-						state: number;
-					} = event.data as any;
-					const eid = playersByUsername.get(d.username)?.eid;
+				case "playerAnim": {
+					const event = whirledEvent.event.value;
+					const eid = playersByUsername.get(event.username)?.eid;
 					if (eid === undefined) {
 						break;
 					}
+					console.log(event.anim ?? -1);
 					if (hasComponent(world, AnimationComponent, eid)) {
-						playAnimation(world, eid, d.action ?? d.state ?? -1);
+						playAnimation(world, eid, event.anim ?? -1);
 					}
 					break;
 				}
-				case NetworkEvent.ObjectJoin: {
-					const object: {
-						id: string;
-						name: string;
-						file: string;
-						position: {
-							x: number;
-							y: number;
-							z: number;
-						};
-						rotation: {
-							x: number;
-							y: number;
-							z: number;
-							w: number;
-						};
-						scale: {
-							x: number;
-							y: number;
-							z: number;
-						};
-						initialScale: number;
-						eid: number;
-					} = event.data as any;
+				case "objectJoin": {
+					const object = whirledEvent.event.value.object;
+
+					if (object === undefined) break;
 
 					const objectEntity = createObject(
 						world,
@@ -470,47 +439,79 @@ export function createNetworkSystem(world: World) {
 						object.file ?? "",
 						object.initialScale ?? 1,
 					);
-					object.eid = objectEntity.eid;
+					const eid = objectEntity.eid;
 
-					TransformComponent.position.x[object.eid] =
-						object.position.x;
-					TransformComponent.position.y[object.eid] =
-						object.position.y;
-					TransformComponent.position.z[object.eid] =
-						object.position.z;
+					if (object.position) {
+						TransformComponent.position.x[eid] = object.position.x;
+						TransformComponent.position.y[eid] = object.position.y;
+						TransformComponent.position.z[eid] = object.position.z;
+					}
 
-					TransformComponent.rotation.x[object.eid] =
-						object.rotation.x;
-					TransformComponent.rotation.y[object.eid] =
-						object.rotation.y;
-					TransformComponent.rotation.z[object.eid] =
-						object.rotation.z;
-					TransformComponent.rotation.w[object.eid] =
-						object.rotation.w;
-					objectEntity.rotation._onChangeCallback();
+					if (object.rotation) {
+						TransformComponent.rotation.x[eid] = object.rotation.x;
+						TransformComponent.rotation.y[eid] = object.rotation.y;
+						TransformComponent.rotation.z[eid] = object.rotation.z;
+						TransformComponent.rotation.w[eid] = object.rotation.w;
+						objectEntity.rotation._onChangeCallback();
+					}
 
-					TransformComponent.scale.x[object.eid] = object.scale.x;
-					TransformComponent.scale.y[object.eid] = object.scale.y;
-					TransformComponent.scale.z[object.eid] = object.scale.z;
+					if (object.scale) {
+						TransformComponent.scale.x[eid] = object.scale.x;
+						TransformComponent.scale.y[eid] = object.scale.y;
+						TransformComponent.scale.z[eid] = object.scale.z;
+					}
 
 					const networkObject: NetworkObject = {
-						eid: object.eid,
+						eid: eid,
 						id: object.id,
 						name: object.name,
 					};
 
 					objectsById.set(object.id, networkObject);
-					objectsByEid.set(object.eid, networkObject);
+					objectsByEid.set(eid, networkObject);
 
-					world.objects.set(object.eid, objectEntity);
+					world.objects.set(eid, objectEntity);
 					world.scene.add(objectEntity);
 					break;
 				}
-				case NetworkEvent.ObjectLeave: {
-					const object: {
-						id: string;
-						isPlayer: boolean;
-					} = event.data as any;
+				case "objectTransform": {
+					const object = whirledEvent.event.value;
+					let eid = -1;
+					if (object.isPlayer) {
+						eid = world.network.getPlayer(object.id)?.eid ?? -1;
+					} else {
+						eid = world.network.getObject(object.id)?.eid ?? -1;
+					}
+					if (eid === -1) break;
+					const objectEntity = world.scene.getObjectByProperty(
+						"eid",
+						eid,
+					);
+					if (objectEntity === undefined) break;
+
+					if (object.position) {
+						TransformComponent.position.x[eid] = object.position.x;
+						TransformComponent.position.y[eid] = object.position.y;
+						TransformComponent.position.z[eid] = object.position.z;
+					}
+
+					if (object.rotation) {
+						TransformComponent.rotation.x[eid] = object.rotation.x;
+						TransformComponent.rotation.y[eid] = object.rotation.y;
+						TransformComponent.rotation.z[eid] = object.rotation.z;
+						TransformComponent.rotation.w[eid] = object.rotation.w;
+						objectEntity.rotation._onChangeCallback();
+					}
+
+					if (object.scale) {
+						TransformComponent.scale.x[eid] = object.scale.x;
+						TransformComponent.scale.y[eid] = object.scale.y;
+						TransformComponent.scale.z[eid] = object.scale.z;
+					}
+					break;
+				}
+				case "objectLeave": {
+					const object = whirledEvent.event.value;
 					console.log(object);
 					let eid = -1;
 					if (object.isPlayer) {
@@ -531,62 +532,159 @@ export function createNetworkSystem(world: World) {
 					removeEntity(world, eid);
 					break;
 				}
-				case NetworkEvent.ObjectTransform: {
-					const object: {
-						id: string;
-						isPlayer: boolean;
-						position: {
-							x: number;
-							y: number;
-							z: number;
-						};
-						rotation: {
-							x: number;
-							y: number;
-							z: number;
-							w: number;
-						};
-						scale: {
-							x: number;
-							y: number;
-							z: number;
-						};
-					} = event.data as any;
-					let eid = -1;
-					if (object.isPlayer) {
-						eid = world.network.getPlayer(object.id)?.eid ?? -1;
-					} else {
-						eid = world.network.getObject(object.id)?.eid ?? -1;
-					}
-					if (eid === -1) break;
-					const objectEntity = world.scene.getObjectByProperty(
-						"eid",
-						eid,
-					);
-					if (objectEntity === undefined) break;
-					TransformComponent.position.x[eid] = object.position.x;
-					TransformComponent.position.y[eid] = object.position.y;
-					TransformComponent.position.z[eid] = object.position.z;
-
-					TransformComponent.rotation.x[eid] = object.rotation.x;
-					TransformComponent.rotation.y[eid] = object.rotation.y;
-					TransformComponent.rotation.z[eid] = object.rotation.z;
-					TransformComponent.rotation.w[eid] = object.rotation.w;
-					objectEntity.rotation._onChangeCallback();
-
-					TransformComponent.scale.x[eid] = object.scale.x;
-					TransformComponent.scale.y[eid] = object.scale.y;
-					TransformComponent.scale.z[eid] = object.scale.z;
-					break;
-				}
 				default: {
-					console.error("Unhandled event:", event.type, event.data);
+					console.warn(
+						`warn: sent event '${whirledEvent.event}' which does not match a case`,
+					);
 					break;
 				}
 			}
-			events.splice(i, 1);
+			eventQueue.splice(i, 1);
 			i--;
 		}
 		return world;
 	});
+}
+
+/**
+ * Emits to server that the player is trying to join (for the first time)
+ *
+ * There should be no reason to call this more than once, or expose this
+ * to be called outside of this file.
+ */
+function emitPlayerJoin(world: World) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "playerJoin",
+		value: create(buf.PlayerJoinSchema),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that the player is trying to send a message
+ */
+export function emitPlayerChat(world: World, message: string) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "playerChat",
+		value: create(buf.PlayerChatSchema, {
+			message,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that the player is trying to move their avatar
+ */
+export function emitPlayerMove(
+	world: World,
+	position: THREE.Vector3,
+	rotation: THREE.Euler,
+) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "playerMove",
+		value: create(buf.PlayerMoveSchema, {
+			position,
+			rotation,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that the player is trying to play an action/state
+ * animation with their avatar
+ */
+export function emitPlayerAnim(world: World, anim: string) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "playerAnim",
+		value: create(buf.PlayerAnimSchema, {
+			anim,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that an object is trying to join
+ *
+ * Ideally this would be a player having ownership of the object to
+ * be able to do this (ex: room owner adding furniture)
+ */
+export function emitObjectJoin(world: World, id: string, type: number) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "objectJoin",
+		value: create(buf.ObjectJoinSchema, {
+			object: create(buf.ObjectSchema, {
+				id,
+				type,
+			}),
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that an object is moving (by the player)
+ *
+ * Ideally this would be a player having ownership of the object to
+ * be able to do this (ex: room owner moving furniture)
+ */
+export function emitObjectTransform(
+	world: World,
+	id: string,
+	isPlayer: boolean,
+	position: THREE.Vector3,
+	rotation: THREE.Euler,
+	scale: THREE.Vector3,
+) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "objectTransform",
+		value: create(buf.ObjectTransformSchema, {
+			id,
+			isPlayer,
+			position,
+			rotation,
+			scale,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
+ * Emits to server that an object is leaving the room
+ *
+ * Ideally this would be a player having ownership of the object to
+ * be able to do this (ex: room owner removing furniture)
+ */
+export function emitObjectLeave(world: World, id: string, isPlayer: boolean) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "objectLeave",
+		value: create(buf.ObjectLeaveSchema, {
+			id,
+			isPlayer,
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
 }

@@ -21,7 +21,7 @@ import {
 	TransformComponent,
 } from "../components";
 import { STATIC, UNIQUE } from "./imgui";
-import { NetworkEvent } from "./network";
+import { emitObjectLeave, emitObjectTransform } from "./network";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -187,26 +187,24 @@ export function createEditorSystem(world: World) {
 				id = world.network.getObject(eid)?.id ?? null;
 			}
 			if (id === null) return;
-			world.network.emit(NetworkEvent.ObjectTransform, {
-				id,
-				isPlayer,
-				position: {
-					x: TransformComponent.position.x[eid],
-					y: TransformComponent.position.y[eid],
-					z: TransformComponent.position.z[eid],
-				},
-				rotation: {
-					x: TransformComponent.rotation.x[eid],
-					y: TransformComponent.rotation.y[eid],
-					z: TransformComponent.rotation.z[eid],
-					w: 0,
-				},
-				scale: {
-					x: TransformComponent.scale.x[eid],
-					y: TransformComponent.scale.y[eid],
-					z: TransformComponent.scale.z[eid],
-				},
-			});
+
+			const position = new THREE.Vector3(
+				TransformComponent.position.x[eid],
+				TransformComponent.position.y[eid],
+				TransformComponent.position.z[eid],
+			);
+			const rotation = new THREE.Euler(
+				TransformComponent.rotation.x[eid],
+				TransformComponent.rotation.y[eid],
+				TransformComponent.rotation.z[eid],
+			);
+			const scale = new THREE.Vector3(
+				TransformComponent.scale.x[eid],
+				TransformComponent.scale.y[eid],
+				TransformComponent.scale.z[eid],
+			);
+
+			emitObjectTransform(world, id, isPlayer, position, rotation, scale);
 		}
 	});
 	world.scene.add(transformControls);
@@ -356,7 +354,7 @@ function renderInspector(world: World) {
 				id = world.network.getObject(eid)?.id ?? null;
 			}
 			if (id === null) return;
-			world.network.emit(NetworkEvent.ObjectLeave, { id, isPlayer });
+			emitObjectLeave(world, id, isPlayer);
 		}
 		ImGui.NewLine();
 		if (

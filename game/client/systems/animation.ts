@@ -11,7 +11,7 @@ import {
 
 import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
-import { NetworkEvent } from "./network";
+import { emitPlayerAnim } from "./network";
 import { EffectComposer } from "three/examples/jsm/Addons.js";
 import { Nameplate } from "../factory/nameplate";
 import { Object } from "../factory/object";
@@ -212,7 +212,7 @@ function playGltfAnimation(
 		animation.play();
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
-			world.network.emit(NetworkEvent.PlayerAnim, { action: index });
+			emitPlayerAnim(world, name);
 	} else {
 		AnimationComponent.prevAnimState[player.eid] =
 			AnimationComponent.animState[player.eid];
@@ -230,7 +230,7 @@ function playGltfAnimation(
 		animation.play();
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
-			world.network.emit(NetworkEvent.PlayerAnim, { state: index });
+			emitPlayerAnim(world, name);
 	}
 }
 
@@ -252,9 +252,7 @@ function playSwfAnimation(
 		rufflePlayer.GotoFrame(frame);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
-			world.network.emit(NetworkEvent.PlayerAnim, {
-				action: index,
-			});
+			emitPlayerAnim(world, name);
 	} else {
 		AnimationComponent.prevAnimState[player.eid] =
 			AnimationComponent.animState[player.eid];
@@ -263,8 +261,6 @@ function playSwfAnimation(
 		rufflePlayer.GotoFrame(frame);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
-			world.network.emit(NetworkEvent.PlayerAnim, {
-				state: index,
-			});
+			emitPlayerAnim(world, name);
 	}
 }

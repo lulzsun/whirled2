@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package whirled2;
+
+option go_package = "whirled2/utils/proto";
+
+import "common.proto";
+
+message PlayerJoin {
+    Player player = 1;
+}
+
+message PlayerLeave {
+    string username = 1;
+}
+
+message PlayerAuth {
+    string id = 1;
+    string code = 2;
+    string room = 3;
+}
+
+message PlayerChat {
+    string username = 1;
+    string message = 2;
+}
+
+message PlayerMove {
+    string username = 1;
+    Position position = 2;
+    Rotation rotation = 3;
+}
+
+message PlayerAnim {
+    string username = 1;
+    string anim = 2;
+}

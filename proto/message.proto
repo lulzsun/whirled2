@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package whirled2;
+
+option go_package = "whirled2/utils/proto";
+
+import "player.proto";
+import "object.proto";
+
+message WhirledEvent {
+    oneof event {
+        PlayerAuth playerAuth = 1;
+        PlayerJoin playerJoin = 2;
+        PlayerLeave playerLeave = 3;
+        PlayerChat playerChat = 4;
+        PlayerMove playerMove = 5;
+        PlayerAnim playerAnim = 6;
+
+        ObjectJoin objectJoin = 7;
+        ObjectLeave objectLeave = 8;
+        ObjectTransform objectTransform = 9;
+    }
+}

@@ -11,7 +11,6 @@ import {
 } from "bitecs";
 import {
 	LocalPlayerComponent,
-	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
 	TransformComponent,
@@ -22,7 +21,7 @@ import { createContextMenuUI } from "../ui/contextmenu";
 import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 import { API_URL } from "../constants";
 
-import { NetworkEvent } from "./network";
+import { emitPlayerMove } from "./network";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -62,19 +61,7 @@ export function createControlSystem(world: World) {
 			);
 			const rotation = localPlayer.rotation;
 
-			world.network.emit(NetworkEvent.PlayerMove, {
-				position: {
-					x: currIntersect.point.x,
-					y: currIntersect.point.y,
-					z: currIntersect.point.z,
-				},
-				rotation: {
-					x: rotation.x,
-					y: rotation.y,
-					z: rotation.z,
-					w: 0,
-				},
-			});
+			emitPlayerMove(world, currIntersect.point, rotation);
 		} else if (
 			currIntersect &&
 			!pointerMesh.visible &&

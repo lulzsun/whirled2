@@ -13,6 +13,7 @@ requires node 18.14.2+ and go 1.21+
 clone repo with submodules and run the following to get you started.
 
 ```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go mod download && npm ci && npm run dev
 ```
 
