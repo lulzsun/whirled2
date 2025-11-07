@@ -124,7 +124,26 @@ export const createPlayerContextMenuUI = (world: World, eid: number) => {
 						hx-target="#page"
 						hx-push-url="true"
 						href={`/profile/${player.username}`}
-						class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
+						class="cursor-default block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
+						onClick={(e) => {
+							var parent = (e.target as HTMLElement)
+								.parentElement;
+							while (parent) {
+								if (
+									parent.tagName.toLowerCase() ===
+									"contextmenu"
+								) {
+									break;
+								}
+								parent = parent.parentElement;
+							}
+							if (
+								parent !== null &&
+								parent.tagName.toLowerCase() === "contextmenu"
+							) {
+								parent.style.display = "none";
+							}
+						}}
 					>
 						View Profile
 					</a>
