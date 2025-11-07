@@ -233,6 +233,12 @@ export function createRenderSystem(world: World) {
 			// this is under the assumption that the first child is the avatar mesh
 			const avatar = player.children[0];
 			player.remove(avatar);
+
+			// @ts-ignore: we had attached this element to avatar mesh without typing
+			const ruffle = avatar.ruffle;
+			if (ruffle !== undefined) {
+				ruffle.remove();
+			}
 		}
 
 		if (!world.composer) {
