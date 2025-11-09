@@ -8,15 +8,17 @@ import {
 } from "../ui/toolbar";
 
 export function createUISystem(world: World) {
-	const toolbar = createToolbarContainer();
-	const container =
-		world.renderer.domElement.parentElement!.appendChild(toolbar);
+	if (!world.isPreview) {
+		const toolbar = createToolbarContainer();
+		const container =
+			world.renderer.domElement.parentElement!.appendChild(toolbar);
 
-	const chatUI = createChatUI((msg) => {
-		emitPlayerChat(world, msg);
-	});
-	container.appendChild(chatUI);
-	container.appendChild(createEditButton());
+		const chatUI = createChatUI((msg) => {
+			emitPlayerChat(world, msg);
+		});
+		container.appendChild(chatUI);
+		container.appendChild(createEditButton());
+	}
 
 	return defineSystem((world: World) => {
 		return world;

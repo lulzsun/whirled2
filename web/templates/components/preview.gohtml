@@ -1,0 +1,65 @@
+{{ define "p" }}
+	<!doctype html>
+	<html>
+		<head>
+			<meta charset="UTF-8" />
+			<meta
+				name="viewport"
+				content="width=device-width, initial-scale=1.0"
+			/>
+			<link
+				href="/static/styles.css?v={{ .GameVersion }}"
+				type="text/css"
+				rel="stylesheet"
+			/>
+			<!-- <script src="https://cdn.tailwindcss.com"></script> */}} -->
+			<script src="/static/htmx.min.js?v={{ .GameVersion }}"></script>
+			<script src="/static/split.min.js?v={{ .GameVersion }}"></script>
+		</head>
+		<div
+			id="ruffle"
+			class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-0 -z-40"
+		></div>
+		<script src="/static/ruffle.js?v={{ .GameVersion }}"></script>
+		<body hx-boost="true" class="h-screen w-screen overflow-hidden">
+			<canvas
+				id="preview"
+				class="w-full h-full"
+				data-preview-file="{{ .File }}"
+				data-preview-type="{{ .Type }}"
+				data-preview-scale="{{ .Scale }}"
+			></canvas>
+			<script type="module">
+				var script = document.createElement("script");
+				script.type = "module";
+				script.onerror = function () {
+					var fallbackScript = document.createElement("script");
+					fallbackScript.type = "module";
+					fallbackScript.src = `http://${window.parent.location.hostname}:6969/preview.ts`;
+					document.body.appendChild(fallbackScript);
+				};
+				script.src = "/static/preview.js";
+				document.body.appendChild(script);
+			</script>
+		</body>
+	</html>
+{{ end }}
+
+{{ define "preview" }}
+	<div class="flex flex-col w-full h-full items-center bg-black">
+		<div class="flex-initial">
+			<!-- <b>top</b> -->
+		</div>
+		<div class="flex-auto overflow-hidden h-full w-full">
+			<!-- prettier-ignore -->
+			<iframe
+			id="preview-frame"
+			class="overflow-hidden relative items-center justify-center flex flex-col w-full h-full"
+			srcdoc='{{ template "p" . }}'
+		></iframe>
+		</div>
+		<div class="flex-initial">
+			<!-- <b>bottom</b> -->
+		</div>
+	</div>
+{{ end }}

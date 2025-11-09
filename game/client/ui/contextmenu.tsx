@@ -23,8 +23,9 @@ export const createContextMenuUI = (hasParentMenu?: boolean) => {
 				);
 				window.htmx.process(element);
 
-				const canvas =
-					document.querySelector<HTMLCanvasElement>("#app")!;
+				const canvas = document.querySelector<HTMLCanvasElement>(
+					!window.world.isPreview ? "#game" : "#preview",
+				)!;
 				const bounds = canvas.parentElement!.getBoundingClientRect();
 
 				let x =

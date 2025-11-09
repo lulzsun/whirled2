@@ -1,6 +1,8 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { World } from "../../factory/world";
 import * as buf from "../../proto";
+import { hasComponent, removeComponent, addComponent } from "bitecs";
+import { MoveTowardsComponent } from "../../components";
 
 /**
  * Emits to server that the player is trying to join (for the first time)
@@ -43,6 +45,20 @@ export function emitPlayerMove(
 	position: THREE.Vector3,
 	rotation: THREE.Euler,
 ) {
+	if (world.isPreview) {
+		// if this world is a preview, we will just assume that there is only 1 player object
+		// and use eid = 1
+		const eid = 1;
+		if (hasComponent(world, MoveTowardsComponent, eid)) {
+			removeComponent(world, MoveTowardsComponent, eid);
+		}
+		addComponent(world, MoveTowardsComponent, eid);
+		MoveTowardsComponent.x[eid] = position.x;
+		MoveTowardsComponent.y[eid] = position.y;
+		MoveTowardsComponent.z[eid] = position.z;
+		return;
+	}
+
 	const whirledEvent = create(buf.WhirledEventSchema);
 	whirledEvent.event = {
 		case: "playerMove",
@@ -61,6 +77,10 @@ export function emitPlayerMove(
  * animation with their avatar
  */
 export function emitPlayerAnim(world: World, anim: string) {
+	if (world.isPreview) {
+		return;
+	}
+
 	const whirledEvent = create(buf.WhirledEventSchema);
 	whirledEvent.event = {
 		case: "playerAnim",

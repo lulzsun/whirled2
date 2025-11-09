@@ -8,8 +8,8 @@
 			mx="auto"
 		>
 			<!-- <span class="text-5xl">🔧🐒</span> -->
-			<canvas id="app" class="w-full h-full"></canvas>
-			<script id="app_js">
+			<canvas id="game" class="w-full h-full"></canvas>
+			<script id="game_js">
 				var script = document.createElement("script");
 				script.type = "module";
 				script.onerror = function () {
@@ -17,17 +17,17 @@
 					script.type = "module";
 					script.src = `http://${window.location.hostname}:6969/main.ts`;
 					document
-						.getElementById("app_js")
+						.getElementById("game_js")
 						.insertAdjacentElement("afterend", script);
-					document.getElementById("app_js").remove();
-					script.id = "app_js";
+					document.getElementById("game_js").remove();
+					script.id = "game_js";
 				};
 				script.src = "/static/game.js";
 				document
-					.getElementById("app_js")
+					.getElementById("game_js")
 					.insertAdjacentElement("afterend", script);
-				document.getElementById("app_js").remove();
-				script.id = "app_js";
+				document.getElementById("game_js").remove();
+				script.id = "game_js";
 			</script>
 		</div>
 	</div>

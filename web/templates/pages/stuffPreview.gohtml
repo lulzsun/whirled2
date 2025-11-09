@@ -1,0 +1,129 @@
+{{ define "page" }}
+	<div class="flex w-full gap-4 p-4 @max-2xl/web:flex-col">
+		<div class="w-3/5 @max-2xl/web:w-full">
+			<div
+				class="w-full flex justify-center bg-white font-bold dark:bg-gray-800 rounded-t-lg"
+			>
+				{{ .Name }}
+			</div>
+			<div class="h-100">
+				{{ template "preview" . }}
+			</div>
+		</div>
+		<div
+			id="profile-card"
+			class="inline-block w-2/5 @max-2xl/web:w-full text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
+		>
+			<div class="p-3">
+				<div class="grid grid-cols-3 mb-2">
+					<div class="justify-self-start flex flex-row gap-2">
+						<a href="#" class="shrink-0">
+							<img
+								class="w-10 h-10 rounded-full"
+								src="/static/assets/profile_picture.png"
+								alt="{{ .Username }}'s profile picture"
+							/>
+						</a>
+						<div>
+							<p
+								class="text-base font-semibold leading-none text-gray-900 dark:text-white"
+							>
+								<a href="#">{{ .CreatorNickname }}</a>
+							</p>
+							<p class="mb-3 text-sm font-normal">
+								<a
+									hx-target="#page"
+									hx-push-url="true"
+									href="/profile/{{ .Username }}"
+									class="hover:underline"
+								>
+									@{{ .CreatorUsername }}
+								</a>
+							</p>
+						</div>
+					</div>
+					<div class="justify-self-center">
+						<div
+							class="flex justify-center mt-16 @max-2xl/web:mt-0"
+						>
+							<svg
+								class="w-4 h-4 text-yellow-300 me-1"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 22 20"
+							>
+								<path
+									d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+								/>
+							</svg>
+							<svg
+								class="w-4 h-4 text-yellow-300 me-1"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 22 20"
+							>
+								<path
+									d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+								/>
+							</svg>
+							<svg
+								class="w-4 h-4 text-yellow-300 me-1"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 22 20"
+							>
+								<path
+									d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+								/>
+							</svg>
+							<svg
+								class="w-4 h-4 text-yellow-300 me-1"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 22 20"
+							>
+								<path
+									d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+								/>
+							</svg>
+							<svg
+								class="w-4 h-4 text-gray-300 me-1 dark:text-gray-500"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 22 20"
+							>
+								<path
+									d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+								/>
+							</svg>
+						</div>
+					</div>
+					<div class="justify-self-end">
+						<button
+							type="button"
+							class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+						>
+							Follow
+						</button>
+					</div>
+				</div>
+				<p class="mb-8 text-base">{{ .Description }}</p>
+				<div class="flex w-full justify-evenly gap-4">
+					<button
+						onclick="(function(){
+								window.game.wearAvatar('{{ .StuffId }}');
+								return false; })();return false;"
+						class="w-32 text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700 focus:outline-none dark:focus:ring-orange-800"
+					>
+						Wear Avatar
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{{ end }}

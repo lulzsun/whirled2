@@ -49,9 +49,10 @@ export function createControlSystem(world: World) {
 		if (currIntersect && pointerMesh.visible && event.button === 0) {
 			contextMenu.close();
 
-			const localPlayer = world.players.get(
-				localPlayerQuery(world)[0],
-			)!.player;
+			const queryPlayer = world.players.get(localPlayerQuery(world)[0]);
+			if (queryPlayer === undefined) return;
+
+			const localPlayer = queryPlayer.player;
 			localPlayer.lookAt(
 				new THREE.Vector3(
 					currIntersect.point.x,

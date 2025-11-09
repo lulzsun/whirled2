@@ -67,7 +67,8 @@ func AppendToBaseData(c echo.Context, data any) any {
 func AppendToBaseTmplFiles(files ...string) []string {
 	return append([]string{
 		"web/templates/pages/index.gohtml",
-		"web/templates/pages/game.gohtml",
+		"web/templates/components/game.gohtml",
+		"web/templates/components/preview.gohtml",
 		"web/templates/components/header.gohtml",
 		"web/templates/components/profileHeader.gohtml",
 	}, files...)

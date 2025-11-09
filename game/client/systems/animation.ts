@@ -215,7 +215,7 @@ export function playAnimation(
 		playSwfAnimation(world, player, anims, animName, animIndex);
 	}
 
-	console.log("Playing animation:", eid, animName, anims[animIndex], anims);
+	// console.log("Playing animation:", eid, animName, anims[animIndex], anims);
 }
 
 function playGltfAnimation(

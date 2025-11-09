@@ -30,8 +30,8 @@
 			<script src="/static/split.min.js?v={{ .GameVersion }}"></script>
 			<script type="text/javascript">
 				window.addEventListener("DOMContentLoaded", () => {
-					document.getElementById("game").removeAttribute("style");
-					window._split_instance = Split(["#game", "#web"], {
+					document.getElementById("main").removeAttribute("style");
+					window._split_instance = Split(["#main", "#web"], {
 						sizes: [75, 25],
 						minSize: [0, 640],
 						expandToMin: true,
@@ -44,13 +44,13 @@
 							document
 								.getElementById("web")
 								.removeAttribute("style");
-							document.getElementById("game").style.display =
+							document.getElementById("main").style.display =
 								"none";
 							document.getElementsByClassName(
 								"gutter",
 							)[0].style.display = "none";
 						} else {
-							document.getElementById("game").style.display =
+							document.getElementById("main").style.display =
 								"flex";
 							document.getElementsByClassName(
 								"gutter",
@@ -62,12 +62,12 @@
 						window._split_instance.destroy();
 						window._split_instance = undefined;
 						document.getElementById("web").style.display = "none";
-						document.getElementById("game").style.display = "flex";
+						document.getElementById("main").style.display = "flex";
 					};
 					window._openWebPanel = () => {
 						if (window._split_instance) return;
 						document.getElementById("web").style.display = "flex";
-						window._split_instance = Split(["#game", "#web"], {
+						window._split_instance = Split(["#main", "#web"], {
 							sizes: [75, 25],
 							minSize: [0, 640],
 							expandToMin: true,
@@ -100,7 +100,7 @@
 				<main class="flex-1 overflow-y-auto">
 					<div class="split w-full h-full">
 						<div
-							id="game"
+							id="main"
 							class="flex flex-col w-full h-full items-center bg-black"
 							style="display: none"
 						>

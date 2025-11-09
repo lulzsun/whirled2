@@ -8,17 +8,24 @@ import { createAnimationSystem } from "../systems/animation";
 import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
 import { createEditorSystem } from "../systems/editor";
+import { createPreviewSystem } from "../systems/preview";
+
+const systems = [
+	createImguiSystem, // Imgui system should run first
+	createTimeSystem,
+
+	createMovementSystem,
+	createUISystem,
+	createAnimationSystem,
+	createControlSystem,
+	createEditorSystem,
+	createRenderSystem, // Render system should run last
+];
 
 export const createSystems = (world: World) => {
 	return [
-		createImguiSystem, // Imgui system should run first
-		createTimeSystem,
-		createNetworkSystem,
-		createMovementSystem,
-		createUISystem,
-		createAnimationSystem,
-		createControlSystem,
-		createEditorSystem,
-		createRenderSystem, // Render system should run last
+		...systems.slice(0, 2),
+		world.isPreview ? createPreviewSystem : createNetworkSystem,
+		...systems.slice(2),
 	].map((createSystem) => createSystem(world));
 };
