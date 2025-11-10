@@ -5,9 +5,15 @@ export default defineConfig({
 	publicDir: "../../web/static/",
 	build: {
 		lib: {
-			entry: "./main.ts",
-			name: "game",
-			fileName: "game",
+			entry: ["./main.ts", "./preview.ts"],
+			fileName: (_, entryName) => {
+				switch (entryName) {
+					case "main":
+						return "game.js";
+					default:
+						return `${entryName}.js`;
+				}
+			},
 		},
 		sourcemap: true,
 	},
