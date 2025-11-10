@@ -8,12 +8,10 @@ import (
 	"text/template"
 	"whirled2/utils"
 
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/models"
 )
 
 var commentTmplFiles []string
@@ -82,23 +80,23 @@ func parseProfileFiles() {
 	profileTmpl = template.Must(template.ParseFiles(profileTmplFiles...))
 }
 
-func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
-	e.Router.GET("/profile", func(c echo.Context) error {
-		info := apis.RequestInfo(c)
-		if info.AuthRecord != nil {
-			username := info.AuthRecord.GetString("username")
-			c.Redirect(302, "/profile/"+username)
+func AddProfileRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
+	se.Router.GET("/profile", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth != nil {
+			username := info.Auth.GetString("username")
+			e.Redirect(302, "/profile/"+username)
 			return nil
 		}
-		c.Redirect(302, "/login")
+		e.Redirect(302, "/login")
 		return nil
 	})
-	e.Router.GET("/profile/:username", func(c echo.Context) error {
+	se.Router.GET("/profile/{username}", func(e *core.RequestEvent) error {
 		htmxEnabled := false
-		username := c.PathParam("username")
-		parentCommentId := c.QueryParam("viewReplies")
-		commentOffset, _ := strconv.Atoi(c.QueryParam("replyOffset"))
-		commentsPage, err := strconv.Atoi(c.QueryParam("commentsPage")) // each page has 4 comments
+		username := e.Request.PathValue("username")
+		parentCommentId := e.Request.URL.Query().Get("viewReplies")
+		commentOffset, _ := strconv.Atoi(e.Request.URL.Query().Get("replyOffset"))
+		commentsPage, err := strconv.Atoi(e.Request.URL.Query().Get("commentsPage")) // each page has 4 comments
 		if err == nil {
 			commentsPage = commentsPage - 1
 		}
@@ -106,7 +104,7 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		profile := Profile{}
 		comments := []Comment{}
 
-		utils.ProcessHXRequest(c, func() error {
+		utils.ProcessHXRequest(e, func() error {
 			htmxEnabled = true
 			return nil
 		}, func() error { return nil })
@@ -188,13 +186,13 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		if htmxEnabled && parentCommentId != "" {
 			// User is viewing more comments under /profile/,
 			// so we will just send partial html (comments)
-			if err := commentTmpl.ExecuteTemplate(c.Response().Writer, "base", AppendToBaseData(c, data)); err != nil {
+			if err := commentTmpl.ExecuteTemplate(e.Response, "base", AppendToBaseData(e, data)); err != nil {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
 			}
 			return nil
 		}
-		if err := profileTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
+		if err := profileTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
@@ -204,28 +202,29 @@ func AddProfileRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/comments/records
-	// Before creating comment for a user's profile
-	//
-	// Set the user_id to be the currently auth'd user
-	// This should prevent impersonations as well 
-	app.OnRecordBeforeCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
-		authRecord, _ := e.HttpContext.Get(apis.ContextAuthRecordKey).(*models.Record)
-		if authRecord == nil {
+	// Verify user id and send back HTML fragments of the new comment
+	app.OnRecordCreateRequest("comments").BindFunc(func(e *core.RecordRequestEvent) error {
+		// Before creating comment for a user's profile
+		// Set the user_id to be the currently auth'd user
+		// This is because our API rule for creating comments is nothing (no rule!)
+		// So we should manually check our token to prevent impersonations and such
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
 			return apis.NewForbiddenError("Only authorized users can create a comment.", nil)
 		}
-		e.Record.Set("user_id", authRecord.Id)
-		return nil
-	})
+		e.Record.Set("user_id", info.Auth.Id)
 
-	// POST /api/collections/comments/records
-	// Successfully created comment for a user's profile
-	//
-	// If HTMX enabled, we will return html for the newly created comment
-	// elif HTMX disabled, we will just refresh the page (redirect=refresh)
-	// else, do normal pocketbase things (return Record json)
-	app.OnRecordAfterCreateRequest("comments").Add(func(e *core.RecordCreateEvent) error {
-		return utils.ProcessHXRequest(e, func() error {
-			user, err := app.Dao().FindRecordById("users", e.Record.GetString("user_id"))
+		// we manually save the record here, do not call e.next() 
+		// or else record json will append to our json
+		if err := app.Save(e.Record); err != nil {
+			return err
+		}
+
+		// If HTMX enabled, we will return html for the newly created comment
+		// elif HTMX disabled, we will just refresh the page (redirect=refresh)
+		// else, do normal pocketbase things (return Record json)
+		err := utils.ProcessHXRequest(e, func() error {
+			user, err := app.FindRecordById("users", e.Record.GetString("user_id"))
 			if err != nil {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
@@ -254,10 +253,15 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 				log.Println(err)
 				return apis.NewBadRequestError("Something went wrong.", err)
 			}
-			return e.HttpContext.HTML(200, htmlBuffer.String())
+			return e.HTML(200, htmlBuffer.String())
 		}, func() error {
-			return e.HttpContext.Redirect(302, e.HttpContext.Request().Referer())
+			return e.Redirect(302, e.Request.Referer())
 		})
+
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 }
 

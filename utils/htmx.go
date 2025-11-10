@@ -2,8 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -14,28 +14,28 @@ import (
 //   - echo.Context
 func ProcessHXRequest(e interface{}, trueCallback, falseCallback func() error) error {
 	switch e := e.(type) {
-	case *core.RecordCreateEvent:
+	case *core.RequestEvent:
 		{
-			hxRequest := e.HttpContext.Request().Header.Get("HX-Request")
+			hxRequest := e.Request.Header.Get("HX-Request")
 			if hxRequest != "" {
 				if hxRequest == "true" {
 					return trueCallback()
 				}
-				return falseCallback()
 			}
+			return falseCallback()
 		}
-	case echo.Context:
+	case *core.RecordRequestEvent:
 		{
-			hxRequest := e.Request().Header.Get("HX-Request")
+			hxRequest := e.Request.Header.Get("HX-Request")
 			if hxRequest != "" {
 				if hxRequest == "true" {
 					return trueCallback()
 				}
-				return falseCallback()
 			}
+			return falseCallback()
 		}
 	default:
+		log.Printf("ProcessHXRequest: Unknown type %T", e)
 		return fmt.Errorf("ProcessHXRequest: Unknown type %T", e)
 	}
-	return nil
 }

@@ -13,7 +13,6 @@ import (
 	"time"
 	"whirled2/utils"
 
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -131,39 +130,39 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 	log.Printf("Gecgos.io server is listening on port at %d\n", port)
 }
 
-func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
-	e.Router.POST("/.wrtc/v2/connections", func(c echo.Context) error {
-		r := c.Request()
+func AddAuthRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
+	se.Router.POST("/.wrtc/v2/connections", func(e *core.RequestEvent) error {
+		r := e.Request
 		ips := r.Header.Get("X-Forwarded-For")
 		if ips == "" {
 			ips = r.RemoteAddr
 		}
 		log.Println("Client attempting to connect from:", ips)
-		server.CreateConnection(c.Response().Writer, r)
+		server.CreateConnection(e.Response, r)
 		return nil
 	})
-	e.Router.POST("/.wrtc/v2/connections/:id/remote-description", func(c echo.Context) error {
-		server.SetRemoteDescription(c.Response().Writer, c.Request())
+	se.Router.POST("/.wrtc/v2/connections/{id}/remote-description", func(e *core.RequestEvent) error {
+		server.SetRemoteDescription(e.Response, e.Request)
 		return nil
 	})
-	e.Router.GET("/.wrtc/v2/connections/:id/additional-candidates", func(c echo.Context) error {
-		server.SendAdditionalCandidates(c.Response().Writer, c.Request())
+	se.Router.GET("/.wrtc/v2/connections/{id}/additional-candidates", func(e *core.RequestEvent) error {
+		server.SendAdditionalCandidates(e.Response, e.Request)
 		return nil
 	})
-	e.Router.GET("/game/:id/auth", func(c echo.Context) error {
+	se.Router.GET("/game/{id}/auth", func(e *core.RequestEvent) error {
 		code, err := generateAuthCode()
 		if err != nil {
-			return c.String(500, "Could not generate auth code")
+			return e.String(500, "Could not generate auth code")
 		}
 
-		id := c.PathParam("id")
+		id := e.Request.PathValue("id")
 
 		// allows passing cookie from subdomain(?) or different localhost:port
-		c.Response().Header().Set("Access-Control-Allow-Credentials", "true")
+		e.Response.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		client, exists := clients[id]
 		if !exists || client.Username != "" {
-			return c.String(400, "ID does not exist")
+			return e.String(400, "ID does not exist")
 		}
 
 		client.Auth = code
@@ -172,17 +171,17 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 		clients[id] = client
 		numOfGuests++
 
-		if cookie, err := c.Cookie("pb_auth"); err == nil {
+		if cookie, err := e.Request.Cookie("pb_auth"); err == nil {
 			decodedCookieValue, err := url.QueryUnescape(cookie.Value)
 			if err != nil {
 				log.Println("Error decoding cookie value:", err)
-				return c.String(200, code)
+				return e.String(200, code)
 			}
 			var cookieData map[string]interface{}
 			err = json.Unmarshal([]byte(decodedCookieValue), &cookieData)
 			if err != nil {
 				log.Println("Error unmarshaling JSON:", err)
-				return c.String(200, code)
+				return e.String(200, code)
 			}
 
 			token := strings.TrimPrefix(cookieData["token"].(string), "Bearer ")
@@ -190,10 +189,10 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			// we assume that our middleware has already verified this JWT/cookie as legitimate
 			claims, _ := security.ParseUnverifiedJWT(token)
 			pbUserId := cast.ToString(claims["id"])
-			user, err := app.Dao().FindRecordById("users", pbUserId)
+			user, err := app.FindRecordById("users", pbUserId)
 			if err != nil {
 				log.Println("Error finding user by id:", err)
-				return c.String(200, code)
+				return e.String(200, code)
 			}
 
 			client.Username = user.GetString("username")
@@ -202,7 +201,7 @@ func AddAuthRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			numOfGuests--
 		}
 
-		return c.String(200, code)
+		return e.String(200, code)
 	})
 }
 
@@ -242,7 +241,7 @@ func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
 
 // Saves room objects to db
 func saveRoomToDb(roomId string) {
-	record, err := pb.Dao().FindRecordById("rooms", roomId)
+	record, err := pb.FindRecordById("rooms", roomId)
 	if err != nil {
 		log.Printf("%s", err)
 		return
@@ -262,7 +261,7 @@ func saveRoomToDb(roomId string) {
 
 	record.Set("objects", string(objsJson))
 
-	if err := pb.Dao().SaveRecord(record); err != nil {
+	if err := pb.Save(record); err != nil {
 		log.Printf("%s", err)
 		return
 	}
@@ -276,13 +275,13 @@ func loadRoomFromDb(roomId string) {
 	}
 	objects[roomId] = make(map[string]*buf.Object)
 
-	record, err := pb.Dao().FindRecordById("rooms", roomId)
+	record, err := pb.FindRecordById("rooms", roomId)
 	if err != nil {
 		log.Printf("%s", err)
 		return
 	}
 
-	objsJsonRaw := record.Get("objects").(types.JsonRaw)
+	objsJsonRaw := record.Get("objects").(types.JSONRaw)
 	objsToLoad := []*buf.Object{}
 
 	err = json.Unmarshal(objsJsonRaw, &objsToLoad)

@@ -4,7 +4,6 @@ import (
 	"log"
 	"text/template"
 
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -37,12 +36,12 @@ func parseRoomFiles() {
 	roomTmpl = template.Must(template.ParseFiles(roomTmplFiles...))
 }
 
-func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
-	e.Router.GET("/room", func(c echo.Context) error {
-		c.Redirect(302, "/rooms")
+func AddRoomRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
+	se.Router.GET("/room", func(e *core.RequestEvent) error {
+		e.Redirect(302, "/rooms")
 		return nil
 	})
-	e.Router.GET("/rooms", func(c echo.Context) error {
+	se.Router.GET("/rooms", func(e *core.RequestEvent) error {
 		data := struct {
 			ActiveRooms []Room
 			FeaturedRooms []Room
@@ -93,7 +92,7 @@ func AddRoomRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 			}
 		}
 
-		if err := roomTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
+		if err := roomTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}

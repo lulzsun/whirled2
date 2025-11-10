@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 type IdleTracker struct {
@@ -54,11 +54,9 @@ func Start() {
 }
 
 // Resets Idle timer if a request has been made
-func IdleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		IdleTimerReset()
-		return next(c)
-	}
+func IdleMiddleware(e *core.RequestEvent) error {
+	IdleTimerReset()
+	return e.Next()
 }
 
 func IdleTimerReset() {

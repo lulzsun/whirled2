@@ -4,7 +4,6 @@ import (
 	"log"
 	"text/template"
 
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -50,27 +49,27 @@ func parseStuffFiles() {
 	previewTmpl = template.Must(template.ParseFiles(previewTmplFiles...))
 }
 
-func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
-	e.Router.GET("/stuff", func(c echo.Context) error {
-		info := apis.RequestInfo(c)
-		if info.AuthRecord != nil {
-			c.Redirect(302, "/stuff/avatars")
+func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
+	se.Router.GET("/stuff", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth != nil {
+			e.Redirect(302, "/stuff/avatars")
 			return nil
 		}
-		c.Redirect(302, "/login")
+		e.Redirect(302, "/login")
 		return nil
 	})
-	e.Router.GET("/stuff/:category", func(c echo.Context) error {
-		info := apis.RequestInfo(c)
-		if info.AuthRecord == nil {
-			c.Redirect(302, "/login")
+	se.Router.GET("/stuff/{category}", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			e.Redirect(302, "/login")
 			return nil
 		}
-		userId := info.AuthRecord.Id
+		userId := info.Auth.Id
 
-		category := c.PathParam("category")
+		category := e.Request.PathValue("category")
 		if category != "avatars" && category != "furniture" && category != "backdrops" && category != "games" {
-			c.Redirect(302, "/stuff/avatars")
+			e.Redirect(302, "/stuff/avatars")
 			return nil
 		}
 
@@ -81,7 +80,7 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 
 		stuff := []Stuff{}
 
-		switch category := c.PathParam("category"); category {
+		switch category {
 		case "avatars":
 			err := app.DB().
 			NewQuery(`
@@ -125,31 +124,31 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 				data.Items = stuff
 			}
 		case "backdrops":
-			c.Redirect(302, "/404")
+			e.Redirect(302, "/404")
 		case "games":
-			c.Redirect(302, "/404")
+			e.Redirect(302, "/404")
 		default:
-			c.Redirect(302, "/stuff/avatars")
+			e.Redirect(302, "/stuff/avatars")
 			return nil
 		}
 
-		if err := stuffTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
+		if err := stuffTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
 		return nil
 	})
-	e.Router.GET("/stuff/:category/:id", func(c echo.Context) error {
-		info := apis.RequestInfo(c)
-		if info.AuthRecord == nil {
-			c.Redirect(302, "/login")
+	se.Router.GET("/stuff/{category}/{id}", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			e.Redirect(302, "/login")
 			return nil
 		}
-		userId := info.AuthRecord.Id
-		avatarId := c.PathParam("id")
-		category := c.PathParam("category")
+		userId := info.Auth.Id
+		avatarId := e.Request.PathValue("id")
+		category := e.Request.PathValue("category")
 		if category != "avatars" && category != "furniture" && category != "backdrops" && category != "games" {
-			c.Redirect(302, "/stuff/avatars")
+			e.Redirect(302, "/stuff/avatars")
 			return nil
 		}
 
@@ -220,11 +219,11 @@ func AddStuffRoutes(e *core.ServeEvent, app *pocketbase.PocketBase) {
 				data.Scale = dbObject.Scale
 			}
 		default:
-			c.Redirect(302, "/stuff/avatars")
+			e.Redirect(302, "/stuff/avatars")
 			return nil
 		}
 
-		if err := previewTmpl.ExecuteTemplate(c.Response().Writer, c.Get("name").(string), AppendToBaseData(c, data)); err != nil {
+		if err := previewTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
 			log.Println(err)
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}

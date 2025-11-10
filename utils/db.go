@@ -5,9 +5,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/forms"
-	"github.com/pocketbase/pocketbase/models"
-	"github.com/pocketbase/pocketbase/models/schema"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
@@ -28,27 +26,23 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	);
 	CREATE UNIQUE INDEX idx_user ON profiles (user_id);
 	*/
-	usersCollection, err := app.Dao().FindCollectionByNameOrId("users")
-	if err == nil && usersCollection.Schema.GetFieldByName("birthday") == nil {
-		form := forms.NewCollectionUpsert(app, usersCollection)
-
-		form.Schema.RemoveField(form.Schema.GetFieldByName("name").Id)
-		form.Schema.AddField(&schema.SchemaField{
-			Name:     "nickname",
-			Type:     schema.FieldTypeText,
-			Required: false,
-			Options: &schema.TextOptions{
-				Min: types.Pointer(3),
-				Max: types.Pointer(30),
+	usersCollection, err := app.FindCollectionByNameOrId("users")
+	if err == nil && usersCollection.Fields.GetByName("birthday") == nil {
+		usersCollection.Fields.RemoveByName("name")
+		usersCollection.Fields.Add(
+			&core.TextField{
+				Name:     "nickname",
+				Required: false,
+				Min:      3,
+				Max:      30,
 			},
-		})
-		form.Schema.AddField(&schema.SchemaField{
-			Name:     "birthday",
-			Type:     schema.FieldTypeDate,
-			Required: true,
-		})
+			&core.DateField{
+				Name:     "birthday",
+				Required: true,
+			},
+		)
 
-		if err := form.Submit(); err != nil {
+		if err := app.Save(usersCollection); err != nil {
 			log.Fatalln(err)
 		}
 	} else if err != nil {
@@ -66,34 +60,28 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	);
 	CREATE UNIQUE INDEX idx_user ON profiles (user_id);
 	*/
-	profilesCollection, err := app.Dao().FindCollectionByNameOrId("profiles")
+	profilesCollection, err := app.FindCollectionByNameOrId("profiles")
 	if err != nil {
-		profilesCollection = &models.Collection{
-			Name:       "profiles",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: nil,
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "user_id",
-					Type:     schema.FieldTypeRelation,
-					Required: true,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: true,
-					},
-				},
-			),
-			Indexes: types.JsonArray[string]{
-				"CREATE UNIQUE INDEX idx_user ON profiles (user_id)",
+		profilesCollection = core.NewBaseCollection("profiles")
+		profilesCollection.ListRule = nil
+		profilesCollection.ViewRule = nil
+		profilesCollection.CreateRule = nil
+		profilesCollection.UpdateRule = nil
+		profilesCollection.DeleteRule = nil
+		profilesCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
 			},
+		)
+		profilesCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_user ON profiles (user_id)",
 		}
 
-		if err := app.Dao().SaveCollection(profilesCollection); err != nil {
+		if err := app.Save(profilesCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -111,59 +99,45 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (profile_id) REFERENCES profiles (id)
 	);
 	*/
-	if _, err := app.Dao().FindCollectionByNameOrId("comments"); err != nil {
-		commentsCollection := &models.Collection{
-			Name:       "comments",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: types.Pointer(""),
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "user_id",
-					Type:     schema.FieldTypeRelation,
-					Required: false,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "profile_id",
-					Type:     schema.FieldTypeRelation,
-					Required: true,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  profilesCollection.Id,
-						CascadeDelete: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "parent_id",
-					Type:     schema.FieldTypeText,
-					Required: false,
-				},
-				&schema.SchemaField{
-					Name:     "content",
-					Type:     schema.FieldTypeText,
-					Required: true,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(1),
-						Max: types.Pointer(280),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "is_deleted",
-					Type:     schema.FieldTypeBool,
-					Required: false,
-				},
-			),
-		}
+	if _, err := app.FindCollectionByNameOrId("comments"); err != nil {
+		commentsCollection := core.NewBaseCollection("comments")
+		commentsCollection.ListRule = nil
+		commentsCollection.ViewRule = nil
+		commentsCollection.CreateRule = types.Pointer("")
+		commentsCollection.UpdateRule = nil
+		commentsCollection.DeleteRule = nil
+		commentsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: false,
+			},
+			&core.RelationField{
+				Name:          "profile_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  profilesCollection.Id,
+				CascadeDelete: false,
+			},
+			&core.TextField{
+				Name:     "parent_id",
+				Required: false,
+			},
+			&core.TextField{
+				Name:     "content",
+				Required: true,
+				Min:      1,
+				Max:      280,
+			},
+			&core.BoolField{
+				Name:     "is_deleted",
+				Required: false,
+			},
+		)
 
-		if err := app.Dao().SaveCollection(commentsCollection); err != nil {
+		if err := app.Save(commentsCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -181,66 +155,49 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (owner_id) REFERENCES users (id)
 	);
 	*/
-	if _, err := app.Dao().FindCollectionByNameOrId("rooms"); err != nil {
-		roomsCollection := &models.Collection{
-			Name:       "rooms",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: nil,
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "owner_id",
-					Type:     schema.FieldTypeRelation,
-					Required: false,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: true,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "name",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(3),
-						Max: types.Pointer(30),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "description",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(1),
-						Max: types.Pointer(280),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "is_home",
-					Type:     schema.FieldTypeBool,
-					Required: false,
-				},
-				&schema.SchemaField{
-					Name:     "is_featured",
-					Type:     schema.FieldTypeBool,
-					Required: false,
-				},
-				&schema.SchemaField{
-					Name:     "objects",
-					Type:     schema.FieldTypeJson,
-					Required: false,
-					Options: &schema.JsonOptions{
-						MaxSize: 5000000, //5 MB in bytes
-					},
-				},
-			),
-		}
+	if _, err := app.FindCollectionByNameOrId("rooms"); err != nil {
+		roomsCollection := core.NewBaseCollection("rooms")
+		roomsCollection.ListRule = nil
+		roomsCollection.ViewRule = nil
+		roomsCollection.CreateRule = nil
+		roomsCollection.UpdateRule = nil
+		roomsCollection.DeleteRule = nil
+		roomsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "owner_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "name",
+				Required: false,
+				Min:      3,
+				Max:      30,
+			},
+			&core.TextField{
+				Name:     "description",
+				Required: false,
+				Min:      1,
+				Max:      280,
+			},
+			&core.BoolField{
+				Name:     "is_home",
+				Required: false,
+			},
+			&core.BoolField{
+				Name:     "is_featured",
+				Required: false,
+			},
+			&core.JSONField{
+				Name:     "objects",
+				Required: false,
+				MaxSize:  5000000, // 5 MB in bytes
+			},
+		)
 
-		if err := app.Dao().SaveCollection(roomsCollection); err != nil {
+		if err := app.Save(roomsCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -258,45 +215,36 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (owner_id) REFERENCES users (id)
 	);
 	*/
-	if _, err := app.Dao().FindCollectionByNameOrId("stuff"); err != nil {
-		stuffCollection := &models.Collection{
-			Name:       "stuff",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: nil,
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "owner_id",
-					Type:     schema.FieldTypeRelation,
-					Required: true,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: true,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "stuff_id",
-					Type:     schema.FieldTypeText,
-					Required: true,
-				},
-				&schema.SchemaField{
-					Name:     "type",
-					Type:     schema.FieldTypeNumber,
-					Required: true,
-				},
-				&schema.SchemaField{
-					Name:     "in_use",
-					Type:     schema.FieldTypeText,
-					Required: false,
-				},
-			),
-		}
+	if _, err := app.FindCollectionByNameOrId("stuff"); err != nil {
+		stuffCollection := core.NewBaseCollection("stuff")
+		stuffCollection.ListRule = nil
+		stuffCollection.ViewRule = types.Pointer("owner_id = @request.auth.id")
+		stuffCollection.CreateRule = nil
+		stuffCollection.UpdateRule = nil
+		stuffCollection.DeleteRule = nil
+		stuffCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "owner_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "stuff_id",
+				Required: true,
+			},
+			&core.NumberField{
+				Name:     "type",
+				Required: true,
+			},
+			&core.TextField{
+				Name:     "in_use",
+				Required: false,
+			},
+		)
 
-		if err := app.Dao().SaveCollection(stuffCollection); err != nil {
+		if err := app.Save(stuffCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -313,86 +261,65 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (creator_id) REFERENCES users (id)
 	);
 	*/
-	avatarsCollection, err := app.Dao().FindCollectionByNameOrId("avatars")
+	avatarsCollection, err := app.FindCollectionByNameOrId("avatars")
 	if err != nil {
-		avatarsCollection = &models.Collection{
-			Name:       "avatars",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: nil,
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "creator_id",
-					Type:     schema.FieldTypeRelation,
-					Required: false,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: true,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "name",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(3),
-						Max: types.Pointer(30),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "description",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(1),
-						Max: types.Pointer(280),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "thumb",
-					Type:     schema.FieldTypeFile,
-					Required: false,
-					Options: &schema.FileOptions{
-						MimeTypes: []string{
-							"image/jpeg", 
-							"image/png", 
-							"image/gif", 
-							"image/bmp",
-							"image/webp",
-						},
-						MaxSelect: 1,
-						MaxSize: 5000000, //5 MB in bytes
-						Protected: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "file",
-					Type:     schema.FieldTypeFile,
-					Required: true,
-					Options: &schema.FileOptions{
-						MaxSelect: 1,
-						MaxSize: 50000000, //50 MB in bytes
-						Protected: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "scale",
-					Type:     schema.FieldTypeNumber,
-					Required: false,
-					Options: &schema.NumberOptions{
-						Min: types.Pointer(0.001),
-						Max: types.Pointer(100.0),
-						NoDecimal: false,
-					},
-				},
-			),
-		}
+		avatarsCollection = core.NewBaseCollection("avatars")
+		avatarsCollection.ListRule = nil
+		avatarsCollection.ViewRule = nil
+		avatarsCollection.CreateRule = nil
+		avatarsCollection.UpdateRule = nil
+		avatarsCollection.DeleteRule = nil
 
-		if err := app.Dao().SaveCollection(avatarsCollection); err != nil {
+		avatarsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "creator_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "name",
+				Required: false,
+				Min:      3,
+				Max:      30,
+			},
+			&core.TextField{
+				Name:     "description",
+				Required: false,
+				Min:      1,
+				Max:      280,
+			},
+			&core.FileField{
+				Name:     "thumb",
+				Required: false,
+				MimeTypes: []string{
+					"image/jpeg",
+					"image/png",
+					"image/gif",
+					"image/bmp",
+					"image/webp",
+				},
+				MaxSelect: 1,
+				MaxSize:   5000000, // 5 MB in bytes
+				Protected: false,
+			},
+			&core.FileField{
+				Name:      "file",
+				Required:  true,
+				MaxSelect: 1,
+				MaxSize:   50000000, // 50 MB in bytes
+				Protected: false,
+			},
+			&core.NumberField{
+				Name:     "scale",
+				Required: false,
+				Min:      types.Pointer(0.001),
+				Max:      types.Pointer(100.0),
+			},
+		)
+
+		if err := app.Save(avatarsCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -400,15 +327,14 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	// add some default avatars
 
 	// add guest (ghost)
-	record := models.Record{}
-	err = app.Dao().RecordQuery("avatars").
+	record := core.NewRecord(avatarsCollection)
+	err = app.RecordQuery("avatars").
 		AndWhere(dbx.HashExp{"name": "Ghost"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Ghost",
 			"description": "Ghost!",
 			"scale": 1,
@@ -417,23 +343,22 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	// add member (tofu)
-	record = models.Record{}
-	err = app.Dao().RecordQuery("avatars").
+	record = core.NewRecord(avatarsCollection)
+	err = app.RecordQuery("avatars").
 		AndWhere(dbx.HashExp{"name": "Tofu"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Tofu",
 			"description": "Tofu!",
 			"scale": 1,
@@ -442,23 +367,22 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	// add robot
-	record = models.Record{}
-	err = app.Dao().RecordQuery("avatars").
+	record = core.NewRecord(avatarsCollection)
+	err = app.RecordQuery("avatars").
 		AndWhere(dbx.HashExp{"name": "Robot"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Robot",
 			"description": "Test avatar",
 			"scale": 1,
@@ -467,23 +391,22 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	// add fox
-	record = models.Record{}
-	err = app.Dao().RecordQuery("avatars").
+	record = core.NewRecord(avatarsCollection)
+	err = app.RecordQuery("avatars").
 		AndWhere(dbx.HashExp{"name": "Fox"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(avatarsCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Fox",
 			"description": "Test avatar",
 			"scale": 0.05,
@@ -492,9 +415,9 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -511,86 +434,64 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		FOREIGN KEY (creator_id) REFERENCES users (id)
 	);
 	*/
-	furnitureCollection, err := app.Dao().FindCollectionByNameOrId("furniture")
+	furnitureCollection, err := app.FindCollectionByNameOrId("furniture")
 	if err != nil {
-		furnitureCollection = &models.Collection{
-			Name:       "furniture",
-			Type:       models.CollectionTypeBase,
-			ListRule:   nil,
-			ViewRule:   nil,
-			CreateRule: nil,
-			UpdateRule: nil,
-			DeleteRule: nil,
-			Schema: schema.NewSchema(
-				&schema.SchemaField{
-					Name:     "creator_id",
-					Type:     schema.FieldTypeRelation,
-					Required: false,
-					Options: &schema.RelationOptions{
-						MaxSelect:     types.Pointer(1),
-						CollectionId:  usersCollection.Id,
-						CascadeDelete: true,
-					},
+		furnitureCollection = core.NewBaseCollection("furniture")
+		furnitureCollection.ListRule = nil
+		furnitureCollection.ViewRule = nil
+		furnitureCollection.CreateRule = nil
+		furnitureCollection.UpdateRule = nil
+		furnitureCollection.DeleteRule = nil
+		furnitureCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "creator_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "name",
+				Required: false,
+				Min:      3,
+				Max:      30,
+			},
+			&core.TextField{
+				Name:     "description",
+				Required: false,
+				Min:      1,
+				Max:      280,
+			},
+			&core.FileField{
+				Name:     "thumb",
+				Required: false,
+				MimeTypes: []string{
+					"image/jpeg",
+					"image/png",
+					"image/gif",
+					"image/bmp",
+					"image/webp",
 				},
-				&schema.SchemaField{
-					Name:     "name",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(3),
-						Max: types.Pointer(30),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "description",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Options: &schema.TextOptions{
-						Min: types.Pointer(1),
-						Max: types.Pointer(280),
-					},
-				},
-				&schema.SchemaField{
-					Name:     "thumb",
-					Type:     schema.FieldTypeFile,
-					Required: false,
-					Options: &schema.FileOptions{
-						MimeTypes: []string{
-							"image/jpeg", 
-							"image/png", 
-							"image/gif", 
-							"image/bmp",
-							"image/webp",
-						},
-						MaxSelect: 1,
-						MaxSize: 5000000, //5 MB in bytes
-						Protected: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "file",
-					Type:     schema.FieldTypeFile,
-					Required: true,
-					Options: &schema.FileOptions{
-						MaxSelect: 1,
-						MaxSize: 50000000, //50 MB in bytes
-						Protected: false,
-					},
-				},
-				&schema.SchemaField{
-					Name:     "scale",
-					Type:     schema.FieldTypeNumber,
-					Required: false,
-					Options: &schema.NumberOptions{
-						Min: types.Pointer(0.001),
-						Max: types.Pointer(100.0),
-						NoDecimal: false,
-					},
-				},
-			),
-		}
+				MaxSelect: 1,
+				MaxSize:   5000000, // 5 MB in bytes
+				Protected: false,
+			},
+			&core.FileField{
+				Name:      "file",
+				Required:  true,
+				MaxSelect: 1,
+				MaxSize:   50000000, // 50 MB in bytes
+				Protected: false,
+			},
+			&core.NumberField{
+				Name:     "scale",
+				Required: false,
+				Min:      types.Pointer(0.001),
+				Max:      types.Pointer(100.0),
+			},
+		)
 
-		if err := app.Dao().SaveCollection(furnitureCollection); err != nil {
+		if err := app.Save(furnitureCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -598,15 +499,14 @@ func Bootstrap(app *pocketbase.PocketBase) {
 	// add some default furniture
 
 	// add chair
-	record = models.Record{}
-	err = app.Dao().RecordQuery("furniture").
+	record = core.NewRecord(furnitureCollection)
+	err = app.RecordQuery("furniture").
 		AndWhere(dbx.HashExp{"name": "Chair"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(furnitureCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Chair",
 			"description": "Test furniture",
 			"scale": 5,
@@ -615,23 +515,22 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	// add sofa
-	record = models.Record{}
-	err = app.Dao().RecordQuery("furniture").
+	record = core.NewRecord(furnitureCollection)
+	err = app.RecordQuery("furniture").
 		AndWhere(dbx.HashExp{"name": "Sofa"}).
 		AndWhere(dbx.HashExp{"creator_id": ""}).
 		One(&record)
 
-	if err != nil && !record.HasId() {
-		form := forms.NewRecordUpsert(app, models.NewRecord(furnitureCollection))
-		form.LoadData(map[string]any{
+	if err != nil {
+		record.Load(map[string]any{
 			"name": "Sofa",
 			"description": "Test furniture",
 			"scale": 5,
@@ -640,9 +539,9 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		form.AddFiles("file", file)
+		record.Set("file", file)
 	
-		if err := form.Submit(); err != nil {
+		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
 	}

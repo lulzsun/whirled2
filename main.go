@@ -12,7 +12,6 @@ import (
 	"whirled2/utils"
 
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -71,30 +70,33 @@ func main() {
 		AddEventHooks(app)
 	}
 
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		utils.Bootstrap(app)
 
 		// serves static files from the provided public dir (if exists)
-		e.Router.GET("/static/*", func(c echo.Context) error {
+		se.Router.GET("/static/{path...}", func(e *core.RequestEvent) error {
 			// Disable client-side caching for development
-			c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-			return apis.StaticDirectoryHandler(os.DirFS("./web/static"), false)(c)
+			e.Response.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+			return apis.Static(os.DirFS("./web/static"), false)(e)
 		})
-		e.Router.Pre(api.AuthMiddleware(app))
-		e.Router.Use(
+		se.Router.Bind(
+			// api.FormMiddleware(app),
+			api.AuthMiddleware(app),
+		)
+		se.Router.BindFunc(
 			utils.IdleMiddleware,
-			api.FormMiddleware,
+			api.ErrorMiddleware,
 			api.BaseMiddleware,
 		)
 		for _, AddRoutes := range routes {
-			AddRoutes(e, app)
+			AddRoutes(se, app)
 		}
-		e.Router.GET("/api/hello", func(c echo.Context) error {
-			return c.String(200, "Hello whirled!")
+		se.Router.GET("/api/hello", func(e *core.RequestEvent) error {
+			return e.String(200, "Hello whirled!")
 		})
-		e.Router.GET("/test", func(c echo.Context) error {
+		se.Router.GET("/test", func(e *core.RequestEvent) error {
 			tmpl := template.Must(template.ParseFiles("web/templates/pages/test.gohtml"))
-			if err := tmpl.Execute(c.Response().Writer, nil); err != nil {
+			if err := tmpl.Execute(e.Response, nil); err != nil {
 				return err
 			}
 			return nil
@@ -102,7 +104,7 @@ func main() {
 
 		// start gecgos.io game server
 		server.Start(42069, app, debug)
-		return nil
+		return se.Next()
 	})
 
 	if err := app.Start(); err != nil {
