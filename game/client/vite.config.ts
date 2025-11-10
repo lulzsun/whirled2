@@ -14,6 +14,7 @@ export default defineConfig({
 						return `${entryName}.js`;
 				}
 			},
+			formats: ["es"],
 		},
 		sourcemap: true,
 	},
