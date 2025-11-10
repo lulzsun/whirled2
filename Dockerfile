@@ -16,7 +16,7 @@ RUN npm run build-client
 RUN find . -type d -name "node_modules" -prune -o -type f -print
 
 # Stage 2: Build server
-FROM golang:1.21-alpine as build-server
+FROM golang:1.24-alpine as build-server
 
 WORKDIR /build
 
