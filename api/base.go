@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"strings"
 	"text/template"
@@ -123,6 +124,16 @@ func ErrorMiddleware(e *core.RequestEvent) error {
 	}
 
 	apiErr := apis.ToApiError(err)
+	for key, value := range apiErr.Data {
+		if nestedMap, ok := value.(map[string]any); ok {
+			newMap := make(map[string]any)
+			newMap["key"] = key
+			maps.Copy(newMap, nestedMap)
+			apiErr.Data[key] = newMap
+		} else {
+			apiErr.Data[key] = value
+		}
+	}
 	var page bytes.Buffer
 	formatErr := map[string]interface{}{
 		"Code": apiErr.Status,
