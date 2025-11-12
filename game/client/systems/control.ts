@@ -22,6 +22,7 @@ import { createPlayerContextMenuUI } from "../ui/playercontextmenu";
 import { API_URL } from "../constants";
 
 import { emitPlayerMove } from "./network";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
 
@@ -29,6 +30,8 @@ export function createControlSystem(world: World) {
 	const pointer = new THREE.Vector2();
 	const pointerMesh = new THREE.Group();
 	const raycaster = new THREE.Raycaster();
+
+	world.controls = new OrbitControls(world.camera, world.renderer.domElement);
 
 	const canvas = world.renderer.domElement;
 
@@ -83,6 +86,7 @@ export function createControlSystem(world: World) {
 	});
 
 	return defineSystem((world: World) => {
+		world.controls.update();
 		raycaster.setFromCamera(pointer, world.camera);
 
 		const intersects = raycaster.intersectObjects(

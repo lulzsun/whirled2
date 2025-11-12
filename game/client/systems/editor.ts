@@ -12,7 +12,6 @@ import { World } from "../factory/world";
 
 import { ImGui } from "imgui-js";
 
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import {
 	ObjectComponent,
@@ -96,14 +95,10 @@ export function createEditorSystem(world: World) {
 		}
 	};
 
-	const orbitControls = new OrbitControls(
-		world.camera,
-		world.renderer.domElement,
-	);
 	canvas.addEventListener("pointermove", (event) => {
 		if (!world.editor.enabled) return;
 		if (ImGui.GetCurrentContext() !== null) {
-			orbitControls.enabled =
+			world.controls.enabled =
 				(!ImGui.GetIO().WantCaptureMouse &&
 					transformControlsCaptureMouse) ||
 				(ImGui.GetIO().WantCaptureMouse &&
@@ -211,7 +206,6 @@ export function createEditorSystem(world: World) {
 
 	let lastSelectedTool: EditorTool = null;
 	return defineSystem((world: World) => {
-		orbitControls.update();
 		raycaster.setFromCamera(pointer, world.camera);
 
 		if (ImGui.bind === undefined || !world.editor.enabled) {

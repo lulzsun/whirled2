@@ -10,10 +10,12 @@ import { Network } from "../systems/network";
 import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
 import { Editor } from "../systems/editor";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
 	objects: Map<number, Object>;
+	controls: OrbitControls;
 	camera: THREE.Camera;
 	scene: THREE.Scene;
 	renderer: THREE.WebGLRenderer;
