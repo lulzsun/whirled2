@@ -236,11 +236,11 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 					a.description,
 					a.file,
 					a.scale,
-					u.username,
-					u.nickname
+					IFNULL(u.username, '') AS username,
+					IFNULL(u.nickname, '') AS nickname
 				FROM stuff s
 				INNER JOIN avatars a ON a.id = s.stuff_id
-				INNER JOIN users u ON u.id = a.creator_id
+				LEFT JOIN users u ON u.id = a.creator_id
 				WHERE s.owner_id = {:owner_id} AND a.id = {:avatar_id}
 			`).
 			Bind(dbx.Params{
