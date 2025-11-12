@@ -283,16 +283,27 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 	// POST /api/collections/avatars/records
 	// After successful avatar creation, redirect the user back to /stuff
 	app.OnRecordCreateRequest("avatars").BindFunc(func(e *core.RecordRequestEvent) error {
-		err := e.Next()
-		if err == nil {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can upload an avatar.", nil)
+		}
+		if !info.Auth.Verified() {
+			return apis.NewForbiddenError("Only verified users can upload an avatar.", nil)
+		}
+
+		if err := app.Save(e.Record); err != nil {
 			return err
 		}
 
-		utils.ProcessHXRequest(e, func() error {
+		err := utils.ProcessHXRequest(e, func() error {
 			return e.Redirect(302, "/stuff")
 		}, func() error {
 			return e.Redirect(302, "/stuff")
 		})
+
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
