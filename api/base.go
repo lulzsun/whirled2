@@ -2,7 +2,11 @@ package api
 
 import (
 	"bytes"
+	"io"
+	"log"
 	"maps"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"text/template"
@@ -113,6 +117,54 @@ func AddBaseRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 func AddBaseEventHooks(app *pocketbase.PocketBase) {
+	// If a client is making a request with a method query, it may possibly be a 
+	// noscript client. Some actions performed by a noscript user needs workarounds
+	// so this handles them.
+	app.OnRecordViewRequest().BindFunc(func(e *core.RecordRequestEvent) error {
+		info, _ := e.RequestInfo()
+		method := info.Query["method"]
+		switch strings.ToLower(method) {
+		case "delete":
+			// if noscript user is setting a GET but has a DELETE method query,
+			// they probably couldnt make the DELETE request themselves, so we
+			// will do it for them.
+			//
+			// this basically will just create a new http request
+			// not sure if there are any security implications doing it this way
+			// but seems like i wasn't the only person to think of this:
+			// https://github.com/pocketbase/pocketbase/discussions/5908#discussioncomment-11349162
+			u, _ := url.Parse(e.Request.RequestURI); u.RawQuery = ""; cleanURL := u.String()
+			token, err := e.Auth.NewAuthToken()
+			if err != nil {
+				return err
+			}
+			req, err := http.NewRequest("DELETE", "http://127.0.0.1:42069" + cleanURL, nil)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			req.Header.Add("Authorization", "Bearer " + token)
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			defer resp.Body.Close()
+			for key, values := range resp.Header {
+				for _, value := range values {
+					e.Response.Header().Set(key, value)
+				}
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil
+			}
+			e.Response.Write(body)
+			return nil
+		}
+		return e.Next()
+	})
 }
 
 // Adds specific htmx error handling

@@ -280,6 +280,41 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 func AddStuffEventHooks(app *pocketbase.PocketBase) {
+	// DELETE /api/collections/stuff/records
+	// After successful deletion of 'stuff', we should delete the creator of the stuff
+	// if only the user is also the creator of the deleted 'stuff'
+	app.OnRecordDeleteRequest("stuff").BindFunc(func(e *core.RecordRequestEvent) error {
+		utils.ProcessHXRequest(e, func() error {
+			e.Response.Header().Set("HX-Location", `{"path":"/stuff", "target":"#page"}`)
+			return e.String(200, "Successful avatar deletion!")
+		}, func() error {
+			return e.Redirect(302, "/stuff")
+		})
+		return e.Next()
+	})
+	app.OnRecordAfterDeleteSuccess("stuff").BindFunc(func(e *core.RecordEvent) error {
+		if e.Record.Get("type") != 2 {
+			return e.Next()
+		}
+		record, err := app.FindFirstRecordByFilter(
+			"avatars",
+			"creator_id = {:owner_id} && id = {:id}",
+			dbx.Params{ 
+				"owner_id": e.Record.Get("owner_id"),
+				"id": e.Record.Get("stuff_id"),
+			},
+		)
+		if err != nil && record != nil {
+			log.Println(err, e.Record)
+			return err
+		}
+		err = app.Delete(record)
+		if err != nil {
+			return err
+		}
+		return e.Next()
+	})
+
 	// POST /api/collections/avatars/records
 	// After successful avatar creation, redirect the user back to /stuff
 	app.OnRecordCreateRequest("avatars").BindFunc(func(e *core.RecordRequestEvent) error {

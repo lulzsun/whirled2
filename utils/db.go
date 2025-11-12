@@ -221,7 +221,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		stuffCollection.ViewRule = types.Pointer("owner_id = @request.auth.id")
 		stuffCollection.CreateRule = nil
 		stuffCollection.UpdateRule = nil
-		stuffCollection.DeleteRule = nil
+		stuffCollection.DeleteRule = types.Pointer("owner_id = @request.auth.id")
 		stuffCollection.Fields.Add(
 			&core.RelationField{
 				Name:          "owner_id",
