@@ -4,6 +4,7 @@ import (
 	"log"
 	"text/template"
 	"whirled2/utils"
+	buf "whirled2/utils/proto"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -293,11 +294,18 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		return e.Next()
 	})
 	app.OnRecordAfterDeleteSuccess("stuff").BindFunc(func(e *core.RecordEvent) error {
-		if e.Record.Get("type") != 2 {
+		collection := ""
+		switch e.Record.Get("type") {
+		case buf.Type_Avatar:
+			collection = "avatars"
+		case buf.Type_Furniture:
+			collection = "furniture"
+		default:
+			log.Println("warning: type did not match any case", e.Record.Get("type"))
 			return e.Next()
 		}
 		record, err := app.FindFirstRecordByFilter(
-			"avatars",
+			collection,
 			"creator_id = {:owner_id} && id = {:id}",
 			dbx.Params{ 
 				"owner_id": e.Record.Get("owner_id"),
@@ -350,7 +358,7 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		record := core.NewRecord(collection)
 		record.Load(map[string]any{
 			"stuff_id": avatarId,
-			"type": 2,
+			"type": buf.Type_Avatar,
 			"owner_id": e.Record.Get("creator_id"),
 		})
 		if err := app.Save(record); err != nil {

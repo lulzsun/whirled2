@@ -17,7 +17,7 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	roomId := peer.Rooms()[0]
 
 	// making sure this object is of type 2 (furniture)
-	if obj.Type != 2 {
+	if obj.Type != buf.Type_Furniture {
 		return
 	}
 
