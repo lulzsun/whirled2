@@ -319,9 +319,6 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 	// After successful avatar creation, redirect the user back to /stuff
 	app.OnRecordCreateRequest("avatars").BindFunc(func(e *core.RecordRequestEvent) error {
 		info, _ := e.RequestInfo()
-		if info.Auth == nil {
-			return apis.NewForbiddenError("Only authorized users can upload an avatar.", nil)
-		}
 		if !info.Auth.Verified() {
 			return apis.NewForbiddenError("Only verified users can upload an avatar.", nil)
 		}

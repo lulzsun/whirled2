@@ -266,7 +266,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		avatarsCollection = core.NewBaseCollection("avatars")
 		avatarsCollection.ListRule = nil
 		avatarsCollection.ViewRule = nil
-		avatarsCollection.CreateRule = types.Pointer("@request.auth.id != '' && creator_id = @request.auth.id && @request.auth.verified = true")
+		avatarsCollection.CreateRule = types.Pointer("@request.auth.id != '' && creator_id = @request.auth.id")
 		avatarsCollection.UpdateRule = nil
 		avatarsCollection.DeleteRule = nil
 
