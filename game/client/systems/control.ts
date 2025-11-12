@@ -5,11 +5,13 @@ import {
 	addComponent,
 	defineQuery,
 	defineSystem,
+	enterQuery,
 	entityExists,
 	hasComponent,
 	removeComponent,
 } from "bitecs";
 import {
+	AvatarComponent,
 	LocalPlayerComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
@@ -25,6 +27,9 @@ import { emitPlayerMove } from "./network";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const localPlayerQuery = defineQuery([LocalPlayerComponent]);
+const enterLocalPlayerQuery = enterQuery(
+	defineQuery([LocalPlayerComponent, AvatarComponent]),
+);
 
 export function createControlSystem(world: World) {
 	const pointer = new THREE.Vector2();
@@ -162,6 +167,41 @@ export function createControlSystem(world: World) {
 			currIntersect = null;
 			pointerMesh.visible = false;
 		}
+
+		const enterPlayer = enterLocalPlayerQuery(world)[0];
+		if (enterPlayer > 0) {
+			const player = world.players.get(enterPlayer)!.player;
+			console.log(player, enterPlayer);
+
+			const box = new THREE.Box3().setFromObject(player);
+			const center = box.getCenter(new THREE.Vector3());
+			const size = box.getSize(new THREE.Vector3());
+
+			const maxDim = Math.max(size.x, size.y, size.z);
+
+			// Set max/min distance for controls
+			world.controls.maxDistance = maxDim * 10;
+			world.controls.minDistance = maxDim * 0.1;
+
+			// Check if we need to zoom out (camera is too close)
+			const currentDistance = world.camera.position.distanceTo(center);
+			//@ts-ignore
+			const fov = (world.camera.fov ?? 1000) * (Math.PI / 180);
+			const requiredDistance =
+				Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
+
+			// Only adjust camera if current distance is less than required
+			if (currentDistance < requiredDistance) {
+				world.controls.target.copy(center);
+				world.camera.position.set(
+					world.camera.position.x,
+					world.camera.position.y,
+					center.z + maxDim,
+				);
+				world.controls.update();
+			}
+		}
+
 		return world;
 	});
 }

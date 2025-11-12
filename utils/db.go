@@ -266,7 +266,7 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		avatarsCollection = core.NewBaseCollection("avatars")
 		avatarsCollection.ListRule = nil
 		avatarsCollection.ViewRule = nil
-		avatarsCollection.CreateRule = nil
+		avatarsCollection.CreateRule = types.Pointer("@request.auth.id != '' && creator_id = @request.auth.id && @request.auth.verified = true")
 		avatarsCollection.UpdateRule = nil
 		avatarsCollection.DeleteRule = nil
 
@@ -301,7 +301,10 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					"image/webp",
 				},
 				MaxSelect: 1,
-				MaxSize:   5000000, // 5 MB in bytes
+				Thumbs: []string{
+					"420x420",
+				},
+				MaxSize:   1000000, // 1 MB in bytes
 				Protected: false,
 			},
 			&core.FileField{

@@ -211,6 +211,7 @@ export const createGtlfAvatar = async (
 ) => {
 	if (avatarFile === "")
 		avatarFile = "/static/assets/avatars/RobotExpressive.glb";
+	if (!avatarFile.startsWith("data:")) avatarFile = `${API_URL}${avatarFile}`;
 
 	const loader = new GLTFLoader();
 	const mesh:
@@ -218,7 +219,7 @@ export const createGtlfAvatar = async (
 		| THREE.Object3D<THREE.Object3DEventMap> = await new Promise(
 		(resolve) => {
 			loader.load(
-				`${API_URL}${avatarFile}`,
+				avatarFile,
 				function (gltf) {
 					let model: THREE.Group | THREE.Object3D = gltf.scene;
 					model.scale.set(
@@ -257,6 +258,7 @@ export const createSwfAvatar = async (
 	initialScale: number = 1,
 ) => {
 	if (avatarFile === "") avatarFile = "/static/assets/avatars/guest.swf";
+	if (!avatarFile.startsWith("data:")) avatarFile = `${API_URL}${avatarFile}`;
 
 	let mesh: THREE.Mesh<
 		THREE.PlaneGeometry,
@@ -270,7 +272,7 @@ export const createSwfAvatar = async (
 	await new Promise<void>((resolve) => {
 		player
 			.ruffle()
-			.load(`${API_URL}${avatarFile}`)
+			.load(avatarFile)
 			.finally(() => {
 				var swfTexture = new THREE.CanvasTexture(
 					player.shadowRoot!.querySelector("canvas")!,

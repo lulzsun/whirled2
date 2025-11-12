@@ -154,8 +154,8 @@
 							</svg>
 						</button>
 					</div>
-					<form class="max-w-lg">
-						<div class="flex">
+					<div class="max-w-lg flex gap-2">
+						<form class="flex">
 							<button
 								class="shrink-0 inline-flex items-center py-1.5 px-2 text-xs font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-s-lg hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-700 dark:text-white dark:border-gray-600"
 								type="button"
@@ -206,8 +206,15 @@
 									<span class="sr-only">Search</span>
 								</button>
 							</div>
-						</div>
-					</form>
+						</form>
+						<a
+							hx-target="#page"
+							href="/stuff/{{ $.Category }}/upload"
+							class="cursor-pointer text-xs font-medium text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:ring-orange-300 rounded-lg px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700 focus:outline-none dark:focus:ring-orange-800"
+						>
+							Upload
+						</a>
+					</div>
 				</div>
 				<div
 					class="text-xs grid grid-cols-6 @max-3xl/web:grid-cols-3 @max-5xl/web:grid-cols-4 gap-4"
@@ -221,8 +228,12 @@
 								href="/stuff/{{ $.Category }}/{{ $item.StuffId }}"
 							>
 								<img
-									class="rounded-t-lg h-auto max-w-full"
-									src="/static/assets/{{ $.Category }}/thumb.png"
+									class="rounded-t-lg h-auto w-[420px]"
+									{{ if $item.Thumbnail }}
+										src="/api/files/{{ $.Category }}/{{ $item.StuffId }}/{{ $item.Thumbnail }}?thumb=420x420"
+									{{ else }}
+										src="/static/assets/{{ $.Category }}/thumb.png"
+									{{ end }}
 									alt="{{ $.Category }} thumbnail"
 								/>
 							</a>

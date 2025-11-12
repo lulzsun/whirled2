@@ -1,0 +1,263 @@
+{{ define "page" }}
+	<form
+		hx-target="#page"
+		hx-swap="innerHTML"
+		hx-push-url="true"
+		hx-encoding="multipart/form-data"
+		action="/api/collections/{{ .Category }}/records"
+		method="post"
+		class="flex flex-col w-full max-w-7xl @7xl/web:w-2/3 gap-4 p-4"
+	>
+		<input type="hidden" name="creator_id" value="{{ .UserId }}" />
+		<div
+			class="h-100 flex @max-3xl/web:flex-col gap-4 flex-row-reverse @7xl/web:justify-center relative"
+		>
+			<div
+				class="p-3 flex flex-col w-2/5 h-100 @7xl/web:absolute @7xl/web:left-[calc(2/5*200%)] @7xl/web:ml-4 @7xl/web:w-2/5 @max-3xl/web:w-full text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
+			>
+				<div class="grow">
+					<div
+						class="flex flex-col gap-3 @max-3xl/web:flex-row @max-3xl/web:items-center"
+					>
+						<h1
+							class="whitespace-nowrap grow text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white"
+						>
+							Create Avatar
+						</h1>
+						<span class="">
+							Learn how to create your own avatars on our
+							<a>wiki!</a>
+						</span>
+					</div>
+				</div>
+				<p class="pt-3 grow">
+					Currently supported avatars are .GLF files and .SWF files
+					(using the Whirled SDK).
+				</p>
+				<p class="pt-3 grow">
+					GLB (gTLF) is a standard file format for three-dimensional
+					models and are fully compatible.
+				</p>
+				<p class="pt-3">
+					Whirled Avatars using the original SDK may need patching for
+					best feature compatibility.
+				</p>
+			</div>
+			<div class="flex flex-col w-3/5 @max-3xl/web:w-full gap-4">
+				<div class="h-100 w-full relative">
+					<div
+						class="z-1 flex items-center justify-center h-100 w-full absolute"
+					>
+						<label
+							for="preview-file"
+							class="flex flex-col items-center justify-center h-full w-full border-2 border-gray-300 border-dashed cursor-pointer bg-gray-50/69 dark:hover:bg-gray-700/69 dark:bg-gray-800/69 hover:bg-gray-100/69 dark:border-gray-600 dark:hover:border-gray-500"
+						>
+							<div
+								class="flex flex-col items-center justify-center pt-5 pb-6"
+							>
+								<svg
+									class="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
+									aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 20 16"
+								>
+									<path
+										stroke="currentColor"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+									/>
+								</svg>
+								<p
+									class="mb-2 text-sm text-gray-500 dark:text-gray-400"
+								>
+									<span class="font-semibold">
+										Click to upload
+									</span>
+									or drag and drop
+								</p>
+								<p
+									class="text-xs text-gray-500 dark:text-gray-400"
+								>
+									SWF or GLB (File size limit: 10 MB)
+								</p>
+							</div>
+							<input
+								id="preview-file"
+								name="file"
+								type="file"
+								class="hidden"
+								onchange="
+                                    const preview = document.getElementById('{{ .Id }}').querySelector('#preview-frame');
+                                    const d = this.parentElement.parentElement;
+                                    if (this.value) {
+                                        window.game.previewUpload(preview, event);
+                                        d.classList.replace('flex', 'hidden')
+                                        d.nextElementSibling.classList.replace('hidden', 'flex')
+                                    } else { 
+                                        d.classList.replace('hidden', 'flex')
+                                        d.nextElementSibling.classList.replace('flex', 'hidden')
+                                        preview.contentWindow.location.reload();
+                                    }
+                                "
+							/>
+						</label>
+					</div>
+					<div
+						class="h-100 p-1 z-1 hidden flex-col absolute justify-center gap-4"
+					>
+						<div
+							class="text-xs whitespace-nowrap focus:outline-none text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg p-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+							onclick="
+                                const el = document.querySelector('#preview-file');
+                                el.value = ''; el.dispatchEvent(new Event('change'));
+                                document.querySelector('#scale-value-display').textContent = '1';
+                                document.querySelector('#preview-scale-range').value = '1';
+                            "
+						>
+							Reset
+						</div>
+						<div
+							class="flex flex-col justify-center items-center grow"
+						>
+							<label
+								for="preview-scale-range"
+								class="block mb-2 text-xs font-medium text-gray-900 dark:text-white"
+							>
+								Scale
+							</label>
+							<input
+								id="preview-scale-range"
+								name="scale"
+								type="range"
+								min="0.001"
+								max="2"
+								value="1"
+								step="0.001"
+								list="values"
+								class="w-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+								style="writing-mode: vertical-lr;"
+								oninput="this.dispatchEvent(new Event('change'));"
+								onchange="
+                                    const preview = document.getElementById('{{ .Id }}').querySelector('#preview-frame');
+                                    const formattedValue = parseFloat(this.value).toFixed(3);
+                                    this.nextElementSibling.textContent = formattedValue;
+                                    window.game.previewScale(preview, formattedValue);
+                                "
+							/>
+							<span id="scale-value-display" class="text-xs">
+								1
+							</span>
+						</div>
+					</div>
+					<div id="{{ .Id }}" class="h-100">
+						{{ template "preview" . }}
+					</div>
+				</div>
+				<div
+					class="mb-4 gap-5 p-3 flex flex-col text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
+				>
+					<div class="w-full mx-auto">
+						<label
+							for="name"
+							class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+						>
+							Name
+						</label>
+						<input
+							type="text"
+							id="name"
+							name="name"
+							required
+							class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+						/>
+					</div>
+					<div class="w-full mx-auto">
+						<label
+							for="description"
+							class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+						>
+							Description
+						</label>
+						<textarea
+							id="description"
+							name="description"
+							rows="4"
+							class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+						></textarea>
+					</div>
+					<div class="w-full mx-auto">
+						<label
+							class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+							for="thumbnail"
+						>
+							Upload thumbnail
+						</label>
+						<input
+							class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 file:border-0
+                           file:me-4 file:px-4 file:py-2.5 file:bg-gray-600 hover:file:bg-gray-500 dark:file:text-white file:font-semibold"
+							aria-describedby="thumbnail_help"
+							id="thumbnail"
+							name="thumb"
+							type="file"
+						/>
+						<div
+							class="mt-1 text-sm text-gray-500 dark:text-gray-300"
+							id="thumbnail_help"
+						>
+							Recommended dimensions: 420x420px, Max file size: 1
+							MB
+						</div>
+					</div>
+					<div class="flex items-start justify-end">
+						<div class="flex items-center h-5">
+							<input
+								id="terms"
+								aria-describedby="terms"
+								type="checkbox"
+								class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
+								required=""
+							/>
+						</div>
+						<div class="ml-3 text-sm">
+							<label
+								for="terms"
+								class="font-light text-gray-500 dark:text-gray-300"
+							>
+								I accept the
+								<a
+									class="font-medium text-blue-600 hover:underline dark:text-blue-500"
+									href="#"
+								>
+									Terms and Conditions
+								</a>
+							</label>
+						</div>
+					</div>
+					<div class="flex items-start justify-end gap-2">
+						<button
+							type="reset"
+							class="text-gray-900 bg-gray-100 border border-gray-300 hover:bg-gray-200 focus:ring-4 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center focus:ring-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-700 dark:text-white dark:border-gray-600"
+							onclick="
+                                const el = document.querySelector('#preview-file');
+                                el.value = ''; el.dispatchEvent(new Event('change'));
+                                document.querySelector('#scale-value-display').textContent = '1';
+                                document.querySelector('#preview-scale-range').dispatchEvent(new Event('change'));
+                            "
+						>
+							Reset
+						</button>
+						<button
+							type="submit"
+							class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+						>
+							Submit
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+{{ end }}

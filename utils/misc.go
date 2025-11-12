@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func GetLocalIP() ([]string, error) {
@@ -100,4 +103,10 @@ func FormatRelativeTime(timestamp string) string {
 		}
 		return fmt.Sprintf("%d year ago", years)
 	}
+}
+
+func GenerateHTMLSafeID() string {
+	id := uuid.New()
+	hexString := strings.ReplaceAll(id.String(), "-", "")
+	return fmt.Sprintf("%s%s", "id_", hexString)
 }
