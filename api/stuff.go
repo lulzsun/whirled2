@@ -190,7 +190,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		}
 		userId := info.Auth.Id
-		avatarId := e.Request.PathValue("id")
+		stuffId := e.Request.PathValue("id")
 		category := e.Request.PathValue("category")
 		if category != "avatars" && category != "furniture" && category != "backdrops" && category != "games" {
 			e.Redirect(302, "/stuff/avatars")
@@ -198,7 +198,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		data := struct {
-			AvatarId string
+			Id string
 			StuffId string
 			CreatorUsername string
 			CreatorNickname string
@@ -208,7 +208,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			File	string
 			Type	string
 			Scale	float64
-		}{AvatarId: avatarId, Type: category}
+		}{Type: category}
 
 		dbObject := struct {
 			Id string		    `db:"id" json:"id"`
@@ -241,14 +241,17 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				FROM stuff s
 				INNER JOIN avatars a ON a.id = s.stuff_id
 				LEFT JOIN users u ON u.id = a.creator_id
-				WHERE s.owner_id = {:owner_id} AND a.id = {:avatar_id}
+				WHERE s.owner_id = {:owner_id} AND s.id = {:id}
 			`).
 			Bind(dbx.Params{
 				"owner_id": userId,
-				"avatar_id": avatarId,
+				"id": stuffId,
 			}).One(&dbObject)
 
 			if err != nil {
+				// if there is an error here, it is possible that the avatar associated
+				// with this stuff_id is deleted.
+				// TODO: clean up stuff or have a message about avatar no longer existing
 				log.Println(err)
 			} else {
 				data.StuffId = dbObject.Id
@@ -277,7 +280,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 func AddStuffEventHooks(app *pocketbase.PocketBase) {
-	// POST /api/collections/comments/records
+	// POST /api/collections/avatars/records
 	// After successful avatar creation, redirect the user back to /stuff
 	app.OnRecordCreateRequest("avatars").BindFunc(func(e *core.RecordRequestEvent) error {
 		err := e.Next()
@@ -293,7 +296,7 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		return nil
 	})
 
-	// POST /api/collections/comments/records
+	// POST /api/collections/avatars/records
 	// After successful avatar creation give the creator a copy of the avatar (in stuff)
 	app.OnRecordAfterCreateSuccess("avatars").BindFunc(func(e *core.RecordEvent) error {
 		avatarId := e.Record.Id
