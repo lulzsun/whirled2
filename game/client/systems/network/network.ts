@@ -349,7 +349,6 @@ export function createNetworkSystem(world: World) {
 				}
 				case "playerLeave": {
 					const username = whirledEvent.event.value.username;
-					console.log("huh");
 					const player = playersByUsername.get(username);
 
 					if (player === undefined) {

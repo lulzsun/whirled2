@@ -94,7 +94,6 @@ export function createPreviewSystem(world: World) {
 					nameplate: nameplateEntity,
 				});
 				world.scene.add(playerEntity);
-				console.log("huh");
 			})();
 			break;
 		}
