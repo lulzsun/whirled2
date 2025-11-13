@@ -214,7 +214,7 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 		}
 		e.Record.Set("user_id", info.Auth.Id)
 
-		// we manually save the record here, do not call e.next() 
+		// we manually save the record here, do not call e.next()
 		// or else record json will append to our json
 		if err := app.Save(e.Record); err != nil {
 			return err
@@ -236,15 +236,15 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 			}{
 				Comments: []Comment{
 					{
-						CommentId: e.Record.Id,
-						ProfileId: e.Record.GetString("profile_id"),
-						ParentId:  e.Record.GetString("parent_id"),
-						Content:   e.Record.GetString("content"),
-						Timestamp: e.Record.GetString("created"),
-						IsDeleted: e.Record.GetBool("is_deleted"),
+						CommentId:    e.Record.Id,
+						ProfileId:    e.Record.GetString("profile_id"),
+						ParentId:     e.Record.GetString("parent_id"),
+						Content:      e.Record.GetString("content"),
+						Timestamp:    e.Record.GetString("created"),
+						IsDeleted:    e.Record.GetBool("is_deleted"),
 						RelativeTime: utils.FormatRelativeTime(e.Record.GetString("created")),
-						Username:  username,
-						Nickname:  nickname,
+						Username:     username,
+						Nickname:     nickname,
 					},
 				},
 			}

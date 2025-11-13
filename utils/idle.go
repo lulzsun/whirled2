@@ -43,7 +43,7 @@ func Start() {
 		return
 	}
 
-	idle = NewIdleTracker(time.Duration(minutes * 60) * time.Second)
+	idle = NewIdleTracker(time.Duration(minutes*60) * time.Second)
 	log.Printf("Configured idle tracker for %d minutes", minutes)
 
 	go func() {

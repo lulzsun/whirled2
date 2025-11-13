@@ -51,13 +51,13 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 
 		// retrieve client's avatar from db
 		dbObject := struct {
-			Id string		`db:"id" json:"id"`
-			Type int		`db:"type" json:"type"`
-			StuffId string	`db:"stuff_id" json:"stuff_id"`
+			Id      string `db:"id" json:"id"`
+			Type    int    `db:"type" json:"type"`
+			StuffId string `db:"stuff_id" json:"stuff_id"`
 
-			Name string		`db:"name" json:"name"`
-			File string		`db:"file" json:"file"`
-			Scale float64	`db:"scale" json:"scale"`
+			Name  string  `db:"name" json:"name"`
+			File  string  `db:"file" json:"file"`
+			Scale float64 `db:"scale" json:"scale"`
 		}{}
 		err := pb.DB().
 			NewQuery(`
@@ -73,8 +73,8 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 				INNER JOIN avatars a ON a.id = s.stuff_id
 				WHERE s.in_use != '' AND u.id = s.owner_id
 			`).Bind(dbx.Params{
-				"username": client.Username,
-			}).One(&dbObject)
+			"username": client.Username,
+		}).One(&dbObject)
 
 		if err != nil {
 			log.Println(err)
@@ -96,9 +96,9 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 		player := &buf.Player{
 			Username: client.Username,
 			Nickname: client.Nickname,
-			File: client.File,
-			Local: true,
-			Owner: false,
+			File:     client.File,
+			Local:    true,
+			Owner:    false,
 			Position: &buf.Position{
 				X: client.Position.X,
 				Y: client.Position.Y,
@@ -138,17 +138,17 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 			if err != nil {
 				roomId = "@underwhirled"
 			} else {
-				player.Owner = true;
+				player.Owner = true
 				roomId = room.Id
 			}
-		// client provided a room id, check if room exists on server
+			// client provided a room id, check if room exists on server
 		} else if _, ok := server.Rooms[roomId]; ok {
-		// client provided a room id, check if room exists by db
+			// client provided a room id, check if room exists by db
 		} else {
 			room := struct {
-				Id string		`db:"id" json:"id"`
-				Owner string	`db:"owner" json:"owner"`
-				Objects string 	`db:"objects" json:"objects"`
+				Id      string `db:"id" json:"id"`
+				Owner   string `db:"owner" json:"owner"`
+				Objects string `db:"objects" json:"objects"`
 			}{}
 			err := pb.DB().
 				NewQuery(`
@@ -168,7 +168,7 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 				roomId = "@underwhirled"
 			} else {
 				if room.Owner == client.Username {
-					player.Owner = true;
+					player.Owner = true
 				}
 			}
 		}
@@ -221,8 +221,8 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 						Player: &buf.Player{
 							Username: clients[p.Id].Username,
 							Nickname: clients[p.Id].Nickname,
-							File: clients[p.Id].File,
-							Local: false,
+							File:     clients[p.Id].File,
+							Local:    false,
 							// Owner: false,
 							Position: &buf.Position{
 								X: clients[p.Id].Position.X,
@@ -268,12 +268,12 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 			}
 			peer.Emit(data)
 		}
-		
+
 		client.Auth = ""
 	} else {
 		log.Printf("Failed to authorize '%s', provided wrong auth code?", peer.Id)
 	}
-	
+
 	clients[peer.Id] = client
 }
 
@@ -304,7 +304,7 @@ func onPlayerMove(peer *gecgosio.Peer, pos *buf.Position, rot *buf.Rotation) {
 				Rotation: rot,
 			},
 		},
-    }
+	}
 
 	// Save position on the server
 	client.Position.X = pos.X
@@ -324,36 +324,36 @@ func onPlayerMove(peer *gecgosio.Peer, pos *buf.Position, rot *buf.Rotation) {
 		return
 	}
 
-	peer.Room().Emit(updatedMsg);
+	peer.Room().Emit(updatedMsg)
 }
 
 func onPlayerChat(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
 
 	p := &buf.WhirledEvent{
-        Event: &buf.WhirledEvent_PlayerChat{
-            PlayerChat: &buf.PlayerChat{
-                Username: client.Username,
-                Message:  msg,
-            },
-        },
-    }
-    data, _ := proto.Marshal(p)
+		Event: &buf.WhirledEvent_PlayerChat{
+			PlayerChat: &buf.PlayerChat{
+				Username: client.Username,
+				Message:  msg,
+			},
+		},
+	}
+	data, _ := proto.Marshal(p)
 
-	peer.Room().Emit(data);
+	peer.Room().Emit(data)
 }
 
 func onPlayerAnim(peer *gecgosio.Peer, name string) {
 	client := clients[peer.Id]
 
 	p := &buf.WhirledEvent{
-        Event: &buf.WhirledEvent_PlayerAnim{
-            PlayerAnim: &buf.PlayerAnim{
-                Username: client.Username,
-                Anim:  name,
-            },
-        },
-    }
+		Event: &buf.WhirledEvent_PlayerAnim{
+			PlayerAnim: &buf.PlayerAnim{
+				Username: client.Username,
+				Anim:     name,
+			},
+		},
+	}
 
 	updatedMsg, err := proto.Marshal(p)
 	if err != nil {
@@ -361,21 +361,21 @@ func onPlayerAnim(peer *gecgosio.Peer, name string) {
 		return
 	}
 
-	peer.Broadcast().Emit(updatedMsg);
+	peer.Broadcast().Emit(updatedMsg)
 }
 
 func onPlayerWear(peer *gecgosio.Peer, id string) {
 	// we need to check if client owns this avatar by id
 	client := clients[peer.Id]
-	
-	dbObject := struct {
-		Id string		`db:"id" json:"id"`
-		Type int		`db:"type" json:"type"`
-		StuffId string	`db:"stuff_id" json:"stuff_id"`
 
-		Name string		`db:"name" json:"name"`
-		File string		`db:"file" json:"file"`
-		Scale float64	`db:"scale" json:"scale"`
+	dbObject := struct {
+		Id      string `db:"id" json:"id"`
+		Type    int    `db:"type" json:"type"`
+		StuffId string `db:"stuff_id" json:"stuff_id"`
+
+		Name  string  `db:"name" json:"name"`
+		File  string  `db:"file" json:"file"`
+		Scale float64 `db:"scale" json:"scale"`
 	}{}
 
 	// find the avatar that the user owns which matches the sent id and is not in_use
@@ -400,7 +400,7 @@ func onPlayerWear(peer *gecgosio.Peer, id string) {
 			RETURNING stuff_id
 		`).Bind(dbx.Params{
 			"username": client.Username,
-			"id": id,
+			"id":       id,
 		}).One(&updateResult)
 
 		if err != nil {
@@ -421,9 +421,9 @@ func onPlayerWear(peer *gecgosio.Peer, id string) {
 			)
 		`).Bind(dbx.Params{
 			"username": client.Username,
-			"id": id,
+			"id":       id,
 		}).
-		Execute()
+			Execute()
 
 		if err != nil {
 			return err
@@ -454,15 +454,15 @@ func onPlayerWear(peer *gecgosio.Peer, id string) {
 	}
 
 	p := &buf.WhirledEvent{
-        Event: &buf.WhirledEvent_PlayerWear{
-            PlayerWear: &buf.PlayerWear{
+		Event: &buf.WhirledEvent_PlayerWear{
+			PlayerWear: &buf.PlayerWear{
 				Username: client.Username,
-                Id: id,
-				File: "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File,
-				Scale: dbObject.Scale,
-            },
-        },
-    }
+				Id:       id,
+				File:     "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File,
+				Scale:    dbObject.Scale,
+			},
+		},
+	}
 
 	client.InitialScale = dbObject.Scale
 	client.File = "/api/files/avatars/" + dbObject.StuffId + "/" + dbObject.File
@@ -473,5 +473,5 @@ func onPlayerWear(peer *gecgosio.Peer, id string) {
 		return
 	}
 
-	peer.Room().Emit(updatedMsg);
+	peer.Room().Emit(updatedMsg)
 }

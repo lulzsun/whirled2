@@ -77,7 +77,7 @@ func AddAuthRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 // https://github.com/pocketbase/pocketbase/discussions/6345
 func AuthMiddleware(app core.App) *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
-		Id:       "authMiddleware",
+		Id: "authMiddleware",
 		// execute this right after pocketbase auth middleware
 		Priority: apis.DefaultLoadAuthTokenMiddlewarePriority + 1,
 		Func: func(e *core.RequestEvent) error {
@@ -192,8 +192,8 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 		record = core.NewRecord(collection)
 		record.Load(map[string]any{
 			"owner_id": e.Record.Id,
-			"name": e.Record.GetString("username") + "'s Home",
-			"is_home": true,
+			"name":     e.Record.GetString("username") + "'s Home",
+			"is_home":  true,
 		})
 		if err := app.Save(record); err != nil {
 			log.Println(err)

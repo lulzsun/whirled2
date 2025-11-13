@@ -35,7 +35,7 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 			WHERE r.id = {:roomId} AND u.username = {:username}
 		`).
 		Bind(dbx.Params{
-			"roomId": roomId,
+			"roomId":   roomId,
 			"username": client.Username,
 		}).One(&struct{}{})
 
@@ -46,13 +46,13 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 
 	// retrieve object (furniture) data from db
 	dbObject := struct {
-		Id string		`db:"id" json:"id"`
-		Type int		`db:"type" json:"type"`
-		StuffId string	`db:"stuff_id" json:"stuff_id"`
+		Id      string `db:"id" json:"id"`
+		Type    int    `db:"type" json:"type"`
+		StuffId string `db:"stuff_id" json:"stuff_id"`
 
-		Name string		`db:"name" json:"name"`
-		File string		`db:"file" json:"file"`
-		Scale float64	`db:"scale" json:"scale"`
+		Name  string  `db:"name" json:"name"`
+		File  string  `db:"file" json:"file"`
+		Scale float64 `db:"scale" json:"scale"`
 	}{}
 	err = pb.DB().
 		NewQuery(`
@@ -81,11 +81,11 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 
 	// prepare object (furniture) data
 	object := &buf.Object{
-		Id: dbObject.Id,
-		Type: buf.Type(dbObject.Type),
+		Id:      dbObject.Id,
+		Type:    buf.Type(dbObject.Type),
 		StuffId: dbObject.StuffId,
-		Name: dbObject.Name,
-		File: dbObject.File,
+		Name:    dbObject.Name,
+		File:    dbObject.File,
 		Position: &buf.Position{
 			X: 0,
 			Y: 0,
@@ -155,7 +155,7 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 			WHERE r.id = {:roomId} AND u.username = {:username}
 		`).
 		Bind(dbx.Params{
-			"roomId": roomId,
+			"roomId":   roomId,
 			"username": client.Username,
 		}).One(&struct{}{})
 
@@ -219,7 +219,7 @@ func onObjectTransform(peer *gecgosio.Peer, obj *buf.ObjectTransform) {
 			WHERE r.id = {:roomId} AND u.username = {:username}
 		`).
 		Bind(dbx.Params{
-			"roomId": roomId,
+			"roomId":   roomId,
 			"username": client.Username,
 		}).One(&struct{}{})
 

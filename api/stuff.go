@@ -22,6 +22,7 @@ var uploadTmplFiles []string
 var uploadTmpl *template.Template
 
 type Category int64
+
 const (
 	Undefined Category = iota
 	Avatar
@@ -29,14 +30,14 @@ const (
 )
 
 type Stuff struct {
-	Id			string 	`db:"id" json:"id"`
-	OwnerId		string 	`db:"owner_id" json:"owner_id"`
-	StuffId		string 	`db:"stuff_id" json:"stuff_id"`
-	Name		string 	`db:"name" json:"name"`
-	Description	string 	`db:"description" json:"description"`
-	Thumbnail	string 	`db:"thumb" json:"thumb"`
+	Id          string `db:"id" json:"id"`
+	OwnerId     string `db:"owner_id" json:"owner_id"`
+	StuffId     string `db:"stuff_id" json:"stuff_id"`
+	Name        string `db:"name" json:"name"`
+	Description string `db:"description" json:"description"`
+	Thumbnail   string `db:"thumb" json:"thumb"`
 
-	Type		int 	`db:"type" json:"type"`
+	Type int `db:"type" json:"type"`
 }
 
 func init() {
@@ -83,8 +84,8 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		data := struct {
-			Category	string
-			Items		[]Stuff
+			Category string
+			Items    []Stuff
 		}{Category: category}
 
 		stuff := []Stuff{}
@@ -92,7 +93,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		switch category {
 		case "avatars":
 			err := app.DB().
-			NewQuery(`
+				NewQuery(`
 				SELECT
 					s.id,
 					s.type,
@@ -103,9 +104,9 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				INNER JOIN avatars f ON f.id = s.stuff_id
 				WHERE s.owner_id = {:owner_id}
 			`).
-			Bind(dbx.Params{
-				"owner_id": userId,
-			}).All(&stuff)
+				Bind(dbx.Params{
+					"owner_id": userId,
+				}).All(&stuff)
 
 			if err != nil {
 				log.Println(err)
@@ -114,7 +115,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			}
 		case "furniture":
 			err := app.DB().
-			NewQuery(`
+				NewQuery(`
 				SELECT
 					s.id,
 					s.type,
@@ -125,9 +126,9 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				INNER JOIN furniture f ON f.id = s.stuff_id
 				WHERE s.owner_id = {:owner_id}
 			`).
-			Bind(dbx.Params{
-				"owner_id": userId,
-			}).All(&stuff)
+				Bind(dbx.Params{
+					"owner_id": userId,
+				}).All(&stuff)
 
 			if err != nil {
 				log.Println(err)
@@ -199,36 +200,36 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 
 		data := struct {
-			Id string
-			StuffId string
+			Id              string
+			StuffId         string
 			CreatorUsername string
 			CreatorNickname string
 
-			Name string
+			Name        string
 			Description string
-			File	string
-			Type	string
-			Scale	float64
+			File        string
+			Type        string
+			Scale       float64
 		}{Type: category}
 
 		dbObject := struct {
-			Id string		    `db:"id" json:"id"`
-			Type int		    `db:"type" json:"type"`
-			AvatarId string	    `db:"stuff_id" json:"stuff_id"`
+			Id       string `db:"id" json:"id"`
+			Type     int    `db:"type" json:"type"`
+			AvatarId string `db:"stuff_id" json:"stuff_id"`
 
-			Name string		    `db:"name" json:"name"`
+			Name        string  `db:"name" json:"name"`
 			Description string  `db:"description" json:"description"`
-			File string		    `db:"file" json:"file"`
-			Scale float64	    `db:"scale" json:"scale"`
+			File        string  `db:"file" json:"file"`
+			Scale       float64 `db:"scale" json:"scale"`
 
-			Username string		`db:"username" json:"Username"`
-			Nickname string	    `db:"nickname" json:"Nickname"`
+			Username string `db:"username" json:"Username"`
+			Nickname string `db:"nickname" json:"Nickname"`
 		}{}
 
 		switch category {
 		case "avatars":
 			err := app.DB().
-			NewQuery(`
+				NewQuery(`
 				SELECT 
 					s.id, 
 					s.type, 
@@ -244,10 +245,10 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				LEFT JOIN users u ON u.id = a.creator_id
 				WHERE s.owner_id = {:owner_id} AND s.id = {:id}
 			`).
-			Bind(dbx.Params{
-				"owner_id": userId,
-				"id": stuffId,
-			}).One(&dbObject)
+				Bind(dbx.Params{
+					"owner_id": userId,
+					"id":       stuffId,
+				}).One(&dbObject)
 
 			if err != nil {
 				// if there is an error here, it is possible that the avatar associated
@@ -307,9 +308,9 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		record, err := app.FindFirstRecordByFilter(
 			collection,
 			"creator_id = {:owner_id} && id = {:id}",
-			dbx.Params{ 
+			dbx.Params{
 				"owner_id": e.Record.Get("owner_id"),
-				"id": e.Record.Get("stuff_id"),
+				"id":       e.Record.Get("stuff_id"),
 			},
 		)
 		if err != nil && record != nil {
@@ -358,7 +359,7 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		record := core.NewRecord(collection)
 		record.Load(map[string]any{
 			"stuff_id": avatarId,
-			"type": buf.Type_Avatar,
+			"type":     buf.Type_Avatar,
 			"owner_id": e.Record.Get("creator_id"),
 		})
 		if err := app.Save(record); err != nil {

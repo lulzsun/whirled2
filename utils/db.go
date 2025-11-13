@@ -338,16 +338,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Ghost",
+			"name":        "Ghost",
 			"description": "Ghost!",
-			"scale": 1,
+			"scale":       1,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/guest.swf")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
@@ -362,16 +362,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Tofu",
+			"name":        "Tofu",
 			"description": "Tofu!",
-			"scale": 1,
+			"scale":       1,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/member.swf")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
@@ -386,16 +386,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Robot",
+			"name":        "Robot",
 			"description": "Test avatar",
-			"scale": 1,
+			"scale":       1,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/RobotExpressive.glb")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
@@ -410,16 +410,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Fox",
+			"name":        "Fox",
 			"description": "Test avatar",
-			"scale": 0.05,
+			"scale":       0.05,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/avatars/Fox.glb")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
@@ -510,16 +510,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Chair",
+			"name":        "Chair",
 			"description": "Test furniture",
-			"scale": 5,
+			"scale":       5,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/furniture/SheenChair.glb")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}
@@ -534,16 +534,16 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 	if err != nil {
 		record.Load(map[string]any{
-			"name": "Sofa",
+			"name":        "Sofa",
 			"description": "Test furniture",
-			"scale": 5,
+			"scale":       5,
 		})
 		file, err := filesystem.NewFileFromPath("./web/static/assets/furniture/GlamVelvetSofa.glb")
 		if err != nil {
 			log.Fatalln(err)
 		}
 		record.Set("file", file)
-	
+
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
 		}

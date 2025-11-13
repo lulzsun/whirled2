@@ -39,15 +39,15 @@ func AppendToBaseData(e *core.RequestEvent, data any) any {
 	}
 
 	baseData := struct {
-		GameVersion  string
+		GameVersion string
 
-		AuthId 		 string
+		AuthId       string
 		AuthUsername string
 		AuthNickname string
 	}{
 		GameVersion: os.Getenv("VERSION"),
 
-		AuthId: authId,
+		AuthId:       authId,
 		AuthUsername: authUsername,
 		AuthNickname: authNickname,
 	}
@@ -117,7 +117,7 @@ func AddBaseRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 func AddBaseEventHooks(app *pocketbase.PocketBase) {
-	// If a client is making a request with a method query, it may possibly be a 
+	// If a client is making a request with a method query, it may possibly be a
 	// noscript client. Some actions performed by a noscript user needs workarounds
 	// so this handles them.
 	app.OnRecordViewRequest().BindFunc(func(e *core.RecordRequestEvent) error {
@@ -133,17 +133,19 @@ func AddBaseEventHooks(app *pocketbase.PocketBase) {
 			// not sure if there are any security implications doing it this way
 			// but seems like i wasn't the only person to think of this:
 			// https://github.com/pocketbase/pocketbase/discussions/5908#discussioncomment-11349162
-			u, _ := url.Parse(e.Request.RequestURI); u.RawQuery = ""; cleanURL := u.String()
+			u, _ := url.Parse(e.Request.RequestURI)
+			u.RawQuery = ""
+			cleanURL := u.String()
 			token, err := e.Auth.NewAuthToken()
 			if err != nil {
 				return err
 			}
-			req, err := http.NewRequest("DELETE", "http://127.0.0.1:42069" + cleanURL, nil)
+			req, err := http.NewRequest("DELETE", "http://127.0.0.1:42069"+cleanURL, nil)
 			if err != nil {
 				log.Println(err)
 				return err
 			}
-			req.Header.Add("Authorization", "Bearer " + token)
+			req.Header.Add("Authorization", "Bearer "+token)
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
@@ -188,15 +190,15 @@ func ErrorMiddleware(e *core.RequestEvent) error {
 	}
 	var page bytes.Buffer
 	formatErr := map[string]interface{}{
-		"Code": apiErr.Status,
+		"Code":    apiErr.Status,
 		"Message": apiErr.Message,
-		"Data": apiErr.Data,
+		"Data":    apiErr.Data,
 	}
 
 	err = utils.ProcessHXRequest(e, func() error {
-		e.Response.Header().Add("HX-Retarget", "#error-alert");
-		e.Response.Header().Add("HX-Reswap", "innerHTML");
-		
+		e.Response.Header().Add("HX-Retarget", "#error-alert")
+		e.Response.Header().Add("HX-Reswap", "innerHTML")
+
 		if err := CreateError(true).ExecuteTemplate(&page, "error", formatErr); err != nil {
 			return nil
 		}

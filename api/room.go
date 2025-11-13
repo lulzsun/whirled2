@@ -16,12 +16,12 @@ var roomTmplFiles []string
 var roomTmpl *template.Template
 
 type Room struct {
-	Id 			string	`db:"id" json:"id"`
-	OwnerId		string	`db:"owner_id" json:"owner_id"`
-	Name		string	`db:"name" json:"name"`
-	IsFeatured	bool	`db:"is_featured" json:"is_featured"`
+	Id         string `db:"id" json:"id"`
+	OwnerId    string `db:"owner_id" json:"owner_id"`
+	Name       string `db:"name" json:"name"`
+	IsFeatured bool   `db:"is_featured" json:"is_featured"`
 
-	UsersCount	int
+	UsersCount int
 }
 
 func init() {
@@ -43,10 +43,10 @@ func AddRoomRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 	})
 	se.Router.GET("/rooms", func(e *core.RequestEvent) error {
 		data := struct {
-			ActiveRooms []Room
+			ActiveRooms   []Room
 			FeaturedRooms []Room
 		}{
-			ActiveRooms: []Room{},
+			ActiveRooms:   []Room{},
 			FeaturedRooms: []Room{},
 		}
 		rooms := server.GetActiveRooms(6, 0)
@@ -67,8 +67,8 @@ func AddRoomRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				continue
 			}
 			data.ActiveRooms = append(data.ActiveRooms, Room{
-				Id: room.Id,
-				Name: dbRoom.Name,
+				Id:         room.Id,
+				Name:       dbRoom.Name,
 				UsersCount: room.UsersCount,
 			})
 		}
@@ -85,8 +85,8 @@ func AddRoomRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err == nil {
 			for _, room := range featuredRooms {
 				data.FeaturedRooms = append(data.FeaturedRooms, Room{
-					Id: room.Id,
-					Name: room.Name,
+					Id:         room.Id,
+					Name:       room.Name,
 					UsersCount: server.GetActiveRoom(room.Id).UsersCount,
 				})
 			}

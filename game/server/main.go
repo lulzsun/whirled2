@@ -30,7 +30,7 @@ var server *gecgosio.Server
 var clients = make(map[string]*Client)
 var objects = make(map[string]map[string]*buf.Object)
 
-var numOfGuests = 0;
+var numOfGuests = 0
 var usernameToPeerId = make(map[string]string)
 var pb *pocketbase.PocketBase
 
@@ -41,14 +41,14 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 	if debug {
 		server = gecgosio.Gecgos(&gecgosio.Options{
 			DisableHttpServer: true,
-			BindAddress: "0.0.0.0",
-			NAT1To1IPs: []string{},
+			BindAddress:       "0.0.0.0",
+			NAT1To1IPs:        []string{},
 		})
 	} else {
 		server = gecgosio.Gecgos(&gecgosio.Options{
 			DisableHttpServer: true,
-			BindAddress: "fly-global-services",
-			NAT1To1IPs: []string{"188.93.148.218"},
+			BindAddress:       "fly-global-services",
+			NAT1To1IPs:        []string{"188.93.148.218"},
 		})
 	}
 
@@ -68,7 +68,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 				log.Printf("Failed to unmarshal: %v", err)
 				return
 			}
-			
+
 			switch e := event.Event.(type) {
 			case *buf.WhirledEvent_PlayerJoin:
 				onPlayerJoin(peer)
@@ -101,7 +101,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 		client, ok := clients[peer.Id]
 		if ok {
 			onPlayerLeave(peer)
-			for _, roomId := range(peer.Rooms()) {
+			for _, roomId := range peer.Rooms() {
 				// check if room is empty (of players)
 				if len(server.Rooms[roomId]) > 1 {
 					continue
@@ -111,7 +111,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 				// check if objects exist in room
 				if _, ok := objects[roomId]; ok {
 					// clear out objects in rooms
-					for objectId := range(objects[roomId]) {
+					for objectId := range objects[roomId] {
 						delete(objects[roomId], objectId)
 						log.Printf("Object '%s' has been deleted from room '%s'", objectId, roomId)
 					}
@@ -206,18 +206,18 @@ func AddAuthRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 type ActiveRoom struct {
-	Id 			string 
-	UsersCount	int
+	Id         string
+	UsersCount int
 }
 
 func GetActiveRoom(id string) ActiveRoom {
 	return ActiveRoom{
-		Id: id,
+		Id:         id,
 		UsersCount: len(server.Rooms[id]),
 	}
 }
 
-func GetActiveRooms(limit int, offset int) ([]ActiveRoom) {
+func GetActiveRooms(limit int, offset int) []ActiveRoom {
 	rooms := server.Rooms
 	activeRooms := []ActiveRoom{}
 
@@ -254,10 +254,10 @@ func saveRoomToDb(roomId string) {
 	}
 
 	objsJson, err := json.Marshal(objsToSave)
-    if err != nil {
-        log.Println("Error marshaling JSON:", err)
-        return
-    }
+	if err != nil {
+		log.Println("Error marshaling JSON:", err)
+		return
+	}
 
 	record.Set("objects", string(objsJson))
 
@@ -297,21 +297,21 @@ func loadRoomFromDb(roomId string) {
 
 // TODO: not secure, tie logic with secret key or something
 func generateAuthCode() (string, error) {
-    // Generate a random seed based on current time
-    seed := time.Now().UnixNano()
+	// Generate a random seed based on current time
+	seed := time.Now().UnixNano()
 
-    // Create a new random number generator with the seed
-    rng := rand.New(rand.NewSource(seed))
+	// Create a new random number generator with the seed
+	rng := rand.New(rand.NewSource(seed))
 
-    // Generate a random byte slice (16 bytes long for a 128-bit string)
-    randomBytes := make([]byte, 16)
-    _, err := rng.Read(randomBytes)
-    if err != nil {
-        return "", err
-    }
+	// Generate a random byte slice (16 bytes long for a 128-bit string)
+	randomBytes := make([]byte, 16)
+	_, err := rng.Read(randomBytes)
+	if err != nil {
+		return "", err
+	}
 
-    // Encode the random bytes to a hexadecimal string
-    randomString := hex.EncodeToString(randomBytes)
+	// Encode the random bytes to a hexadecimal string
+	randomString := hex.EncodeToString(randomBytes)
 
-    return randomString, nil
+	return randomString, nil
 }

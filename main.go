@@ -21,8 +21,8 @@ func main() {
 	log.SetFlags(log.Llongfile)
 	args := os.Args[1:]
 
-    // Check if "--http" is present in the arguments
-    debug := true
+	// Check if "--http" is present in the arguments
+	debug := true
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "--http") {
 			debug = false
@@ -35,7 +35,7 @@ func main() {
 		godotenv.Load(".env.local")
 		localIPs, err := utils.GetLocalIP()
 		if err == nil {
-			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://" + localIPs[0] + ":6969")
+			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://"+localIPs[0]+":6969")
 		} else {
 			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
 		}
