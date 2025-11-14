@@ -5,7 +5,7 @@ export default defineConfig({
 	publicDir: "../../web/static/",
 	build: {
 		lib: {
-			entry: ["./main.ts", "./preview.ts"],
+			entry: ["./main.ts", "./preview.ts", "./swf.ts"],
 			fileName: (_, entryName) => {
 				switch (entryName) {
 					case "main":
