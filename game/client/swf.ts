@@ -3,13 +3,9 @@ try {
 	console.error("WARNING!!! SWF IFRAME CAN ACCESS PARENT WINDOW!!!");
 } catch (e) {}
 
-window.addEventListener("message", (event) => {
-	console.log("Message from parent:", event.data);
-});
-
-let ruffle = window.RufflePlayer.newest();
-let player = ruffle.createPlayer();
-let container = document.getElementById("ruffle");
+const ruffle = window.RufflePlayer.newest();
+const player = ruffle.createPlayer();
+const container = document.getElementById("ruffle");
 container!.appendChild(player);
 player
 	.ruffle()
@@ -41,3 +37,23 @@ player
 			streamFrame();
 		});
 	});
+
+window.addEventListener("message", (event) => {
+	switch (event.data.type) {
+		case "framelist":
+			const frameList = player.metadata.frameList.map(
+				(item: [number, string][]) => ({
+					frame: item[0],
+					name: item[1],
+				}),
+			);
+			window.parent.postMessage({ type: "framelist", frameList }, "*");
+			break;
+		case "gotoframe":
+			player.GotoFrame(event.data.frame);
+			break;
+		default:
+			console.log("Message from parent:", event.data);
+			break;
+	}
+});

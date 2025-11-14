@@ -274,14 +274,12 @@ function playSwfAnimation(
 	index: number,
 ) {
 	//@ts-ignore
-	const rufflePlayer = player.children[0].ruffle;
-	//@ts-ignore
 	const frame = anims[index].frame;
 
 	if (/^action_/i.test(name)) {
 		AnimationComponent.animAction[player.eid] = index;
 
-		rufflePlayer.GotoFrame(frame);
+		world.swfAssetManager.gotoFrame(player.eid, frame);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
 			emitPlayerAnim(world, name);
@@ -290,7 +288,7 @@ function playSwfAnimation(
 			AnimationComponent.animState[player.eid];
 		AnimationComponent.animState[player.eid] = index;
 
-		rufflePlayer.GotoFrame(frame);
+		world.swfAssetManager.gotoFrame(player.eid, frame);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
 			emitPlayerAnim(world, name);

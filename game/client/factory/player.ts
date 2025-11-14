@@ -281,13 +281,8 @@ export const createSwfAvatar = async (
 	mesh.material.needsUpdate;
 	mesh.position.y = geometry.parameters.height / 2;
 	mesh.scale.y = -1;
-
-	// 				mesh.animations = player.metadata.frameList.map(
-	// 					(item: [number, string][]) => ({
-	// 						frame: item[0],
-	// 						name: item[1],
-	// 					}),
-	// 				);
+	//@ts-ignore
+	mesh.animations = await world.swfAssetManager.getFrameList(eid);
 
 	addComponent(world, SwfComponent, eid);
 	addComponent(world, AnimationComponent, eid);

@@ -62,4 +62,61 @@ export class SwfAssetManager {
 	public getTexture(eid: number): THREE.Texture | undefined {
 		return this.swfTexture.get(eid);
 	}
+
+	public getFrameList(
+		eid: number,
+	): Promise<{ frame: number; name: string }[]> {
+		const iframe = this.swfSandboxes.get(eid);
+		const frameListPromise = new Promise<{ frame: number; name: string }[]>(
+			(resolve, reject) => {
+				if (
+					iframe === null ||
+					iframe === undefined ||
+					iframe.contentWindow === null
+				) {
+					return reject(
+						new Error(`could not find iframe given eid: ${eid}`),
+					);
+				}
+				iframe.contentWindow.postMessage({ type: "framelist" }, "*");
+				const handler = (event: MessageEvent) => {
+					if (
+						event.source === iframe.contentWindow &&
+						event.data.type === "framelist"
+					) {
+						window.removeEventListener("message", handler);
+						resolve(event.data.frameList);
+					}
+				};
+				window.addEventListener("message", handler);
+			},
+		);
+
+		return frameListPromise;
+	}
+
+	public gotoFrame(eid: number, frame: number): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const iframe = this.swfSandboxes.get(eid);
+			if (
+				iframe === null ||
+				iframe === undefined ||
+				iframe.contentWindow === null
+			) {
+				return reject(
+					new Error(`could not find iframe given eid: ${eid}`),
+				);
+			}
+			iframe.contentWindow.postMessage({ type: "gotoframe", frame }, "*");
+			const handler = (event: MessageEvent) => {
+				if (
+					event.source === iframe.contentWindow &&
+					event.data.type === "gotoframe"
+				) {
+					resolve();
+				}
+			};
+			window.addEventListener("message", handler);
+		});
+	}
 }
