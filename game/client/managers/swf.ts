@@ -4,10 +4,12 @@ import { createSwfSandbox } from "../ui/swfsandbox";
 export class SwfAssetManager {
 	private swfSandboxes: Map<number, HTMLIFrameElement>;
 	private swfTexture: Map<number, THREE.Texture>;
+	private swfEventHandler: Map<number, (event: MessageEvent) => void>;
 
 	constructor() {
 		this.swfSandboxes = new Map();
 		this.swfTexture = new Map();
+		this.swfEventHandler = new Map();
 	}
 
 	public async add(eid: number, swfFile: string): Promise<THREE.Texture> {
@@ -39,6 +41,7 @@ export class SwfAssetManager {
 					resolve(texture);
 				}
 			};
+			this.swfEventHandler.set(eid, handler);
 			window.addEventListener("message", handler);
 		});
 
@@ -46,7 +49,12 @@ export class SwfAssetManager {
 		return texturePromise;
 	}
 
-	public remove() {}
+	public remove(eid: number) {
+		this.swfEventHandler.delete(eid);
+		this.swfTexture.delete(eid);
+		this.swfSandboxes.get(eid)?.remove();
+		this.swfSandboxes.delete(eid);
+	}
 
 	public getTexture(eid: number): THREE.Texture | undefined {
 		return this.swfTexture.get(eid);

@@ -234,11 +234,7 @@ export function createRenderSystem(world: World) {
 			const avatar = player.children[0];
 			player.remove(avatar);
 
-			// @ts-ignore: we had attached this element to avatar mesh without typing
-			const ruffle = avatar.ruffle;
-			if (ruffle !== undefined) {
-				ruffle.remove();
-			}
+			world.swfAssetManager.remove(eid);
 		}
 
 		if (!world.composer) {
