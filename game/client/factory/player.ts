@@ -15,6 +15,7 @@ import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { API_URL } from "../constants";
+import { createSwfSandbox } from "../ui/swfsandbox";
 
 export type Player = THREE.Group & { eid: number };
 export enum Avatar {
@@ -265,48 +266,29 @@ export const createSwfAvatar = async (
 		THREE.MeshBasicMaterial,
 		THREE.Object3DEventMap
 	> = new THREE.Mesh();
-	let ruffle = window.RufflePlayer.newest();
-	let player = ruffle.createPlayer();
-	let container = document.getElementById("ruffle");
-	container!.appendChild(player);
-	await new Promise<void>((resolve) => {
-		player
-			.ruffle()
-			.load(avatarFile)
-			.finally(() => {
-				var swfTexture = new THREE.CanvasTexture(
-					player.shadowRoot!.querySelector("canvas")!,
-				);
 
-				const geometry = new THREE.PlaneGeometry(10, 10);
-				const material = new THREE.MeshBasicMaterial({
-					map: swfTexture,
-					alphaTest: 0.5,
-					side: THREE.DoubleSide,
-					depthWrite: true,
-					depthTest: true,
-				});
-				mesh = new THREE.Mesh(geometry, material);
-				mesh.material.needsUpdate;
-				mesh.position.y = geometry.parameters.height / 2;
+	var swfTexture = await world.swfAssetManager.add(eid, avatarFile);
 
-				player.addEventListener("loadedmetadata", () => {
-					// this is overriding THREE.AnimationClip[], could cause unintentional behavior
-					// TODO: have a generic way of storing animations across all avatar types
-					// 		 maybe storing it in AnimationComponent?
-					mesh.animations = player.metadata.frameList.map(
-						(item: [number, string][]) => ({
-							frame: item[0],
-							name: item[1],
-						}),
-					);
-					// @ts-ignore: adding a ref to the ruffle player to make life easier
-					//			is there a better way of doing this...?
-					mesh.ruffle = player;
-				});
-				resolve();
-			});
+	const geometry = new THREE.PlaneGeometry(10, 10);
+	const material = new THREE.MeshBasicMaterial({
+		map: swfTexture,
+		alphaTest: 0.5,
+		side: THREE.DoubleSide,
+		depthWrite: true,
+		depthTest: true,
 	});
+	mesh = new THREE.Mesh(geometry, material);
+	mesh.material.needsUpdate;
+	mesh.position.y = geometry.parameters.height / 2;
+	mesh.scale.y = -1;
+
+	// 				mesh.animations = player.metadata.frameList.map(
+	// 					(item: [number, string][]) => ({
+	// 						frame: item[0],
+	// 						name: item[1],
+	// 					}),
+	// 				);
+
 	addComponent(world, SwfComponent, eid);
 	addComponent(world, AnimationComponent, eid);
 	addComponent(world, AvatarComponent, eid);

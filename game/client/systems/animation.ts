@@ -137,7 +137,7 @@ export function createAnimationSystem() {
 				const material: THREE.MeshBasicMaterial =
 					//@ts-ignore
 					player.children[y]?.material?.map;
-				if (material === undefined) continue;
+				if (material === undefined || material === null) continue;
 				material.needsUpdate = true;
 			}
 		}

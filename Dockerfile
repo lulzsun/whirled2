@@ -62,4 +62,4 @@ COPY ./.env ./
 RUN find .
 
 # start whirled2
-CMD ["/app/whirled2", "serve", "--http=0.0.0.0:42069"]
+CMD ["/app/whirled2", "serve", "--http=0.0.0.0:42069", "--origins=null"]

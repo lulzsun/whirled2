@@ -11,6 +11,7 @@ import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
 import { Editor } from "../systems/editor";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { SwfAssetManager } from "../managers/swf";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -27,6 +28,7 @@ export type World = {
 	};
 	network: Network;
 	spineAssetManager: spine.AssetManager;
+	swfAssetManager: SwfAssetManager;
 	editor: Editor;
 	isPreview: boolean;
 };
@@ -194,6 +196,7 @@ export const createWorld = (isPreview: boolean = false): World => {
 	world.spineAssetManager = new spine.AssetManager(
 		`${API_URL}/static/assets/avatars/`,
 	);
+	world.swfAssetManager = new SwfAssetManager();
 
 	return world;
 };

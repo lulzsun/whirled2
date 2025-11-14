@@ -23,6 +23,13 @@ export default defineConfig({
 		origin: "http://127.0.0.1:6969",
 		strictPort: true,
 		port: 6969,
+		cors: {
+			origin: [
+				// Match the null origin for srcdoc (must be matched as a string "null" for CORS)
+				"null",
+				/^https?:\/\/((?:[^\/:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/,
+			],
+		},
 	},
 	esbuild: {
 		jsx: "automatic",

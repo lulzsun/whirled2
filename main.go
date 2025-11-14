@@ -35,9 +35,9 @@ func main() {
 		godotenv.Load(".env.local")
 		localIPs, err := utils.GetLocalIP()
 		if err == nil {
-			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://"+localIPs[0]+":6969")
+			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://"+localIPs[0]+":6969,null")
 		} else {
-			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969")
+			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,null")
 		}
 	} else {
 		godotenv.Load()
