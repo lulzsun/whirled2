@@ -4,6 +4,9 @@ export const createSwfSandbox = (
 	swfFile: string,
 ): Promise<HTMLIFrameElement> => {
 	const nonce = Math.random().toString(36).substring(2);
+	const hostname = window.location.hostname
+		? window.location.hostname
+		: window.parent.location.hostname;
 	const srcDoc = (
 		<html>
 			<head>
@@ -26,7 +29,7 @@ export const createSwfSandbox = (
                 script.onerror = function () {
                     var fallbackScript = document.createElement("script");
                     fallbackScript.type = "module";
-                    fallbackScript.src = 'http://${window.location.hostname}:6969/swf.ts';
+                    fallbackScript.src = 'http://${hostname}:6969/swf.ts';
                     document.body.appendChild(fallbackScript);
                 };
                 script.src = "${API_URL}/static/swf.js";
