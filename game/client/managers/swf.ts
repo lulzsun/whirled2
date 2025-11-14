@@ -50,6 +50,9 @@ export class SwfAssetManager {
 	}
 
 	public remove(eid: number) {
+		const handler = this.swfEventHandler.get(eid);
+		if (handler !== undefined)
+			window.removeEventListener("message", handler);
 		this.swfEventHandler.delete(eid);
 		this.swfTexture.delete(eid);
 		this.swfSandboxes.get(eid)?.remove();
