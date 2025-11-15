@@ -183,6 +183,42 @@ export function getActionNames(
 	return result;
 }
 
+export function faceLeft(world: World, eid: number) {
+	if (hasComponent(world, SwfComponent, eid)) {
+		world.swfAssetManager.setOrientation(eid, 270);
+	}
+}
+
+export function faceRight(world: World, eid: number) {
+	if (hasComponent(world, SwfComponent, eid)) {
+		world.swfAssetManager.setOrientation(eid, 90);
+	}
+}
+
+export function playWalking(world: World, eid: number) {
+	if (hasComponent(world, GltfComponent, eid)) {
+		// Play default walking animation
+		playAnimation(
+			world,
+			eid,
+			/^state_walking|^state_walk|^walking_|^walk_/i,
+		);
+	}
+	if (hasComponent(world, SwfComponent, eid)) {
+		world.swfAssetManager.setMoving(eid, true);
+	}
+}
+
+export function stopWalking(world: World, eid: number) {
+	if (hasComponent(world, GltfComponent, eid)) {
+		// Play default state animation
+		playAnimation(world, eid, AnimationComponent.prevAnimState[eid]);
+	}
+	if (hasComponent(world, SwfComponent, eid)) {
+		world.swfAssetManager.setMoving(eid, false);
+	}
+}
+
 export function playAnimation(
 	world: World,
 	eid: number,
@@ -273,13 +309,10 @@ function playSwfAnimation(
 	name: string,
 	index: number,
 ) {
-	//@ts-ignore
-	const frame = anims[index].frame;
-
 	if (/^action_/i.test(name)) {
 		AnimationComponent.animAction[player.eid] = index;
 
-		world.swfAssetManager.gotoFrame(player.eid, frame);
+		// world.swfAssetManager.gotoFrame(player.eid, frame);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
 			emitPlayerAnim(world, name);
@@ -288,7 +321,7 @@ function playSwfAnimation(
 			AnimationComponent.animState[player.eid];
 		AnimationComponent.animState[player.eid] = index;
 
-		world.swfAssetManager.gotoFrame(player.eid, frame);
+		world.swfAssetManager.setState(player.eid, name);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
 			emitPlayerAnim(world, name);

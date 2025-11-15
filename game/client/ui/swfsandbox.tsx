@@ -14,9 +14,9 @@ export const createSwfSandbox = (
 					http-equiv="Content-Security-Policy"
 					content={`
                         default-src 'none'; 
-                        script-src http://127.0.0.1:6969 ${API_URL} 'nonce-${nonce}' 'wasm-unsafe-eval'; 
+                        script-src http://127.0.0.1:6969 ${API_URL} 'nonce-${nonce}' 'wasm-unsafe-eval' 'unsafe-eval'; 
                         style-src 'unsafe-inline';
-                        connect-src http://127.0.0.1:6969 ${API_URL};
+                        connect-src http://127.0.0.1:6969 ${API_URL} data:;
                     `}
 				/>
 			</head>

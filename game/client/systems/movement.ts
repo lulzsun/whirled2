@@ -7,7 +7,7 @@ import {
 	TransformComponent,
 } from "../components";
 import { World } from "../factory/world";
-import { playAnimation } from "./animation";
+import { faceLeft, faceRight, playWalking, stopWalking } from "./animation";
 
 const movementQuery = defineQuery([MoveTowardsComponent]);
 
@@ -73,6 +73,36 @@ export function createMovementSystem() {
 			var duration = distance / speed;
 			var progress = delta / duration;
 			if (progress < 1) {
+				// Calculate the 3D Movement Direction Vector
+				const movementDirection = targetPosition
+					.clone()
+					.sub(initialPosition);
+				// Ensure we're only considering the horizontal (X-Z) plane for the flip check
+				movementDirection.y = 0;
+				movementDirection.normalize();
+
+				// Get the Camera's Right Vector
+				const camera = world.camera;
+				const cameraRight = new THREE.Vector3();
+				// The .right vector is typically calculated from the cross product of the camera's up and forward.
+				// Three.js provides a convenient method to get the world direction vectors.
+				camera.getWorldDirection(cameraRight); // This gets the FORWARD vector
+				cameraRight.cross(camera.up); // Cross Forward with Up to get Right
+
+				// Ensure cameraRight is also only considering the horizontal plane for the check
+				cameraRight.y = 0;
+				cameraRight.normalize();
+
+				// Calculate the Dot Product ---
+				// A positive result means movement is aligned with the camera's Right (faceRight)
+				// A negative result means movement is aligned with the camera's Left (faceLeft)
+				const dotProduct = movementDirection.dot(cameraRight);
+				if (dotProduct > 0.01) {
+					faceRight(world, e);
+				} else if (dotProduct < -0.01) {
+					faceLeft(world, e);
+				}
+
 				var newPosition = new THREE.Vector3().lerpVectors(
 					initialPosition,
 					targetPosition,
@@ -82,17 +112,11 @@ export function createMovementSystem() {
 				TransformComponent.position.y[e] = newPosition.y;
 				TransformComponent.position.z[e] = newPosition.z;
 
-				// Play default walking animation
-				playAnimation(
-					world,
-					e,
-					/^state_walking|^state_walk|^walking_|^walk_/i,
-				);
+				playWalking(world, e);
 			} else {
 				removeComponent(world, MoveTowardsComponent, e);
 
-				// Play default state animation
-				playAnimation(world, e, AnimationComponent.prevAnimState[e]);
+				stopWalking(world, e);
 			}
 		}
 		return world;

@@ -49,6 +49,17 @@ player
 		});
 	});
 
+var avatarStates: string[] = [];
+//@ts-ignore
+window.setupStates = (states: string[]) => {
+	avatarStates = states;
+};
+var avatarActions: string[] = [];
+//@ts-ignore
+window.setupActions = (actions: string[]) => {
+	avatarActions = actions;
+};
+
 window.addEventListener("message", (event) => {
 	switch (event.data.type) {
 		case "framelist":
@@ -63,8 +74,23 @@ window.addEventListener("message", (event) => {
 		case "gotoframe":
 			player.GotoFrame(event.data.frame);
 			break;
+		case "setMoving":
+			player.setMoving(event.data.isMoving);
+			break;
+		case "setState":
+			player.setState(event.data.state);
+			break;
+		case "setOrientation":
+			player.setOrientation(event.data.degrees);
+			break;
+		case "states":
+			window.parent.postMessage({ type: "states", avatarStates }, "*");
+			break;
+		case "actions":
+			window.parent.postMessage({ type: "actions", avatarActions }, "*");
+			break;
 		default:
-			console.log("Message from parent:", event.data);
+			console.log("Unhandled message from parent:", event.data);
 			break;
 	}
 });
