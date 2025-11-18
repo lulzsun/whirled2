@@ -8,6 +8,7 @@ export class SwfAssetManager {
 	private avatarStates: Map<number, string[]>;
 	private avatarActions: Map<number, string[]>;
 	private isMoving: boolean;
+	private orientation: number;
 
 	constructor() {
 		this.swfSandboxes = new Map();
@@ -16,6 +17,7 @@ export class SwfAssetManager {
 		this.avatarStates = new Map();
 		this.avatarActions = new Map();
 		this.isMoving = false;
+		this.orientation = -1;
 	}
 
 	public async add(eid: number, swfFile: string): Promise<THREE.Texture> {
@@ -111,7 +113,9 @@ export class SwfAssetManager {
 	}
 
 	public setMoving(eid: number, isMoving: boolean) {
-		if (isMoving === this.isMoving) return;
+		if (isMoving === this.isMoving) {
+			return;
+		}
 		this.isMoving = isMoving;
 		const iframe = this.swfSandboxes.get(eid);
 		if (
@@ -140,6 +144,10 @@ export class SwfAssetManager {
 	}
 
 	public setOrientation(eid: number, degrees: number) {
+		if (degrees === this.orientation) {
+			return;
+		}
+		this.orientation = degrees;
 		const iframe = this.swfSandboxes.get(eid);
 		if (
 			iframe === null ||
