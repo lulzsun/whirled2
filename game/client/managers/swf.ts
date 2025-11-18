@@ -41,7 +41,6 @@ export class SwfAssetManager {
 					texture.image = imageBitmap;
 					texture.needsUpdate = true;
 
-					// window.removeEventListener("message", handler);
 					resolve(texture);
 				}
 			};
@@ -172,17 +171,11 @@ export class SwfAssetManager {
 				);
 			}
 			iframe.contentWindow.postMessage({ type: "states" }, "*");
-			const timeout = setTimeout(() => {
-				// TIMEOUT: If the message hasn't arrived yet
-				window.removeEventListener("message", handler);
-				resolve([]);
-			}, 500);
 			const handler = (event: MessageEvent) => {
 				if (
 					event.source === iframe.contentWindow &&
 					event.data.type === "states"
 				) {
-					clearTimeout(timeout);
 					window.removeEventListener("message", handler);
 					resolve(
 						this.avatarStates
@@ -211,18 +204,12 @@ export class SwfAssetManager {
 					new Error(`could not find iframe given eid: ${eid}`),
 				);
 			}
-			iframe.contentWindow.postMessage({ type: "states" }, "*");
-			const timeout = setTimeout(() => {
-				// TIMEOUT: If the message hasn't arrived yet
-				window.removeEventListener("message", handler);
-				resolve([]);
-			}, 500);
+			iframe.contentWindow.postMessage({ type: "actions" }, "*");
 			const handler = (event: MessageEvent) => {
 				if (
 					event.source === iframe.contentWindow &&
 					event.data.type === "actions"
 				) {
-					clearTimeout(timeout);
 					window.removeEventListener("message", handler);
 					resolve(
 						this.avatarActions

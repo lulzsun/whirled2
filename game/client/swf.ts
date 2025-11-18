@@ -84,10 +84,42 @@ window.addEventListener("message", (event) => {
 			player.setOrientation(event.data.degrees);
 			break;
 		case "states":
-			window.parent.postMessage({ type: "states", avatarStates }, "*");
+			// if length is 0, either there are no states or ruffle was a little slow
+			// on sending the states, so we will wait 1 second before send
+			// ...
+			// need to figure out how to properly fix this race condition
+			if (avatarStates.length === 0) {
+				setTimeout(() => {
+					window.parent.postMessage(
+						{ type: "states", avatarStates },
+						"*",
+					);
+				}, 1000);
+			} else {
+				window.parent.postMessage(
+					{ type: "states", avatarStates },
+					"*",
+				);
+			}
 			break;
 		case "actions":
-			window.parent.postMessage({ type: "actions", avatarActions }, "*");
+			// if length is 0, either there are no actions or ruffle was a little slow
+			// on sending the actions, so we will wait 1 second before send
+			// ...
+			// need to figure out how to properly fix this race condition
+			if (avatarActions.length === 0) {
+				setTimeout(() => {
+					window.parent.postMessage(
+						{ type: "actions", avatarActions },
+						"*",
+					);
+				}, 1000);
+			} else {
+				window.parent.postMessage(
+					{ type: "actions", avatarActions },
+					"*",
+				);
+			}
 			break;
 		default:
 			console.log("Unhandled message from parent:", event.data);
