@@ -83,6 +83,9 @@ window.addEventListener("message", (event) => {
 		case "setOrientation":
 			player.setOrientation(event.data.degrees);
 			break;
+		case "playAction":
+			player.playAction(event.data.action);
+			break;
 		case "states":
 			// if length is 0, either there are no states or ruffle was a little slow
 			// on sending the states, so we will wait 1 second before send

@@ -312,7 +312,7 @@ function playSwfAnimation(
 	if (/^action_/i.test(name)) {
 		AnimationComponent.animAction[player.eid] = index;
 
-		// world.swfAssetManager.gotoFrame(player.eid, frame);
+		world.swfAssetManager.playAction(player.eid, name);
 
 		if (hasComponent(world, LocalPlayerComponent, player.eid))
 			emitPlayerAnim(world, name);

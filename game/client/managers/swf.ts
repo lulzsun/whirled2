@@ -154,6 +154,24 @@ export class SwfAssetManager {
 		);
 	}
 
+	public playAction(eid: number, action: string) {
+		const iframe = this.swfSandboxes.get(eid);
+		if (
+			iframe === null ||
+			iframe === undefined ||
+			iframe.contentWindow === null
+		) {
+			return new Error(`could not find iframe given eid: ${eid}`);
+		}
+		iframe.contentWindow.postMessage(
+			{
+				type: "playAction",
+				action: action.replace(/^(action|state)_/i, ""),
+			},
+			"*",
+		);
+	}
+
 	public getStates(eid: number): Promise<string[]> {
 		return new Promise((resolve, reject) => {
 			if (this.avatarStates.has(eid)) {
