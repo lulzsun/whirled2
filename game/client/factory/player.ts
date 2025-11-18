@@ -269,7 +269,14 @@ export const createSwfAvatar = async (
 
 	var swfTexture = await world.swfAssetManager.add(eid, avatarFile);
 
-	const geometry = new THREE.PlaneGeometry(10, 10);
+	const textureWidth = swfTexture.image.width;
+	const textureHeight = swfTexture.image.height;
+	const scale = 0.01;
+	const geometry = new THREE.PlaneGeometry(
+		textureWidth * scale,
+		textureHeight * scale,
+	);
+
 	const material = new THREE.MeshBasicMaterial({
 		map: swfTexture,
 		alphaTest: 0.5,
@@ -277,6 +284,7 @@ export const createSwfAvatar = async (
 		depthWrite: true,
 		depthTest: true,
 	});
+
 	mesh = new THREE.Mesh(geometry, material);
 	mesh.material.needsUpdate;
 	mesh.position.y = geometry.parameters.height / 2;

@@ -26,6 +26,8 @@ player
 			const canvas = player.shadowRoot!.querySelector("canvas")!;
 			if (canvas == null || canvas == undefined)
 				throw Error("Ruffle canvas could not be found");
+			player.style.height = `${player.metadata.height * 2}px`;
+			player.style.width = `${player.metadata.width * 2}px`;
 			function streamFrame() {
 				requestAnimationFrame(streamFrame);
 
