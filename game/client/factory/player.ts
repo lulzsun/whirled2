@@ -285,9 +285,14 @@ export const createSwfAvatar = async (
 		depthTest: true,
 	});
 
+	const offset = swfTexture.userData.spriteOffset;
+	const spriteHeight = geometry.parameters.height;
+	console.log(offset.bottomNormalized);
+	const spriteBottomLocal = (offset.bottomNormalized - 0.5) * spriteHeight;
+
 	mesh = new THREE.Mesh(geometry, material);
 	mesh.material.needsUpdate;
-	mesh.position.y = geometry.parameters.height / 2;
+	mesh.position.y = spriteBottomLocal;
 	mesh.scale.y = -1;
 	//@ts-ignore
 	mesh.animations = await world.swfAssetManager.getAnimations(eid);

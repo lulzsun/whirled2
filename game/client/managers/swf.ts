@@ -23,19 +23,25 @@ export class SwfAssetManager {
 	public async add(eid: number, swfFile: string): Promise<THREE.Texture> {
 		const iframe = await createSwfSandbox(swfFile);
 		const texturePromise = new Promise<THREE.Texture>((resolve) => {
-			const handler = (event: MessageEvent) => {
+			const handler = async (event: MessageEvent) => {
 				// this sandbox is ready when the first frame can be rendered
 				if (event.source !== iframe.contentWindow) return;
 				if (event.data.type === "frame") {
 					const imageBitmap = event.data.imageBitmap;
 					let texture = this.swfTexture.get(eid);
 					if (texture === undefined) {
+						const offset = await getSpriteBottomOffset(imageBitmap);
+						if (offset.bottomNormalized === 0) return;
+						// TODO: capture AvatarControl.setPreferredY() to calculate offset
+						// for avatars that do not touch the ground (flying?)
+
 						texture = new THREE.Texture(imageBitmap);
 
 						texture.minFilter = THREE.LinearFilter;
 						texture.magFilter = THREE.LinearFilter;
 						texture.format = THREE.RGBAFormat;
 						texture.needsUpdate = true;
+						texture.userData.spriteOffset = offset;
 
 						this.swfTexture.set(eid, texture);
 					}
@@ -260,4 +266,37 @@ export class SwfAssetManager {
 			})) ?? [];
 		return [...states, ...actions];
 	}
+}
+
+// maybe move this somewhere else
+async function getSpriteBottomOffset(imageBitmap: ImageBitmap) {
+	const canvas = document.createElement("canvas");
+	const ctx = canvas.getContext("2d");
+	canvas.width = imageBitmap.width;
+	canvas.height = imageBitmap.height;
+	ctx!.drawImage(imageBitmap, 0, 0);
+	const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+
+	let minY = canvas.height;
+	let maxY = 0;
+
+	for (let y = 0; y < canvas.height; y++) {
+		for (let x = 0; x < canvas.width; x++) {
+			const i = (y * canvas.width + x) * 4;
+			if (imageData.data[i + 3] > 127) {
+				minY = Math.min(minY, y);
+				maxY = Math.max(maxY, y);
+			}
+		}
+	}
+
+	// Return normalized positions (0 = top, 1 = bottom)
+	return {
+		topPixel: minY,
+		bottomPixel: maxY,
+		topNormalized: minY / canvas.height,
+		bottomNormalized: maxY / canvas.height,
+		heightPixels: maxY - minY,
+		heightNormalized: (maxY - minY) / canvas.height,
+	};
 }
