@@ -15,6 +15,7 @@ import {
 	LocalPlayerComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
+	SwfComponent,
 	TransformComponent,
 } from "../components";
 import { World } from "../factory/world";
@@ -118,40 +119,96 @@ export function createControlSystem(world: World) {
 			}
 		};
 
+		const isHitTransparent = (
+			intersect: THREE.Intersection<
+				THREE.Object3D<THREE.Object3DEventMap>
+			>,
+		) => {
+			const mesh = intersect.object;
+
+			// @ts-ignore: If no material or no texture, assume it's solid
+			if (!mesh.material || !mesh.material.map || !intersect.uv)
+				return false;
+
+			// @ts-ignore
+			const image = mesh.material.map.image;
+
+			// Guard against image not loaded yet
+			if (!image || !image.width) return false;
+
+			// Create a temporary canvas to read pixel data
+			// (ideally we cache imagedata for better perf, but since this texture is dynamic and animated, we cannot)
+			if (!image.canvas) {
+				image.canvas = document.createElement("canvas");
+				image.canvas.width = image.width;
+				image.canvas.height = image.height;
+				const ctx = image.canvas.getContext("2d");
+				ctx.drawImage(image, 0, 0);
+				image.ctx = ctx;
+			}
+
+			const x = Math.floor(intersect.uv.x * image.width);
+			const y = Math.floor(intersect.uv.y * image.height); // Check texture.flipY if inverted
+
+			// Get Alpha channel (4th byte)
+			const pixel = image.ctx.getImageData(x, y, 1, 1).data;
+			const alpha = pixel[3];
+
+			// Return true if transparency is below threshold (e.g., 20 out of 255)
+			return alpha < 20;
+		};
+
 		if (
 			intersects.length > 0 &&
 			(!world.editor.enabled || !world.editor.selectedTool)
 		) {
-			let i = 0;
-			let root = intersects[i].object;
-			while (root.type === "GridHelper") {
-				i++;
-				if (i > intersects.length - 1) break;
-				root = intersects[i].object;
-			}
-			do {
-				if (intersects[i] === undefined) break;
-				if (root.parent != null && root.parent.type !== "Scene") {
+			// Loop through ALL intersects (front to back)
+			for (let i = 0; i < intersects.length; i++) {
+				const hit = intersects[i];
+				let root = hit.object;
+
+				// Skip GridHelpers immediately
+				if (root.type === "GridHelper") continue;
+
+				// Traverse up to find the Entity Root
+				while (
+					root.parent &&
+					root.parent.type !== "Scene" &&
+					//@ts-ignore
+					!root.eid
+				) {
 					root = root.parent;
-					continue;
 				}
 
 				cleanupIntersect(currIntersect);
-				//@ts-ignore
+
+				// @ts-ignore
 				const eid = root.eid;
 
-				// attach outline component on player hover
+				// Check if hit is on a transparent pixel of the swf texture
+				// (if it is, we just want to ignore)
+				if (
+					eid !== undefined &&
+					hasComponent(world, SwfComponent, eid) &&
+					isHitTransparent(hit)
+				) {
+					continue;
+				}
+
+				// Attach outline component on player hover
 				if (
 					eid !== undefined &&
 					hasComponent(world, PlayerComponent, eid)
 				) {
-					currIntersect = { point: intersects[i].point, root };
+					currIntersect = { point: hit.point, root };
 					if (!hasComponent(world, ObjectOutlineComponent, eid))
 						addComponent(world, ObjectOutlineComponent, eid);
 					pointerMesh.visible = false;
 					break;
 				}
-				currIntersect = { point: intersects[i].point, root };
+
+				// Handle non-player pointer logic
+				currIntersect = { point: hit.point, root };
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
 					currIntersect.point.x,
@@ -159,7 +216,7 @@ export function createControlSystem(world: World) {
 					currIntersect.point.z,
 				);
 				break;
-			} while (true);
+			}
 		} else {
 			if (currIntersect) {
 				cleanupIntersect(currIntersect);
