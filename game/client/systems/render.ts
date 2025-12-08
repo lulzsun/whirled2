@@ -70,9 +70,9 @@ export function createRenderSystem(world: World) {
 		world.scene,
 		world.camera,
 	);
-	playerOutlinePass.outlineColor.set(0x57aed1);
-	playerOutlinePass.outlineThickness = 3.0;
-	playerOutlinePass.outlineAlpha = 1.0;
+	playerOutlinePass.visibleEdgeColor.set(0x57aed1);
+	playerOutlinePass.hiddenEdgeColor.set(0x57aed1);
+	playerOutlinePass.overlayMaterial.blending = THREE.CustomBlending;
 	composer.addPass(playerOutlinePass);
 
 	world.composer = composer;
@@ -261,29 +261,23 @@ export function createRenderSystem(world: World) {
 					hasComponent(world, SwfComponent, player.eid) &&
 					(!world.editor.enabled || !world.editor.selectedTool)
 				) {
-					const outline = playerOutlinePass.selectedObjects.findIndex(
-						(item) => item.object === player,
-					);
+					const outline =
+						playerOutlinePass.selectedObjects.indexOf(player);
 					if (outline === -1)
-						playerOutlinePass.selectedObjects.push({
-							object: player,
-							sprite: true,
-						});
+						playerOutlinePass.selectedObjects.push(player);
 					continue;
 				}
-				const outline = playerOutlinePass.selectedObjects.findIndex(
-					(item) => item.object === player,
-				);
+				const outline =
+					playerOutlinePass.selectedObjects.indexOf(player);
 				if (outline === -1)
-					playerOutlinePass.selectedObjects.push({ object: player });
+					playerOutlinePass.selectedObjects.push(player);
 			}
 			const exitOutlines = exitOutlinePlayerQuery(world);
 			for (let i = 0; i < exitOutlines.length; i++) {
 				// handle removing player outlines
 				const player = world.players.get(exitOutlines[i])!.player;
-				const outline = playerOutlinePass.selectedObjects.findIndex(
-					(item) => item.object === player,
-				);
+				const outline =
+					playerOutlinePass.selectedObjects.indexOf(player);
 				if (outline !== -1)
 					playerOutlinePass.selectedObjects.splice(outline, 1);
 			}
