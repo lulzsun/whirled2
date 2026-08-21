@@ -250,6 +250,74 @@ export class OutlinePass extends Pass {
 		this.separableBlurMaterial2.uniforms["texSize"].value.set(resx, resy);
 	}
 
+	/**
+	 * Draw the selected objects into the mask buffer.
+	 *
+	 * Most objects mask by their geometry, and all of them can go in one pass.
+	 * A SWF avatar cannot: it is a flat quad with the character drawn into a
+	 * texture, so masking by geometry outlines the rectangle rather than the
+	 * character. Those mask by the texture's alpha instead — but the texture
+	 * differs per avatar while `overrideMaterial` is shared by the whole
+	 * scene, so each one needs its own draw.
+	 *
+	 * In practice this is one extra draw call: the pass is driven by hover, so
+	 * `selectedObjects` almost always holds a single player.
+	 */
+	private renderMaskGroups(renderer: WebGLRenderer) {
+		const material = this.prepareMaskMaterial;
+		const textured: {
+			mesh: any;
+			map: any;
+			cutoff: number;
+			wasVisible: boolean;
+		}[] = [];
+		let hasUntextured = false;
+
+		for (const selected of this.selectedObjects) {
+			selected.traverse((child: any) => {
+				if (!child.isMesh) return;
+				const map = child.userData?.outlineAlphaMap;
+				if (map === undefined || map === null) {
+					hasUntextured = true;
+					return;
+				}
+				textured.push({
+					mesh: child,
+					map,
+					cutoff: child.userData.outlineAlphaTest ?? 0.5,
+					wasVisible: child.visible,
+				});
+			});
+		}
+
+		if (textured.length === 0) {
+			material.uniforms["alphaCutoff"].value = -1.0;
+			renderer.render(this.renderScene, this.renderCamera);
+			return;
+		}
+
+		// `autoClear` is off for the whole pass, so these accumulate.
+		for (const entry of textured) entry.mesh.visible = false;
+
+		if (hasUntextured) {
+			material.uniforms["alphaCutoff"].value = -1.0;
+			renderer.render(this.renderScene, this.renderCamera);
+		}
+
+		for (const entry of textured) {
+			entry.mesh.visible = entry.wasVisible;
+			if (entry.wasVisible) {
+				material.uniforms["alphaTexture"].value = entry.map;
+				material.uniforms["alphaCutoff"].value = entry.cutoff;
+				renderer.render(this.renderScene, this.renderCamera);
+			}
+			entry.mesh.visible = false;
+		}
+
+		for (const entry of textured) entry.mesh.visible = entry.wasVisible;
+		material.uniforms["alphaCutoff"].value = -1.0;
+	}
+
 	changeVisibilityOfSelectedObjects(bVisible: boolean) {
 		const cache = this._visibilityCache;
 
@@ -399,7 +467,7 @@ export class OutlinePass extends Pass {
 				this.textureMatrix;
 			renderer.setRenderTarget(this.renderTargetMaskBuffer);
 			renderer.clear();
-			renderer.render(this.renderScene, this.renderCamera);
+			this.renderMaskGroups(renderer);
 			this.renderScene.overrideMaterial = null;
 			this.changeVisibilityOfNonSelectedObjects(true);
 			this._visibilityCache.clear();
@@ -518,6 +586,12 @@ export class OutlinePass extends Pass {
 				depthTexture: { value: null },
 				cameraNearFar: { value: new Vector2(0.5, 0.5) },
 				textureMatrix: { value: null },
+				// Silhouette source for objects that are a flat quad with the
+				// artwork in a texture — SWF avatars. A negative cutoff means
+				// "mask the whole shape", which is what every other object
+				// wants. See renderMaskGroups.
+				alphaTexture: { value: null },
+				alphaCutoff: { value: -1.0 },
 			},
 
 			vertexShader: `#include <morphtarget_pars_vertex>
@@ -525,9 +599,12 @@ export class OutlinePass extends Pass {
 
 				varying vec4 projTexCoord;
 				varying vec4 vPosition;
+				varying vec2 vMaskUv;
 				uniform mat4 textureMatrix;
 
 				void main() {
+
+					vMaskUv = uv;
 
 					#include <skinbase_vertex>
 					#include <begin_vertex>
@@ -544,10 +621,18 @@ export class OutlinePass extends Pass {
 			fragmentShader: `#include <packing>
 				varying vec4 vPosition;
 				varying vec4 projTexCoord;
+				varying vec2 vMaskUv;
 				uniform sampler2D depthTexture;
 				uniform vec2 cameraNearFar;
+				uniform sampler2D alphaTexture;
+				uniform float alphaCutoff;
 
 				void main() {
+
+					if (alphaCutoff >= 0.0 &&
+						texture2D(alphaTexture, vMaskUv).a < alphaCutoff) {
+						discard;
+					}
 
 					float depth = unpackRGBAToDepth(texture2DProj( depthTexture, projTexCoord ));
 					float viewZ = - DEPTH_TO_VIEW_Z( depth, cameraNearFar.x, cameraNearFar.y );

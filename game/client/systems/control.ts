@@ -119,43 +119,25 @@ export function createControlSystem(world: World) {
 			}
 		};
 
+		/**
+		 * True when a ray hit a see-through part of a SWF avatar.
+		 *
+		 * A SWF avatar is a rectangle with an avatar-shaped hole in it, so a
+		 * raw raycast hit picks up the corners. The old pipeline copied the
+		 * frame's ImageBitmap into a 2D canvas and read the alpha there. The
+		 * frame now lives in a GPU render target, so this reads back the single
+		 * texel instead — one pixel per hover, not a whole-frame copy.
+		 */
 		const isHitTransparent = (
+			eid: number,
 			intersect: THREE.Intersection<
 				THREE.Object3D<THREE.Object3DEventMap>
 			>,
 		) => {
-			const mesh = intersect.object;
-
-			// @ts-ignore: If no material or no texture, assume it's solid
-			if (!mesh.material || !mesh.material.map || !intersect.uv)
-				return false;
-
-			// @ts-ignore
-			const image = mesh.material.map.image;
-
-			// Guard against image not loaded yet
-			if (!image || !image.width) return false;
-
-			// Create a temporary canvas to read pixel data
-			// (ideally we cache imagedata for better perf, but since this texture is dynamic and animated, we cannot)
-			if (!image.canvas) {
-				image.canvas = document.createElement("canvas");
-				image.canvas.width = image.width;
-				image.canvas.height = image.height;
-				const ctx = image.canvas.getContext("2d");
-				ctx.drawImage(image, 0, 0);
-				image.ctx = ctx;
-			}
-
-			const x = Math.floor(intersect.uv.x * image.width);
-			const y = Math.floor(intersect.uv.y * image.height); // Check texture.flipY if inverted
-
-			// Get Alpha channel (4th byte)
-			const pixel = image.ctx.getImageData(x, y, 1, 1).data;
-			const alpha = pixel[3];
-
-			// Return true if transparency is below threshold (e.g., 20 out of 255)
-			return alpha < 20;
+			if (!intersect.uv) return false;
+			const stream = world.swfAssetManager.getStream(eid);
+			if (stream === undefined) return false;
+			return stream.alphaAt(world.renderer, intersect.uv) < 20;
 		};
 
 		if (
@@ -190,7 +172,7 @@ export function createControlSystem(world: World) {
 				if (
 					eid !== undefined &&
 					hasComponent(world, SwfComponent, eid) &&
-					isHitTransparent(hit)
+					isHitTransparent(eid, hit)
 				) {
 					continue;
 				}

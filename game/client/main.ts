@@ -3,6 +3,7 @@ import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
 import { emitObjectJoin, emitPlayerWear } from "./systems/network";
 import { initializeHtmx, htmx } from "./htmx";
+import { BenchmarkApi } from "./systems/benchmark";
 
 const world = createWorld();
 declare global {
@@ -16,6 +17,11 @@ declare global {
 			previewUpload: (iframe: HTMLIFrameElement, e: Event) => void;
 			previewScale: (iframe: HTMLIFrameElement, scale: number) => void;
 			reconnect: () => void;
+			/**
+			 * SWF benchmark harness; see docs/specs/swf-avatar-rendering.md M0.
+			 * Unset until createSystems() has run.
+			 */
+			bench?: BenchmarkApi;
 		};
 	}
 }
@@ -82,6 +88,9 @@ window.RufflePlayer.config = {
 };
 
 const systems = createSystems(world);
+
+// Populated by createBenchmarkSystem, so this has to come after createSystems.
+window.game.bench = world.benchmark.api;
 
 const update = () => {
 	requestAnimationFrame(update);

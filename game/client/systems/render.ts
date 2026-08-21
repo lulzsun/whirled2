@@ -3,6 +3,7 @@ import {
 	defineSystem,
 	enterQuery,
 	exitQuery,
+	entityExists,
 	hasComponent,
 	removeComponent,
 	removeEntity,
@@ -27,6 +28,7 @@ import { OutlinePass as ObjectOutlinePass } from "three/examples/jsm/postprocess
 import { OutlinePass as PlayerOutlinePass } from "../shaders/OutlinePass";
 
 import { ImGui, ImGui_Impl } from "imgui-js";
+import { composeSwfStreams } from "../managers/stream";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -188,6 +190,8 @@ export function createRenderSystem(world: World) {
 
 		// handle cleanup of player entities
 		const playerLeave = playerLeaveQuery(world);
+		/** Players whose map entry is released once their avatar is torn down. */
+		const left: number[] = [];
 		for (let x = 0; x < playerLeave.length; x++) {
 			const player = {
 				eid: playerLeave[x],
@@ -207,6 +211,12 @@ export function createRenderSystem(world: World) {
 			} else {
 				console.warn("Unable to cleanup player nameplate", player.eid);
 			}
+
+			// The map entry is the last reference to the group and its
+			// nameplate, so leaving it behind keeps both alive forever. It
+			// cannot be dropped here though: the avatar cleanup below still
+			// needs it to find the mesh it has to dispose.
+			left.push(playerLeave[x]);
 		}
 
 		// handle cleanup of object entities
@@ -225,26 +235,54 @@ export function createRenderSystem(world: World) {
 		}
 
 		// handle cleanup of avatars
+		//
+		// This fires in two quite different situations, and the teardown has to
+		// work for both: a player left, in which case `removeEntity` is what put
+		// the entity in this query and it no longer exists; or a player changed
+		// avatar, in which case the entity is alive and about to be given a new
+		// one.
+		//
+		// Nothing here may assume the entity still exists. `removeComponent`
+		// throws on a removed entity, and that throw used to abort this loop
+		// before any resource was released — so every player who left leaked
+		// their avatar's Ruffle player, render target and textures, and the
+		// exception surfaced in main.ts's update loop as "bitECS - entity does
+		// not exist in the world".
 		const avatarLeave = avatarLeaveQuery(world);
 		for (let x = 0; x < avatarLeave.length; x++) {
 			const eid = avatarLeave[x];
+
+			// Release first: this is the part that has to happen either way.
+			const wasSwf = world.swfAssetManager.getStream(eid) !== undefined;
+			world.swfAssetManager.remove(eid);
+
 			const player = world.players.get(eid)?.player;
-
-			removeComponent(world, SpineComponent, eid);
-			removeComponent(world, GltfComponent, eid);
-			removeComponent(world, SwfComponent, eid);
-			removeComponent(world, AnimationComponent, eid);
-
-			if (player === undefined) {
-				continue;
+			// this is under the assumption that the first child is the avatar mesh
+			const avatar = player?.children[0];
+			if (player !== undefined && avatar !== undefined) {
+				player.remove(avatar);
+				// Only SWF billboards own their geometry and material outright.
+				// glTF and Spine avatars share loader-cached resources with
+				// every other instance of the same file, so disposing theirs
+				// would blank out other players wearing it.
+				if (wasSwf) disposeMesh(avatar);
 			}
 
-			// this is under the assumption that the first child is the avatar mesh
-			const avatar = player.children[0];
-			player.remove(avatar);
-
-			world.swfAssetManager.remove(eid);
+			if (entityExists(world, eid)) {
+				removeComponent(world, SpineComponent, eid);
+				removeComponent(world, GltfComponent, eid);
+				removeComponent(world, SwfComponent, eid);
+				removeComponent(world, AnimationComponent, eid);
+			}
 		}
+
+		for (const eid of left) world.players.delete(eid);
+
+		// SWF streams render into their own targets with the world's renderer, so
+		// they have to be composed before anything samples them and at a point
+		// where no pass owns the renderer's state. Here is that point: after the
+		// scene graph is settled for this frame, before any pass runs.
+		composeSwfStreams(world);
 
 		if (!world.composer) {
 			world.renderer.render(world.scene, world.camera);
@@ -256,7 +294,8 @@ export function createRenderSystem(world: World) {
 			const enterOutlines = enterOutlinePlayerQuery(world);
 			for (let i = 0; i < enterOutlines.length; i++) {
 				// handle adding player outlines
-				const player = world.players.get(enterOutlines[i])!.player;
+				const player = world.players.get(enterOutlines[i])?.player;
+				if (player === undefined) continue;
 				if (
 					hasComponent(world, SwfComponent, player.eid) &&
 					(!world.editor.enabled || !world.editor.selectedTool)
@@ -275,7 +314,10 @@ export function createRenderSystem(world: World) {
 			const exitOutlines = exitOutlinePlayerQuery(world);
 			for (let i = 0; i < exitOutlines.length; i++) {
 				// handle removing player outlines
-				const player = world.players.get(exitOutlines[i])!.player;
+				// A player who left is already out of the map, and their entry
+				// in this query is exactly that departure.
+				const player = world.players.get(exitOutlines[i])?.player;
+				if (player === undefined) continue;
 				const outline =
 					playerOutlinePass.selectedObjects.indexOf(player);
 				if (outline !== -1)
@@ -286,7 +328,8 @@ export function createRenderSystem(world: World) {
 			const enterOutlines = enterOutlineObjectQuery(world);
 			for (let i = 0; i < enterOutlines.length; i++) {
 				// handle adding object outlines
-				const object = world.objects.get(enterOutlines[i])!;
+				const object = world.objects.get(enterOutlines[i]);
+				if (object === undefined) continue;
 				const outline =
 					objectOutlinePass.selectedObjects.indexOf(object);
 				if (outline === -1)
@@ -294,8 +337,9 @@ export function createRenderSystem(world: World) {
 			}
 			const exitOutlines = exitOutlineObjectQuery(world);
 			for (let i = 0; i < exitOutlines.length; i++) {
-				// handle adding object outlines
-				const object = world.objects.get(exitOutlines[i])!;
+				// handle removing object outlines
+				const object = world.objects.get(exitOutlines[i]);
+				if (object === undefined) continue;
 				const outline =
 					objectOutlinePass.selectedObjects.indexOf(object);
 				if (outline !== -1)
@@ -315,5 +359,20 @@ export function createRenderSystem(world: World) {
 
 		ImGui_Impl.RenderDrawData(ImGui.GetDrawData());
 		return world;
+	});
+}
+
+/** Free a mesh's own geometry and material(s). */
+function disposeMesh(object: THREE.Object3D) {
+	object.traverse((child) => {
+		const mesh = child as THREE.Mesh;
+		if (!mesh.isMesh) return;
+		mesh.geometry?.dispose();
+		const material = mesh.material;
+		if (Array.isArray(material)) {
+			for (const entry of material) entry.dispose();
+		} else {
+			material?.dispose();
+		}
 	});
 }

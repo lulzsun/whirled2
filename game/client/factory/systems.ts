@@ -9,11 +9,13 @@ import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
 import { createEditorSystem } from "../systems/editor";
 import { createPreviewSystem } from "../systems/preview";
+import { createBenchmarkSystem } from "../systems/benchmark";
 
 const systems = [
 	createImguiSystem, // Imgui system should run first
 	createTimeSystem,
 
+	createBenchmarkSystem, // dev tooling; inert until enabled
 	createMovementSystem,
 	createUISystem,
 	createAnimationSystem,

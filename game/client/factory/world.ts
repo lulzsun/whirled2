@@ -12,6 +12,8 @@ import { Object, createObject } from "./object";
 import { Editor } from "../systems/editor";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { SwfAssetManager } from "../managers/swf";
+import { SwfStreamRenderer } from "../managers/stream";
+import { Benchmark } from "../systems/benchmark";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -29,7 +31,10 @@ export type World = {
 	network: Network;
 	spineAssetManager: spine.AssetManager;
 	swfAssetManager: SwfAssetManager;
+	/** Live SWF command-stream renderers, composed once per frame. */
+	swfStreams: Set<SwfStreamRenderer>;
 	editor: Editor;
+	benchmark: Benchmark;
 	isPreview: boolean;
 };
 
@@ -196,7 +201,10 @@ export const createWorld = (isPreview: boolean = false): World => {
 	world.spineAssetManager = new spine.AssetManager(
 		`${API_URL}/static/assets/avatars/`,
 	);
-	world.swfAssetManager = new SwfAssetManager();
+	// The manager creates stream renderers, which register themselves here, so
+	// the registry has to exist first.
+	world.swfStreams = new Set();
+	world.swfAssetManager = new SwfAssetManager(world);
 
 	return world;
 };
