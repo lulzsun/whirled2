@@ -1,4 +1,5 @@
 import { API_URL } from "../constants";
+import { SwfRoom, SwfRoomEntity } from "./room";
 
 // The boundary between our page and Flash. See docs/specs/swf-avatar-rendering.md
 // §16 (M6), step 1.
@@ -24,8 +25,9 @@ import { API_URL } from "../constants";
 //
 //   Queries. The SDK's room queries (getEntityIds, getEntityProperty) return a
 //   value *inline*, inside the calling avatar's own AVM tick. No message
-//   boundary can serve those, which is why `callSync` exists and why every
-//   avatar has to share one host — see the note on it, and W4.
+//   boundary can serve those, so they do not cross one: ./room answers them on
+//   this side, from state the page publishes. That is why every avatar has to
+//   share one host — see W4.
 
 /**
  * How a host reaches back into whoever asked for an avatar.
@@ -40,15 +42,20 @@ export type SwfInstanceOptions = {
 	 * security domains and the handshake fails.
 	 */
 	avatarUrl: string;
+	/** This avatar's id within the room, as the SDK sees it. */
+	entityId: string;
 	/** Size of the instance's viewport in CSS pixels. May change later. */
 	width: number;
 	height: number;
 	/** A frame's worth of draw commands from the forked render backend. */
 	onStream: (event: any) => void;
-	/** An asynchronous event pushed out by the shim. */
+	/**
+	 * An asynchronous event pushed out by the shim.
+	 *
+	 * Only the ones the page has a use for: signals and messages are addressed
+	 * to other avatars and never get this far.
+	 */
 	onEvent: (type: string, value: any) => void;
-	/** A synchronous room query from the SDK. Must be answered inline. */
-	onQuery: (query: string, a: any, b: any) => unknown;
 };
 
 export interface SwfHost {
@@ -64,25 +71,28 @@ export interface SwfHost {
 	/** Resize an instance's viewport, in CSS pixels. */
 	resize(id: string, width: number, height: number): void;
 
+	/**
+	 * Grant control and announce the avatar to the room.
+	 *
+	 * Separate from `create` because the SDK gates everything on `hasControl`,
+	 * so this must not happen until the avatar has answered the handshake —
+	 * which the page learns about through `onEvent("connected")`.
+	 */
+	enter(id: string): void;
+
+	/**
+	 * Publish what the room should know about an instance. Omitted fields are
+	 * left alone. One-way: nothing comes back, and nothing waits on it.
+	 */
+	update(id: string, patch: Partial<SwfRoomEntity>): void;
+
 	/** Invoke one of the shim's callbacks, ignoring anything it returns. */
 	call(id: string, name: string, ...args: unknown[]): void;
 
 	/** Invoke a callback and read its result. */
 	query(id: string, name: string, ...args: unknown[]): Promise<unknown>;
 
-	/**
-	 * Invoke a callback and read its result *without yielding*.
-	 *
-	 * Only legitimate while answering a synchronous room query, and only
-	 * because the SDK resolves a property by calling into another avatar. An
-	 * out-of-process host cannot implement this across its boundary; what makes
-	 * it possible is that the asker and the answerer are in the same context,
-	 * so M6 step 2 moves the caller (the room-state mirror) to this side of the
-	 * boundary rather than trying to make the call itself asynchronous.
-	 */
-	callSync(id: string, name: string, ...args: unknown[]): unknown;
-
-	/** Stop an avatar and release everything it holds. */
+	/** Stop an avatar, announce its departure, and release what it holds. */
 	destroy(id: string): void;
 }
 
@@ -149,6 +159,16 @@ export class InPageSwfHost implements SwfHost {
 	 */
 	private container: HTMLElement | null = null;
 
+	/**
+	 * The room, on this side of the boundary. It calls straight into the
+	 * players beside it, which is what lets it answer the SDK's synchronous
+	 * queries — including the ones that resolve by running another avatar's
+	 * code. See ./room.
+	 */
+	private readonly room = new SwfRoom((id, name, args) =>
+		this.invoke(id, name, args),
+	);
+
 	constructor() {
 		installBridge();
 	}
@@ -173,8 +193,15 @@ export class InPageSwfHost implements SwfHost {
 		player.whirledStream = options.onStream;
 
 		this.instances.set(id, { player, element });
-		eventListeners.set(id, options.onEvent);
-		queryHandlers.set(id, options.onQuery);
+		eventListeners.set(id, (type, value) => {
+			// Signals and messages are routing, not news. The room consumes
+			// them; only what the page has a use for gets forwarded.
+			if (this.room.handleEvent(id, type, value)) return;
+			options.onEvent(type, value);
+		});
+		queryHandlers.set(id, (query, a, b) =>
+			this.room.query(id, query, a, b),
+		);
 
 		// The shim loads the avatar itself, from the `avatar` flashvar, then
 		// scales it to fill whatever box it is given.
@@ -191,6 +218,10 @@ export class InPageSwfHost implements SwfHost {
 			preferredRenderer: "three",
 			parameters: { avatar: options.avatarUrl, hostId: id },
 		});
+
+		// Registered only once the SWF is up, since registering asserts the
+		// avatar's identity and the room's bounds to it.
+		this.room.add(id, options.entityId);
 	}
 
 	public resize(id: string, width: number, height: number) {
@@ -198,6 +229,14 @@ export class InPageSwfHost implements SwfHost {
 		if (instance === undefined) return;
 		instance.element.style.width = `${width}px`;
 		instance.element.style.height = `${height}px`;
+	}
+
+	public enter(id: string) {
+		this.room.enter(id);
+	}
+
+	public update(id: string, patch: Partial<SwfRoomEntity>) {
+		this.room.update(id, patch);
 	}
 
 	public call(id: string, name: string, ...args: unknown[]) {
@@ -208,13 +247,13 @@ export class InPageSwfHost implements SwfHost {
 		return this.invoke(id, name, args);
 	}
 
-	public callSync(id: string, name: string, ...args: unknown[]) {
-		return this.invoke(id, name, args);
-	}
-
 	public destroy(id: string) {
 		const instance = this.instances.get(id);
 		if (instance === undefined) return;
+		// Before the player goes: the departure is announced to avatars that
+		// are still alive, and this one is still a legitimate target of the
+		// property reads that announcement can provoke.
+		this.room.remove(id);
 		eventListeners.delete(id);
 		queryHandlers.delete(id);
 		this.instances.delete(id);
