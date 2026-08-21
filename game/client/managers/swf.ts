@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import { API_URL } from "../constants";
+import { SANDBOX_ORIGIN, SANDBOX_URL } from "../constants";
 import { SwfStreamRenderer } from "./stream";
-import { InPageSwfHost, SwfHost } from "./host";
+import { SwfHost } from "./host";
+import { FrameSwfHost } from "./host-frame";
 
 // M4 of docs/specs/swf-avatar-rendering.md: the cutover.
 //
@@ -19,9 +20,9 @@ import { InPageSwfHost, SwfHost } from "./host";
 //   callbacks. Unpatched avatars work; the hand-patched patched_*.swf files
 //   are no longer needed.
 //
-//   Isolation. There is none right now — this is the known cost of M4, and
-//   what W3/M6 exists to fix by moving Flash execution out of our origin. The
-//   iframe's isolation was already only nominal in dev (§12.4).
+//   Isolation. Flash now runs in a separate document, driven over postMessage
+//   (./host-frame). Whether that document is actually isolated depends on the
+//   origin it is served from, and today it is still ours — M6 step 4 moves it.
 //
 // Nothing below knows where Flash is running. Every player, every callback and
 // every ExternalInterface call goes through the `SwfHost` in ./host; this file
@@ -116,7 +117,7 @@ export class SwfAssetManager {
 			renderer: THREE.WebGLRenderer;
 			swfStreams: Set<SwfStreamRenderer>;
 		},
-		host: SwfHost = new InPageSwfHost(),
+		host: SwfHost = new FrameSwfHost(SANDBOX_URL),
 	) {
 		this.host = host;
 	}
@@ -529,10 +530,27 @@ function toStringArray(value: unknown): string[] {
 	return value.filter((item): item is string => typeof item === "string");
 }
 
+/**
+ * Turn a stored avatar path into a URL Flash can load.
+ *
+ * Resolved against the sandbox's origin rather than the app's, because that is
+ * where it will be fetched from and Flash requires the shim and the avatar to
+ * share a security domain. In dev both names point at the same Go server, so
+ * this is a rewrite; in production the sandbox is a separate app and will have
+ * to serve these bytes itself (M6 steps 4 and 5).
+ */
 function resolveAvatarUrl(swfFile: string): string {
-	if (swfFile === "") return `${API_URL}/static/assets/avatars/guest.swf`;
-	if (swfFile.startsWith("data:") || /^https?:/.test(swfFile)) return swfFile;
-	return `${API_URL}${swfFile}`;
+	if (swfFile === "") {
+		return `${SANDBOX_ORIGIN}/static/assets/avatars/guest.swf`;
+	}
+	if (swfFile.startsWith("data:")) return swfFile;
+	if (/^https?:/.test(swfFile)) {
+		// An absolute URL from elsewhere in the app; keep the path, take the
+		// sandbox's origin.
+		const url = new URL(swfFile);
+		return `${SANDBOX_ORIGIN}${url.pathname}${url.search}`;
+	}
+	return `${SANDBOX_ORIGIN}${swfFile}`;
 }
 
 const nextFrame = () =>

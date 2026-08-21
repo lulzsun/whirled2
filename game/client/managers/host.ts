@@ -1,4 +1,3 @@
-import { API_URL } from "../constants";
 import { SwfRoom, SwfRoomEntity } from "./room";
 
 // The boundary between our page and Flash. See docs/specs/swf-avatar-rendering.md
@@ -153,6 +152,16 @@ export class InPageSwfHost implements SwfHost {
 	private instances = new Map<string, Instance>();
 
 	/**
+	 * Absolute URL of whirled-host.swf.
+	 *
+	 * A constructor argument rather than a constant because this class also
+	 * runs *inside* the sandbox, where the shim has to come from the sandbox's
+	 * own origin — the shim reaches into the avatar it loads, which Flash only
+	 * permits within one security domain.
+	 */
+	private readonly shimUrl: string;
+
+	/**
 	 * Players live in one hidden container rather than in the scene's DOM.
 	 * Positioned off-screen rather than display:none, because a hidden element
 	 * gets no layout and Ruffle would have no viewport to scale into.
@@ -169,7 +178,8 @@ export class InPageSwfHost implements SwfHost {
 		this.invoke(id, name, args),
 	);
 
-	constructor() {
+	constructor(shimUrl: string) {
+		this.shimUrl = shimUrl;
 		installBridge();
 	}
 
@@ -207,7 +217,7 @@ export class InPageSwfHost implements SwfHost {
 		// scales it to fill whatever box it is given.
 		await player.ruffle().load({
 			url:
-				`${API_URL}/static/whirled-host.swf` +
+				`${this.shimUrl}` +
 				`?avatar=${encodeURIComponent(options.avatarUrl)}&hostId=${id}`,
 			allowScriptAccess: true,
 			autoplay: "on",

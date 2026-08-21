@@ -1923,9 +1923,11 @@ whether a function call or a `message` event delivered them.
 
 ### 16.3 Steps
 
-Steps 1 and 2 have landed (`managers/host.ts`, `managers/room.ts`). Flash is
-still in the page; what has changed is that nothing outside those two files
-knows it.
+Steps 1 to 3 have landed. Flash now runs in `web/static/sandbox.html`, driven
+over `postMessage` from `managers/host-frame.ts`; the page bundle contains no
+code that creates a Ruffle player. The sandbox is still served from the app's
+own origin, so it isolates nothing yet — that is step 4, and it is now a
+one-constant change (`SANDBOX_ORIGIN` in `constants.ts`).
 
 
 1. **Draw the seam where Flash is today.** Extract everything in
@@ -1985,3 +1987,32 @@ knows it.
 -   **`API_URL` reads `window.parent.location`** for the `about:` case, a
     leftover of the old iframe pipeline that will throw cross-origin. It has to
     go when the sandbox page gets its own constant.
+
+### 16.6 What step 3 turned up
+
+Three things that were not in the plan, all found by measurement rather than
+by reading.
+
+**Off-screen cross-origin iframes are rAF-throttled.** The obvious placement
+for the sandbox frame is off-screen, next to where the players themselves are
+parked. It does not work: Chrome throttles `requestAnimationFrame` in a
+cross-origin iframe that intersects nothing, and Ruffle's entire tick rides on
+rAF. Measured, an avatar in an off-screen frame emitted **2 draw frames in 6
+seconds** where an in-page one emits 48 in 2. The frame has to stay inside the
+viewport and be made invisible instead — 1×1, `opacity:0`, `z-index:-1`, which
+is what `pages/index.gohtml` already does with its own `#ruffle` container.
+This is a standing constraint on the design, not a one-off fix.
+
+**PocketBase sends `X-Frame-Options: SAMEORIGIN`.** Correct for every page here
+except the one that exists to be framed from somewhere else. `main.go` now
+drops it for `sandbox.html` and sends `frame-ancestors` instead, built from
+`APP_ORIGIN` in production and from the dev origins otherwise. `X-Frame-Options`
+has no syntax for "this one other origin", so it cannot be narrowed in place.
+
+**The avatar URL has to name the sandbox origin, not the app's.** Two separate
+failures stack up otherwise: the fetch is refused by CORS, and even if it were
+not, the shim and the avatar would land in different Flash security domains and
+the SDK handshake would not work. `resolveAvatarUrl` now resolves against
+`SANDBOX_ORIGIN`. In dev that is a rewrite between two names for one Go server;
+in production the sandbox is a separate app and will have to serve those bytes
+itself, which is where step 5's size cap and SWF sniffing belong.

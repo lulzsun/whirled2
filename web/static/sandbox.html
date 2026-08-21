@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>swf sandbox</title>
+		<!--
+			The Flash sandbox. See docs/specs/swf-avatar-rendering.md section 16.
+
+			This document exists to hold user-uploaded Flash and nothing else.
+			It is served from its own origin so that a hostile avatar reaching
+			`window` reaches only this: no session, no storage, no DOM of ours.
+
+			Everything it loads is relative, so it all comes from the sandbox
+			origin -- ruffle.js, the wasm beside it, whirled-host.swf, and the
+			avatar itself. Do not add an absolute URL here. Fetching any part of
+			this from the app origin puts the shim and the avatar in different
+			Flash security domains, and the SDK handshake stops working.
+		-->
+		<style>
+			html,
+			body {
+				margin: 0;
+				width: 0;
+				height: 0;
+				overflow: hidden;
+				background: transparent;
+			}
+		</style>
+		<script src="./ruffle.js"></script>
+	</head>
+	<body>
+		<script type="module">
+			// Built bundle in production; the vite dev server otherwise. Same
+			// shape as components/preview.gohtml, but with the dev host written
+			// out rather than read from window.parent -- the parent is
+			// cross-origin here, and reading its location throws.
+			const script = document.createElement("script");
+			script.type = "module";
+			script.src = "./sandbox.js";
+			script.onerror = () => {
+				const fallback = document.createElement("script");
+				fallback.type = "module";
+				fallback.src = "http://127.0.0.1:6969/sandbox.ts";
+				document.body.appendChild(fallback);
+			};
+			document.body.appendChild(script);
+		</script>
+	</body>
+</html>
