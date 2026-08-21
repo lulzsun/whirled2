@@ -1452,3 +1452,46 @@ It was not the preview: the Browser pane had been backgrounded, and the main
 game page measured the same 2 fps at that moment, having measured 120 fps
 earlier in the same session. Worth remembering before reading any frame-rate
 number off a pane that is not on screen.
+
+### 15.7 appearanceChanged is an edge, not a sample
+
+Feeding the room location in every frame (15.2) froze the walk cycle on
+`guest.swf`, `member.swf` and `Kawaii_Basic_F` — the avatar slid across the
+floor stuck on one frame. Whirled's own stock avatar says why:
+
+```as3
+public function updateLook (... ) :void {
+    var moving :Boolean = _ctrl.isMoving();
+    var orient :Number = _ctrl.getOrientation();
+    gotoAndPlay(1, (moving ? "walk" : "face") + "_" +
+        (orient < 180 ? "right" : "left"));
+}
+_ctrl.addEventListener(ControlEvent.APPEARANCE_CHANGED, updateLook);
+```
+
+`gotoAndPlay(1, scene)` unconditionally, with no check for whether the look
+actually changed. Push appearance every frame and the walk restarts every frame.
+This is Whirled's own avatar, so it is evidence about what the real host did:
+Whirled moved actors by tweening between endpoints, and the avatar heard about a
+walk twice — once starting, once ending — not sixty times a second.
+
+So appearance is now pushed on the edges only: `setMoving` and `setOrientation`
+transitions, both of which carry the cached location with them, plus a location
+change while _not_ moving, which is a placement or a teleport rather than a walk.
+`entityMoved` still fans out every step, because that one genuinely is a sample —
+an avatar tracking a neighbour wants its current position, not the last place it
+stood still.
+
+The cost is that `getLogicalLocation()` inside an avatar is stale for the
+duration of a walk and settles when it stops. Nothing in the corpus reads it
+mid-walk, and cross-entity reads do not go through it: `std:location_pixel` is
+answered from the host's own live copy.
+
+Measured over 90 frames of walking, per avatar, appearance pushes vs. distinct
+rendered frames:
+
+| avatar         | edge-only (now) | every frame (before) |
+| -------------- | --------------- | -------------------- |
+| guest.swf      | 0 → 19 frames   | 90 → 2 frames        |
+| member.swf     | 0 → 17 frames   | 90 → 2 frames        |
+| Kawaii_Basic_F | 0 → 20 frames   | 90 → 2 frames        |

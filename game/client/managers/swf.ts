@@ -487,7 +487,26 @@ export class SwfAssetManager {
 			return;
 		}
 		entry.location = [x, y, z];
-		this.pushAppearance(entry);
+		// Deliberately not pushing appearance while the avatar is walking.
+		//
+		// appearanceChanged is an edge, not a sample. Avatars treat it as
+		// "your look changed, re-pick your animation", and they re-pick by
+		// jumping to the first frame of a labelled scene — Whirled's own
+		// guest.swf does exactly `gotoAndPlay(1, moving ? "walk_..." :
+		// "face_...")` on every event, with no check for whether anything
+		// actually changed. Pushing it per frame of movement restarts the walk
+		// cycle every frame, so the avatar slides along the floor frozen on
+		// frame 1. Whirled itself moved actors by tweening between endpoints,
+		// so the avatar heard about a walk twice: once starting, once ending.
+		//
+		// setMoving covers both of those edges and carries the cached location
+		// with it, so the only case left here is a position change with no
+		// movement — a placement or a teleport — which is a real appearance
+		// change and does need to go through.
+		if (!entry.moving) this.pushAppearance(entry);
+		// Neighbours still get every step: entityMoved is a sample, and an
+		// avatar tracking another one wants the current position, not the last
+		// place it stood still.
 		for (const other of this.entries.keys()) {
 			if (other === eid) continue;
 			this.call(other, "whirledEntityMoved", entry.entityId, [x, y, z]);
