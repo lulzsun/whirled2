@@ -1903,14 +1903,15 @@ is independent of the renderer and can start now.
 
 ### 16.1 The stopgap, and why it is not the fix
 
-`.github/workflows/fly.yml` deploys on push to `master`, so merging ships M4's
-in-page Flash. Until M6 lands, SWF avatars should be **compiled out of
-production builds** behind `import.meta.env.DEV`, the same shape as the guard
-already in `swfsandbox.tsx`. Vite substitutes it at build time, so the shipped
-bundle contains no branch to flip.
+`.github/workflows/fly.yml` deploys on push to `master`, so merging M4 as it
+stood would have shipped in-page Flash. The plan was to **compile SWF avatars
+out of production builds** behind `import.meta.env.DEV` until M6 landed — a
+gate, not a fix, since it would have turned the feature off for everyone.
 
-That is a gate, not a fix: it means the feature this branch exists for cannot be
-used by anyone. M6 is what turns it back on.
+The gate was never built. M6 landed on this branch before anything merged, so
+there was never a production build with Flash on the app origin to defend
+against, and `swfsandbox.tsx` — where the guard would have lived — is deleted.
+Nothing remains to remove.
 
 ### 16.2 Shape
 
@@ -2051,9 +2052,13 @@ acceptance test against that build.
 -   **The proxy is now the upload boundary.** Anything it will not serve, an
     avatar cannot load. That is the point, but it means the SWF sniffing has to
     be right or working avatars break.
--   **`API_URL` reads `window.parent.location`** for the `about:` case, a
-    leftover of the old iframe pipeline that will throw cross-origin. It has to
-    go when the sandbox page gets its own constant.
+-   **`API_URL` reads `window.parent.location`** for the `about:` case. Once
+    suspected as an iframe-era leftover that would throw against a cross-origin
+    parent — it is neither removable nor at risk. The srcdoc upload preview
+    depends on it (it is the same read `SANDBOX_OPAQUE` had to adopt in §16.9),
+    and the sandbox page never runs `constants.ts`: `sandbox.ts` imports
+    nothing from the game and builds its shim URL relative to its own real URL.
+    The only documents that evaluate this constant have a same-origin parent.
 
 ### 16.6 What step 3 turned up
 
