@@ -21,10 +21,21 @@ export const API_URL = (() => {
 })();
 
 /**
- * Origin that runs Flash.
+ * Origin that runs Flash. M6 step 4: a different *site* from the app, so that
+ * a hostile avatar reaching `window` reaches nothing of ours. See
+ * docs/specs/swf-avatar-rendering.md §16.3.
  *
- * Still the app's own, so it isolates nothing yet: M6 step 3 built the
- * boundary, step 4 moves it. See docs/specs/swf-avatar-rendering.md §16.3.
+ * Production names it explicitly through VITE_SANDBOX_ORIGIN, baked in at
+ * build time; it should be a second deployment of this same server (fly.dev
+ * is on the Public Suffix List, so two Fly apps are cross-site, where a
+ * subdomain of ours would be same-site and still receive our cookies on
+ * requests it makes to us).
+ *
+ * Dev gets a second origin out of the one Go server for free: `localhost` and
+ * `127.0.0.1` are different origins with different cookie jars, so whichever
+ * name the page is on, the sandbox uses the other. LAN-IP dev has no second
+ * name for the same host, so it falls back to the app origin and isolates
+ * nothing — acceptable for dev, and exactly what production must not do.
  *
  * Everything Flash touches has to come from here, not just the sandbox
  * document: the shim reaches into the avatar it loads, and Flash only permits
@@ -32,7 +43,19 @@ export const API_URL = (() => {
  * app's origin fails twice over — CORS refuses the fetch, and even if it did
  * not, the SDK handshake would not work.
  */
-export const SANDBOX_ORIGIN = API_URL;
+export const SANDBOX_ORIGIN = (() => {
+	const configured = import.meta.env.VITE_SANDBOX_ORIGIN;
+	if (typeof configured === "string" && configured !== "") {
+		// Trailing slashes invite `${origin}/path` to double up.
+		return configured.replace(/\/+$/, "");
+	}
+	const hostname = window.location.hostname
+		? window.location.hostname
+		: window.parent.location.hostname;
+	if (hostname === "127.0.0.1") return "http://localhost:42069";
+	if (hostname === "localhost") return "http://127.0.0.1:42069";
+	return API_URL;
+})();
 
 /** The sandbox document itself. */
 export const SANDBOX_URL = `${SANDBOX_ORIGIN}/static/sandbox.html`;

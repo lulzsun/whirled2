@@ -1923,11 +1923,24 @@ whether a function call or a `message` event delivered them.
 
 ### 16.3 Steps
 
-Steps 1 to 3 have landed. Flash now runs in `web/static/sandbox.html`, driven
-over `postMessage` from `managers/host-frame.ts`; the page bundle contains no
-code that creates a Ruffle player. The sandbox is still served from the app's
-own origin, so it isolates nothing yet — that is step 4, and it is now a
-one-constant change (`SANDBOX_ORIGIN` in `constants.ts`).
+Steps 1 to 4 have landed. Flash runs in `web/static/sandbox.html`, driven over
+`postMessage` from `managers/host-frame.ts`, and the sandbox is on a different
+origin: in dev the page and the sandbox take opposite loopback names
+(`127.0.0.1` vs `localhost`) of the same Go server, so each has its own cookie
+jar; in production `VITE_SANDBOX_ORIGIN` (a Dockerfile build arg) names a
+second deployment of this same server, and that deployment sets `APP_ORIGIN`
+so its `frame-ancestors` admits the app. Unset, both fall back to the app's
+own origin — functional, isolating nothing. LAN-IP dev has no second loopback
+name and always falls back.
+
+Verified cross-origin in dev: the page gets `SecurityError` reaching the
+frame's document, avatars load in ~500ms with stage/ground/animation numbers
+identical to in-page, and two avatars compose at 24fps each.
+
+Still open before the §16.1 gate can lift: the production sandbox deployment
+itself, step 5's hardening (the avatar proxy with size cap and SWF sniffing
+belongs there — in dev both names hit one server, so no proxy exists yet), and
+the §16.4 eval-avatar acceptance test against the deployed pair.
 
 
 1. **Draw the seam where Flash is today.** Extract everything in
