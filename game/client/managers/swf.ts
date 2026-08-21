@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { API_URL } from "../constants";
 import { SwfStreamRenderer } from "./stream";
+import { InPageSwfHost, SwfHost } from "./host";
 
 // M4 of docs/specs/swf-avatar-rendering.md: the cutover.
 //
@@ -19,8 +20,13 @@ import { SwfStreamRenderer } from "./stream";
 //   are no longer needed.
 //
 //   Isolation. There is none right now — this is the known cost of M4, and
-//   what W3/M6 exists to fix by moving Flash execution into a worker. The
+//   what W3/M6 exists to fix by moving Flash execution out of our origin. The
 //   iframe's isolation was already only nominal in dev (§12.4).
+//
+// Nothing below knows where Flash is running. Every player, every callback and
+// every ExternalInterface call goes through the `SwfHost` in ./host; this file
+// is the room — who is here, where they are, and what one avatar is allowed to
+// ask about another. That split is M6 step 1 (§16.3).
 
 /** How long to wait for an avatar to answer the SDK handshake. */
 const CONNECT_TIMEOUT_MS = 5000;
@@ -70,9 +76,11 @@ type Entry = {
 	 * Releasing by entity id alone destroys the new avatar mid-load.
 	 */
 	token: number;
-	player: any;
+	/** This registration's key with the host. Distinct from `entityId` only in
+	 * meaning: one addresses a Flash instance, the other addresses a room
+	 * occupant, and nothing guarantees they stay the same string. */
+	hostId: string;
 	stream: SwfStreamRenderer;
-	host: HTMLElement;
 	/** Registered states/actions, read once the avatar has connected. */
 	states: string[] | null;
 	actions: string[] | null;
@@ -104,95 +112,34 @@ type Entry = {
 	connected: boolean;
 };
 
-/**
- * Routes whirledHostEvent calls back to the avatar that made them.
- *
- * ExternalInterface.call reaches the page's single global scope, so with every
- * player in one document the events would be indistinguishable. The shim takes
- * a hostId flashvar and hands it back on every event; this maps it to an entry.
- */
-const hostListeners = new Map<
-	string,
-	(type: HostEventType, value: any) => void
->();
-
-/** Synchronous room queries, keyed the same way as `hostListeners`. */
-const hostQueries = new Map<
-	string,
-	(query: string, a: any, b: any) => unknown
->();
-
-let hostEventInstalled = false;
-
 /** Source of `Entry.token`. Monotonic for the life of the page. */
 let tokenCounter = 0;
-
-function installHostEventBridge() {
-	if (hostEventInstalled) return;
-	hostEventInstalled = true;
-	(window as any).whirledHostEvent = (
-		hostId: string,
-		type: HostEventType,
-		value: any,
-	) => {
-		hostListeners.get(String(hostId))?.(type, value);
-	};
-	// Synchronous counterpart: the SDK's room queries return a value inline, so
-	// this has to answer within the caller's own AVM tick. That is only
-	// possible while every player shares this JS context — see the spec, W4.
-	(window as any).whirledHostQuery = (
-		hostId: string,
-		query: string,
-		a: any,
-		b: any,
-	) => hostQueries.get(String(hostId))?.(query, a, b) ?? null;
-}
 
 export class SwfAssetManager {
 	private entries = new Map<number, Entry>();
 
-	/**
-	 * Offscreen players live in one hidden container rather than in the scene's
-	 * DOM. They are positioned off-screen rather than display:none, because a
-	 * hidden element gets no layout and Ruffle would have no viewport to scale
-	 * its transforms into.
-	 */
-	private container: HTMLElement | null = null;
+	/** Where Flash runs. The only thing here that knows. */
+	private readonly host: SwfHost;
 
 	constructor(
 		private readonly world: {
 			renderer: THREE.WebGLRenderer;
 			swfStreams: Set<SwfStreamRenderer>;
 		},
+		host: SwfHost = new InPageSwfHost(),
 	) {
-		installHostEventBridge();
+		this.host = host;
 	}
 
 	public async add(eid: number, swfFile: string): Promise<THREE.Texture> {
 		this.remove(eid);
 
-		const host = document.createElement("div");
-		host.dataset.swfEid = String(eid);
-		host.style.cssText =
-			"position:fixed;left:-10000px;top:0;width:1px;height:1px;";
-		this.getContainer().appendChild(host);
-
-		const player = window.RufflePlayer.newest().createPlayer();
-		// <ruffle-player> defaults to 550x400 and ignores its parent, and that
-		// box is what decides both the stage size the shim lays the avatar out
-		// in and the render target's resolution. Left alone, every avatar would
-		// render into a 550x400 letterbox regardless of its own shape.
-		player.style.cssText = "display:block;width:100%;height:100%;";
-		host.appendChild(player);
-
 		const stream = new SwfStreamRenderer(this.world);
-		player.whirledStream = (event: any) => stream.handleEvent(event);
 
 		const entry: Entry = {
 			token: ++tokenCounter,
-			player,
+			hostId: String(eid),
 			stream,
-			host,
 			states: null,
 			actions: null,
 			moving: false,
@@ -209,8 +156,8 @@ export class SwfAssetManager {
 		};
 		this.entries.set(eid, entry);
 
-		hostListeners.set(String(eid), (type, value) => {
-			switch (type) {
+		const onEvent = (type: string, value: any) => {
+			switch (type as HostEventType) {
 				case "connected":
 					entry.connected = true;
 					// Entity awareness, signals and the SDK's own tick timer
@@ -256,26 +203,17 @@ export class SwfAssetManager {
 				// itself. Nothing consumes them yet; the room is the authority
 				// on both, so acting on them would fight the movement system.
 			}
-		});
+		};
 
-		hostQueries.set(String(eid), (query, a, b) =>
-			this.answerQuery(eid, query, a, b),
-		);
-
-		// The shim loads the avatar itself, from the `avatar` flashvar, then
-		// scales it to fill whatever box it is given. The box is set below,
-		// once the avatar has reported the stage size it wants.
-		const url = resolveAvatarUrl(swfFile);
-		await player.ruffle().load({
-			url: `${API_URL}/static/whirled-host.swf?avatar=${encodeURIComponent(url)}&hostId=${eid}`,
-			allowScriptAccess: true,
-			autoplay: "on",
-			splashScreen: false,
-			unmuteOverlay: "hidden",
-			letterbox: "off",
-			wmode: "transparent",
-			preferredRenderer: "three",
-			parameters: { avatar: url, hostId: String(eid) },
+		// The box starts at 1x1 and is set for real by sizeToAvatar, once the
+		// avatar has reported the stage size it wants.
+		await this.host.create(entry.hostId, {
+			avatarUrl: resolveAvatarUrl(swfFile),
+			width: 1,
+			height: 1,
+			onStream: (event) => stream.handleEvent(event),
+			onEvent,
+			onQuery: (query, a, b) => this.answerQuery(eid, query, a, b),
 		});
 
 		this.call(eid, "whirledSetEntityId", entry.entityId);
@@ -303,11 +241,14 @@ export class SwfAssetManager {
 	 * decides the render target's resolution.
 	 */
 	private async sizeToAvatar(entry: Entry) {
-		const size = await waitForStageSize(entry);
+		const size = await waitForStageSize(this.host, entry);
 		if (!entry.alive) return;
 		entry.stage = size;
-		entry.host.style.width = `${size.width * RENDER_SCALE}px`;
-		entry.host.style.height = `${size.height * RENDER_SCALE}px`;
+		this.host.resize(
+			entry.hostId,
+			size.width * RENDER_SCALE,
+			size.height * RENDER_SCALE,
+		);
 	}
 
 	/**
@@ -346,14 +287,7 @@ export class SwfAssetManager {
 		if (token !== undefined && entry.token !== token) return false;
 		entry.alive = false;
 		this.announceLeft(eid, entry.entityId);
-		hostListeners.delete(String(eid));
-		hostQueries.delete(String(eid));
-		try {
-			entry.player.remove();
-		} catch {
-			// Ruffle throws if the instance is already gone; nothing to undo.
-		}
-		entry.host.remove();
+		this.host.destroy(entry.hostId);
 		entry.stream.dispose();
 		this.entries.delete(eid);
 		return true;
@@ -467,18 +401,16 @@ export class SwfAssetManager {
 	 * moving, orientation and location are pushed together from cached values.
 	 */
 	private pushAppearance(entry: Entry) {
-		try {
-			entry.player.whirledSetAppearance?.(
-				entry.location[0],
-				entry.location[1],
-				entry.location[2],
-				entry.orientation,
-				entry.moving,
-				false,
-			);
-		} catch (error) {
-			console.warn("swf: setAppearance failed", error);
-		}
+		this.host.call(
+			entry.hostId,
+			"whirledSetAppearance",
+			entry.location[0],
+			entry.location[1],
+			entry.location[2],
+			entry.orientation,
+			entry.moving,
+			false,
+		);
 	}
 
 	public async getStates(eid: number): Promise<string[]> {
@@ -486,7 +418,9 @@ export class SwfAssetManager {
 		if (entry === undefined) return [];
 		if (entry.states === null) {
 			await this.waitForConnection(entry);
-			entry.states = toStringArray(this.call(eid, "whirledGetStates"));
+			entry.states = toStringArray(
+				await this.query(eid, "whirledGetStates"),
+			);
 		}
 		return entry.states;
 	}
@@ -496,7 +430,9 @@ export class SwfAssetManager {
 		if (entry === undefined) return [];
 		if (entry.actions === null) {
 			await this.waitForConnection(entry);
-			entry.actions = toStringArray(this.call(eid, "whirledGetActions"));
+			entry.actions = toStringArray(
+				await this.query(eid, "whirledGetActions"),
+			);
 		}
 		return entry.actions;
 	}
@@ -521,13 +457,9 @@ export class SwfAssetManager {
 		if (entry.connected) return;
 		const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
 		while (!entry.connected && !expired()) {
-			try {
-				if (entry.player.whirledIsConnected?.()) {
-					entry.connected = true;
-					break;
-				}
-			} catch {
-				// Callbacks are not registered until the shim's first frame.
+			if (await this.host.query(entry.hostId, "whirledIsConnected")) {
+				entry.connected = true;
+				break;
 			}
 			await nextFrame();
 		}
@@ -673,7 +605,10 @@ export class SwfAssetManager {
 				return [target.stage.width, target.stage.height];
 		}
 
-		return this.callEntry(target, "whirledLookupProperty", key);
+		// Synchronous by necessity: we are inside the asking avatar's AVM tick,
+		// and the answer comes from running code in a different avatar. See the
+		// note on SwfHost.callSync.
+		return this.host.callSync(target.hostId, "whirledLookupProperty", key);
 	}
 
 	/** Tell the room an avatar arrived, and the avatar who is already here. */
@@ -701,35 +636,22 @@ export class SwfAssetManager {
 		return undefined;
 	}
 
-	/** Invoke one of the shim's ExternalInterface callbacks. */
-	private call(eid: number, name: string, ...args: unknown[]): unknown {
+	/** Invoke one of the shim's callbacks on an entity, if it still has one. */
+	private call(eid: number, name: string, ...args: unknown[]) {
+		const entry = this.entries.get(eid);
+		if (entry === undefined) return;
+		this.host.call(entry.hostId, name, ...args);
+	}
+
+	/** As `call`, for the callbacks whose answer we read. */
+	private async query(
+		eid: number,
+		name: string,
+		...args: unknown[]
+	): Promise<unknown> {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return undefined;
-		return this.callEntry(entry, name, ...args);
-	}
-
-	private callEntry(entry: Entry, name: string, ...args: unknown[]): unknown {
-		const player = entry.player;
-		if (player === undefined) return undefined;
-		const fn = player[name];
-		if (typeof fn !== "function") return undefined;
-		try {
-			return fn.apply(player, args);
-		} catch (error) {
-			console.warn(`swf: ${name} failed`, error);
-			return undefined;
-		}
-	}
-
-	private getContainer(): HTMLElement {
-		if (this.container === null) {
-			this.container = document.createElement("div");
-			this.container.id = "swf-players";
-			this.container.style.cssText =
-				"position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;";
-			document.body.appendChild(this.container);
-		}
-		return this.container;
+		return this.host.query(entry.hostId, name, ...args);
 	}
 }
 
@@ -825,16 +747,12 @@ const VISIBLE_WAIT_CEILING = 12;
  * has not initialized yet" rather than "this avatar is empty".
  */
 async function waitForStageSize(
+	host: SwfHost,
 	entry: Entry,
 ): Promise<{ width: number; height: number }> {
 	const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
 	while (entry.alive && !expired()) {
-		let size: unknown;
-		try {
-			size = entry.player.whirledGetStageSize?.();
-		} catch {
-			// The shim has not registered its callbacks yet.
-		}
+		const size = await host.query(entry.hostId, "whirledGetStageSize");
 		if (Array.isArray(size)) {
 			const width = Number(size[0]);
 			const height = Number(size[1]);
