@@ -279,7 +279,13 @@ export function createRenderSystem(world: World) {
 			// wearing a second SWF avatar fail with a Ruffle error and no
 			// avatar. Passing the outgoing mesh's token makes that a no-op;
 			// the outgoing avatar was already released by `add`.
-			world.swfAssetManager.remove(eid, token);
+			//
+			// No token means the outgoing avatar was glTF or Spine, which owns
+			// no SWF registration at all. Calling remove anyway would fall
+			// through to the untokened form — "release whatever this entity
+			// has" — and destroy an incoming SWF, which is the same bug again
+			// by way of swf -> glTF -> swf.
+			if (token !== undefined) world.swfAssetManager.remove(eid, token);
 
 			if (player !== undefined && avatar !== undefined) {
 				player.remove(avatar);

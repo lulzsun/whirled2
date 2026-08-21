@@ -1614,3 +1614,41 @@ reaches it:
 
 The raw-raycast figure is identical to the airborne one, which is the whole
 bug in a single number. A real jump still turns the shadow off, as it should.
+
+### 15.10 The swap bug, again, by a path the token did not cover
+
+§14.10 fixed "wearing a second SWF avatar destroys the incoming one" with
+registration tokens. Going through a glTF avatar in between brought it back:
+**swf → glTF → swf** left the second SWF permanently unloaded.
+
+`remove(eid, token?)` has two behaviours in one signature. With a token it
+releases one registration and no-ops if the entity has since been given a
+different avatar. Without one it releases whatever the entity currently has —
+which is what `add` needs in order to clear the way for a replacement, and is
+never what teardown wants.
+
+The render system passed `avatar.userData.swfToken` straight through. A glTF or
+Spine mesh carries no such token, so on the frame the outgoing glTF avatar was
+torn down the call became the untokened form and destroyed the SWF that had
+just registered. Measured through the manager directly:
+
+| step                                  | entry for the entity |
+| ------------------------------------- | -------------------- |
+| wear SWF A                            | token 1              |
+| wear glTF (teardown passes A's token) | released, correct    |
+| wear SWF B                            | token 2              |
+| teardown of the glTF, no token        | **released — wrong** |
+
+The last row is the bug: the incoming avatar is destroyed, and because its
+`add` is still waiting on a stage size that will never arrive, it hangs rather
+than failing, which is why the avatar simply never appears.
+
+An avatar that owns no SWF registration has nothing to release, so the render
+system now calls `remove` only when it has a token, and the two behaviours are
+spelled out on the method.
+
+**Note on topology.** One Ruffle player is created per avatar and destroyed
+when that avatar is replaced. That is the current design, not a regression:
+W4's single-player-per-room is unscheduled, and §15 was built deliberately on
+the one-player-per-avatar topology because routing is a host concern that does
+not need it. Only `getEntityProperty` genuinely does.

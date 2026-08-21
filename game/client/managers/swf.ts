@@ -321,6 +321,16 @@ export class SwfAssetManager {
 	 *
 	 * Returns whether anything was released.
 	 */
+	/**
+	 * Release an avatar's player and render target.
+	 *
+	 * With a token this releases one *registration*: it no-ops if the entity
+	 * has since been given a different avatar. Without one it releases
+	 * whatever the entity currently has, which is what `add` needs to clear
+	 * the way for a replacement — and is never what teardown wants. A caller
+	 * tearing down an avatar that owns no registration must not call this at
+	 * all, or it will destroy an incoming avatar that has already registered.
+	 */
 	public remove(eid: number, token?: number): boolean {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return false;
