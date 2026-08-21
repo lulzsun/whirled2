@@ -1719,3 +1719,38 @@ there just burns the timeout. But counting _only_ visible time means a tab that
 is never shown waits forever, and nothing downstream has a timeout of its own,
 so the avatar simply never appears. The waits now expire on either clock, with
 the wall-clock ceiling set well above the visible budget.
+
+### 15.12 Never divide the premultiply back out
+
+Lowering the billboard's cutout to 0.02 (§15.11) exposed the shader sitting
+behind it. It undid the premultiply and blended normally:
+
+```glsl
+gl_FragColor = vec4(texel.rgb / texel.a, texel.a);
+```
+
+That division is unbounded as alpha approaches zero. At the old 0.5 cutout it
+could at most double a texel's colour, which is why it was survivable. At 0.02
+it multiplies by fifty, so every soft edge and the whole of a drop shadow blow
+out towards white — and they shimmer as the artwork animates and different
+texels land in the low-alpha band.
+
+Premultiplied data wants premultiplied blending, not conversion. The texel now
+goes to the blender exactly as it comes out of the target, with
+`premultipliedAlpha: true` selecting `ONE, ONE_MINUS_SRC_ALPHA`. There is no
+division and therefore no failure mode near zero.
+
+Measured against a mid-green background, counting near-white pixels per sampled
+frame: `[0, 3, 3, 2]` with premultiplied blending against `[0, 11, 11]` with the
+division — and kawaii is mostly opaque artwork, so this understates it badly for
+anything with large soft regions.
+
+**Ground offset ordering, corrected.** §15.11 made the reported hot spot outrank
+the measured bottom edge. That is backwards: measurement describes what is
+actually drawn, and the hot spot is what the avatar claims, which for a
+`setHotSpot(avatar.x, avatar.y, …)` call is the author's container origin and
+need not be the feet at all. The order is now `setPreferredY` (a request, so it
+wins), then the measured edge, then the hot spot, which is reached only when
+measurement found nothing — exactly the translucent case it was added for. The
+measuring loop gives up early in favour of the hot spot rather than spending its
+whole timeout, but only after a fair number of frames.

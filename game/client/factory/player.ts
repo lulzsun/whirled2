@@ -333,10 +333,15 @@ const SWF_WORLD_SCALE = 0.04;
  * Billboard material for a SWF render target.
  *
  * The target holds premultiplied alpha — the stream composes onto a
- * transparent clear — so a stock `MeshBasicMaterial` would draw every
- * partially transparent texel too dark and tinted, most visibly around soft
- * edges and shadows. This undoes the premultiply, which leaves straight alpha,
- * exactly what normal blending expects.
+ * transparent clear — so the texel is fed to premultiplied blending
+ * (`ONE, ONE_MINUS_SRC_ALPHA`) exactly as it comes out, with no conversion.
+ *
+ * Emphatically *not* by dividing the colour back out and blending normally.
+ * That division is unbounded as alpha approaches zero: at the 0.02 cutout a
+ * texel's colour is multiplied by fifty, so every soft edge and the whole of a
+ * drop shadow blow out to white, and they shimmer as the artwork moves and
+ * different texels land in the low-alpha band. Premultiplied blending is what
+ * premultiplied data wants, and it has no such failure mode.
  *
  * Blended rather than purely cut out, because avatars genuinely contain
  * semi-transparent artwork and a cutout has no way to express it. Depth is
@@ -364,11 +369,13 @@ varying vec2 vUv;
 void main() {
 	vec4 texel = texture2D(uMap, vUv);
 	if (texel.a < uAlphaTest) discard;
-	gl_FragColor = vec4(texel.rgb / texel.a, texel.a);
+	// Already premultiplied; the material blends it as such.
+	gl_FragColor = texel;
 }
 `,
 		side: THREE.DoubleSide,
 		transparent: true,
+		premultipliedAlpha: true,
 		depthWrite: true,
 		depthTest: true,
 	});

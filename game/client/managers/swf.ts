@@ -402,14 +402,15 @@ export class SwfAssetManager {
 	public getGroundOffset(eid: number): number {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return 1;
-		if (entry.stage.height > 0) {
-			// setPreferredY is a request about where to sit, so it wins.
-			if (entry.preferredY !== null) {
-				return entry.preferredY / entry.stage.height;
-			}
-			if (entry.hotSpotY !== null) {
-				return Math.min(1, entry.hotSpotY / entry.stage.height);
-			}
+		if (entry.preferredY !== null && entry.stage.height > 0) {
+			// A request about where to sit, so it outranks both descriptions.
+			return entry.preferredY / entry.stage.height;
+		}
+		// Measurement first, because it describes what is actually drawn.
+		// `1` means it found nothing to measure.
+		if (entry.ground < 1) return entry.ground;
+		if (entry.hotSpotY !== null && entry.stage.height > 0) {
+			return Math.min(1, entry.hotSpotY / entry.stage.height);
 		}
 		return entry.ground;
 	}
@@ -868,14 +869,20 @@ async function waitForGround(
 	const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
 	let ground = 1;
 
+	let attempts = 0;
 	while (entry.alive && !expired()) {
-		// The avatar answering for itself beats measuring it, and stops a
-		// translucent avatar burning the whole timeout on a scan that will
-		// never find a row it considers solid.
-		if (entry.hotSpotY !== null) return 1;
 		if (stream.composedFrames > 0) {
 			ground = stream.measureBottomEdge(renderer);
 			if (ground < 1) break;
+			// Measuring looks for the lowest row the avatar draws solidly, a
+			// question a translucent avatar has no answer to: Spooky Ghost
+			// never reaches the opacity threshold, so this would scan until
+			// the timeout and then guess. Once it has had a fair chance, let
+			// the avatar's own hot spot answer instead — but only then, since
+			// what is actually drawn beats what the avatar claims.
+			if (++attempts >= GROUND_SAMPLE_FRAMES && entry.hotSpotY !== null) {
+				return 1;
+			}
 		}
 		await nextFrame();
 	}
