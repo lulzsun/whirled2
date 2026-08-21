@@ -51,3 +51,5 @@ web/templates/pages/test.gohtml
 
 # Do not ignore our .env.local for local dev (should not contain any real secrets)
 !.env.local
+# Apache Flex SDK, fetched by tools/build-shim.mjs
+.flex-sdk/
