@@ -12,6 +12,8 @@
 		"build-css": "npx @tailwindcss/cli -i ./tailwind.css -o ./game/client/dist/styles.css",
 		"build-proto": "npx buf generate",
 		"build-client": "vite build ./game/client && npm run build-css",
+		"build-ruffle": "node tools/build-ruffle.mjs",
+		"build-shim": "node tools/build-shim.mjs",
 		"build-server": "go build .",
 		"pretty": "prettier --write ."
 	},
