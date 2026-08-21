@@ -1923,6 +1923,11 @@ whether a function call or a `message` event delivered them.
 
 ### 16.3 Steps
 
+Steps 1 and 2 have landed (`managers/host.ts`, `managers/room.ts`). Flash is
+still in the page; what has changed is that nothing outside those two files
+knows it.
+
+
 1. **Draw the seam where Flash is today.** Extract everything in
    `managers/swf.ts` that touches `RufflePlayer`, `player[name](…)`,
    `whirledHostEvent` and `whirledHostQuery` behind one interface — call it
