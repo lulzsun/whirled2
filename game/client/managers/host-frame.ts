@@ -22,8 +22,15 @@ type Instance = Pick<SwfInstanceOptions, "onStream" | "onEvent">;
 
 export class FrameSwfHost implements SwfHost {
 	private readonly frame: HTMLIFrameElement;
-	/** The origin we will post to and the only one we accept replies from. */
+	/** The only origin we accept replies from. `"null"` when opaque. */
 	private readonly origin: string;
+	/**
+	 * The targetOrigin we post commands to. An opaque origin cannot be named
+	 * in postMessage, so the opaque mode posts to `"*"` — safe because the
+	 * `event.source` check is what identifies the frame, and commands carry
+	 * nothing secret.
+	 */
+	private readonly postTarget: string;
 
 	private ready = false;
 	/** Set once the sandbox has been given up on. Requests fail fast after. */
@@ -38,17 +45,29 @@ export class FrameSwfHost implements SwfHost {
 	>();
 	private seq = 0;
 
-	constructor(sandboxUrl: string) {
-		this.origin = new URL(sandboxUrl, window.location.href).origin;
+	constructor(sandboxUrl: string, opaque = false) {
+		const realOrigin = new URL(sandboxUrl, window.location.href).origin;
+		this.origin = opaque ? "null" : realOrigin;
+		this.postTarget = opaque ? "*" : realOrigin;
 
 		this.frame = document.createElement("iframe");
 		this.frame.id = "swf-sandbox";
-		// Deliberately no `sandbox` attribute. An opaque origin — which is what
-		// `allow-scripts` alone produces — is treated as public by Private
-		// Network Access, so nothing it loads from a loopback address arrives,
-		// which is exactly how §12.4's sandbox failed. A *different* origin
-		// needs no attribute to be isolated and keeps a real origin, so its
-		// subresources load normally in dev and in production alike.
+		// Two isolation modes, chosen by the caller (SANDBOX_OPAQUE):
+		//
+		// A *different* origin needs no `sandbox` attribute — it is already
+		// isolated, keeps a real origin, and its subresources load normally.
+		// That is dev's loopback pair and any deployment with a configured
+		// VITE_SANDBOX_ORIGIN.
+		//
+		// A *same-origin* production deployment gets `allow-scripts` instead,
+		// which makes the document's origin opaque: no cookie jar, no storage,
+		// cross-site to everything including us. Only viable on a public
+		// address — Private Network Access treats opaque origins as public and
+		// blocks their fetches to private ones, which is exactly how §12.4's
+		// sandbox failed in dev.
+		if (opaque) {
+			this.frame.setAttribute("sandbox", "allow-scripts");
+		}
 		// Inside the viewport, deliberately. The obvious thing is to park it
 		// off-screen the way the players themselves are parked, and it does not
 		// work: Chrome throttles requestAnimationFrame in a cross-origin iframe
@@ -140,7 +159,7 @@ export class FrameSwfHost implements SwfHost {
 		}
 		const target = this.frame.contentWindow;
 		if (target === null) return;
-		target.postMessage(message, this.origin, transfer);
+		target.postMessage(message, this.postTarget, transfer);
 	}
 
 	private request(

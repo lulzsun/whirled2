@@ -59,3 +59,35 @@ export const SANDBOX_ORIGIN = (() => {
 
 /** The sandbox document itself. */
 export const SANDBOX_URL = `${SANDBOX_ORIGIN}/static/sandbox.html`;
+
+/**
+ * Whether the sandbox iframe should carry `sandbox="allow-scripts"`, giving
+ * the document an opaque origin.
+ *
+ * This is the single-app production posture (M6 step 7). When no second
+ * origin is configured, the sandbox document would share the app's origin and
+ * isolate nothing — so the browser is asked to manufacture an origin instead:
+ * an opaque origin has no cookie jar, no storage, and is cross-site to
+ * everything, including us. A hostile avatar reaching that window reaches an
+ * origin the browser refuses to associate with anything.
+ *
+ * Never on a private or loopback address, because Private Network Access
+ * treats opaque origins as public and blocks their fetches to private
+ * addresses — the frame would load nothing (the original §12.4 failure). Dev
+ * keeps its loopback-pair isolation and never takes this path; LAN-IP dev
+ * falls through to an unisolated same-origin frame, as before.
+ */
+export const SANDBOX_OPAQUE = (() => {
+	if (SANDBOX_ORIGIN !== window.location.origin) return false;
+	const hostname = window.location.hostname;
+	const isPrivate =
+		hostname === "localhost" ||
+		hostname.endsWith(".localhost") ||
+		hostname === "[::1]" ||
+		/^127\./.test(hostname) ||
+		/^10\./.test(hostname) ||
+		/^192\.168\./.test(hostname) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+		/^169\.254\./.test(hostname);
+	return !isPrivate;
+})();

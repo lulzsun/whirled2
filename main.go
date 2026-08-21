@@ -40,10 +40,17 @@ import (
 // service), and the directives that actually confine an avatar — connect-src,
 // default-src, frame-ancestors — stay tight. 'unsafe-inline' styles are for
 // the styles Ruffle injects into its shadow DOM and, in dev, vite's HMR.
+// The policy contains a "{origin}" placeholder next to every 'self', filled
+// in per request from the Host header. 'self' alone is not enough: under M6
+// step 7 a single-origin deployment runs the sandbox with an opaque origin
+// (iframe sandbox="allow-scripts"), and CSP's 'self' keyword matches nothing
+// for a document whose origin is opaque — the explicit origin is what keeps
+// ruffle.js, the wasm and /avatar loadable there, while still permitting only
+// the one origin they actually come from.
 var sandboxCSP = "default-src 'none'"
 
 func buildSandboxCSP(debug bool, localIPs []string) string {
-	self := []string{"'self'"}
+	self := []string{"'self'", "{origin}"}
 	viteHTTP := []string{}
 	viteWS := []string{}
 	ancestors := []string{"'self'"}
@@ -85,10 +92,10 @@ func buildSandboxCSP(debug bool, localIPs []string) string {
 		"connect-src data: " + strings.Join(
 			append(append(append([]string{}, self...), viteHTTP...),
 				viteWS...), " "),
-		"img-src 'self' data: blob:",
-		"media-src 'self' blob:",
-		"font-src 'self' data:",
-		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' {origin} data: blob:",
+		"media-src 'self' {origin} blob:",
+		"font-src 'self' {origin} data:",
+		"style-src 'self' {origin} 'unsafe-inline'",
 		"object-src 'none'",
 		"base-uri 'none'",
 		"form-action 'none'",
@@ -165,8 +172,15 @@ func main() {
 			// origin", so it goes and frame-ancestors takes over.
 			if strings.HasSuffix(e.Request.URL.Path, "/sandbox.html") {
 				e.Response.Header().Del("X-Frame-Options")
+				scheme := "http"
+				if e.Request.TLS != nil ||
+					e.Request.Header.Get("X-Forwarded-Proto") == "https" {
+					scheme = "https"
+				}
+				origin := scheme + "://" + e.Request.Host
 				e.Response.Header().Set(
-					"Content-Security-Policy", sandboxCSP)
+					"Content-Security-Policy",
+					strings.ReplaceAll(sandboxCSP, "{origin}", origin))
 			}
 			return apis.Static(os.DirFS("./web/static"), false)(e)
 		})

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SANDBOX_ORIGIN, SANDBOX_URL } from "../constants";
+import { SANDBOX_OPAQUE, SANDBOX_ORIGIN, SANDBOX_URL } from "../constants";
 import { SwfStreamRenderer } from "./stream";
 import { SwfHost } from "./host";
 import { FrameSwfHost } from "./host-frame";
@@ -117,7 +117,7 @@ export class SwfAssetManager {
 			renderer: THREE.WebGLRenderer;
 			swfStreams: Set<SwfStreamRenderer>;
 		},
-		host: SwfHost = new FrameSwfHost(SANDBOX_URL),
+		host: SwfHost = new FrameSwfHost(SANDBOX_URL, SANDBOX_OPAQUE),
 	) {
 		this.host = host;
 	}

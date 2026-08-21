@@ -1956,9 +1956,16 @@ script tag in `index.gohtml` and `preview.gohtml`. The app's pages no longer
 load Ruffle at all — `RufflePlayer` appears in no bundle but `sandbox.js`, and
 `window.RufflePlayer` is `undefined` in the page at runtime.
 
-Still open before the §16.1 gate can lift: the production sandbox deployment
-itself (step 7) and the §16.4 eval-avatar acceptance test against the
-deployed pair.
+Step 7 pivoted away from a second deployment entirely — see §16.8. A
+single-origin production deployment now isolates Flash with an opaque origin:
+when `SANDBOX_ORIGIN` equals the page's origin and the host is public,
+`SANDBOX_OPAQUE` (constants.ts) puts `sandbox="allow-scripts"` on the frame.
+`VITE_SANDBOX_ORIGIN` remains supported as an optional stronger mode for
+anyone who wants a real second site; nothing requires it.
+
+Still open before the §16.1 gate can lift: confirming the opaque mode on a
+deployed build (it is untestable locally, §16.8) and the §16.4 eval-avatar
+acceptance test against that build.
 
 1. **Draw the seam where Flash is today.** Extract everything in
    `managers/swf.ts` that touches `RufflePlayer`, `player[name](…)`,
@@ -2066,3 +2073,52 @@ levels also disable `ExternalInterface`, which the shim is built on. The
 network denial lives in `connect-src 'self'`, where the browser enforces it,
 plus `openUrlMode: "deny"` for `navigateToURL` — the one API that becomes a
 page navigation rather than a fetch, which CSP on this document cannot see.
+
+### 16.8 Step 7's pivot: one app, an opaque origin
+
+The plan said "a second Fly app". It died on an operational fact: this project
+ships as a single executable that should be hostable anywhere, and a second
+deployment is a second thing every operator must stand up, point DNS at, and
+keep in lockstep. So production isolation comes from the browser instead of
+from infrastructure.
+
+An iframe with `sandbox="allow-scripts"` (and no `allow-same-origin`) gets an
+**opaque origin**: no cookie jar, no storage, cross-site to everything —
+including us. That is a _stronger_ cookie story than the two-app design (an
+opaque origin cannot hold a session even if someone logs in through it), for
+zero deployment surface. `SANDBOX_OPAQUE` turns it on exactly when it is both
+needed and viable: the sandbox shares the page's origin (no second origin
+configured) _and_ the host is public.
+
+Why §12.4's rejection of this shape does not apply: that failure was Private
+Network Access, which treats opaque origins as public and blocks their fetches
+to private addresses. It is a property of _dev_ (loopback and LAN hosts), not
+of the mechanism. Re-measured while building this: a forced-opaque frame on
+`localhost` loads no subresources and the host fails all pending creates at
+the 15-second ready timeout — loud, not hanging. On a public origin PNA has
+nothing to object to. The consequence is that **the opaque mode cannot be
+exercised locally at all**; it is verified on a deployed build or not at all,
+which is what step 7's "confirm on a deployed build" now means.
+
+What the mode required beyond the attribute, all in code we ship:
+
+-   **The wire accepts `"null"`.** An opaque origin serializes as the string
+    `"null"`, so `FrameSwfHost` expects that as `event.origin` and posts
+    commands to `"*"` — identity rests on the `event.source` check, which was
+    already load-bearing in both modes.
+-   **CORS, because same-URL is now cross-origin.** Every subresource the
+    sandbox document loads — module scripts, the wasm, `/avatar` — is a
+    cross-origin request with `Origin: null`. PocketBase's CORS middleware
+    answers it because `--origins` includes `null`, which the production CMD
+    (`--origins=null`) and dev's appended list both already do. A self-hosted
+    deployment that changes `--origins` must keep `null` in the list or SWF
+    avatars stop loading.
+-   **CSP cannot lean on `'self'`.** The keyword matches nothing for a
+    document whose origin is opaque, so `buildSandboxCSP` carries an
+    `{origin}` placeholder next to every `'self'`, filled per request from
+    the Host header (scheme from TLS or `X-Forwarded-Proto`).
+
+Costs, honestly: Chrome's process isolation for an opaque-origin frame is less
+certain than for a genuinely different site, so §16.5's "measure G4" caveat
+leans harder on measurement; and requests arriving with `Origin: null` must
+never be treated as trusted anywhere on the server (today nothing does).
