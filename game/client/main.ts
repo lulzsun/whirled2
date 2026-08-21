@@ -8,7 +8,6 @@ import { BenchmarkApi } from "./systems/benchmark";
 const world = createWorld();
 declare global {
 	interface Window {
-		RufflePlayer: any;
 		world: World;
 		htmx: typeof htmx;
 		game: {
@@ -77,16 +76,6 @@ window.game = {
 	},
 	reconnect: () => {},
 };
-// Config for Ruffle player which handles swf emulation
-window.RufflePlayer.config = {
-	autoplay: "on",
-	splashScreen: false,
-	unmuteOverlay: "hidden",
-	letterbox: "off",
-	wmode: "transparent",
-	preferredRenderer: "canvas",
-};
-
 const systems = createSystems(world);
 
 // Populated by createBenchmarkSystem, so this has to come after createSystems.

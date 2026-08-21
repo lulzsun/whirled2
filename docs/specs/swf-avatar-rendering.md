@@ -1949,9 +1949,16 @@ frame's document; through the proxy and under the CSP, guest.swf connects,
 reports its real 200x200 stage, and streams 38fps with zero CSP violations.
 The proxy 403s non-avatar paths and traversal, 415s non-SWF bytes.
 
+Step 6 deleted the old in-page pipeline: `game/client/swf.ts`,
+`ui/swfsandbox.tsx`, the `swf.js` vite entry, the `window.RufflePlayer.config`
+globals in `main.ts` and `preview.ts`, and the `#ruffle` div and `ruffle.js`
+script tag in `index.gohtml` and `preview.gohtml`. The app's pages no longer
+load Ruffle at all — `RufflePlayer` appears in no bundle but `sandbox.js`, and
+`window.RufflePlayer` is `undefined` in the page at runtime.
+
 Still open before the §16.1 gate can lift: the production sandbox deployment
-itself, step 6's deletion of the old in-page pipeline, and the §16.4
-eval-avatar acceptance test against the deployed pair.
+itself (step 7) and the §16.4 eval-avatar acceptance test against the
+deployed pair.
 
 1. **Draw the seam where Flash is today.** Extract everything in
    `managers/swf.ts` that touches `RufflePlayer`, `player[name](…)`,

@@ -109,6 +109,17 @@ export interface SwfHost {
  * instance state. Ids are entity ids, so two worlds can still collide on one —
  * that is true of M4 as well, and is not this change's to fix.
  */
+declare global {
+	interface Window {
+		/**
+		 * Installed by ruffle.js, which only the sandbox document loads. The
+		 * declaration lives here because this class is the last thing that
+		 * touches it — the app's own pages stopped loading Ruffle at M6 step 6.
+		 */
+		RufflePlayer: any;
+	}
+}
+
 const eventListeners = new Map<string, (type: string, value: any) => void>();
 const queryHandlers = new Map<
 	string,

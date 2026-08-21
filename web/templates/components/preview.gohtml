@@ -16,11 +16,6 @@
 			<script src="/static/htmx.min.js?v={{ .GameVersion }}"></script>
 			<script src="/static/split.min.js?v={{ .GameVersion }}"></script>
 		</head>
-		<div
-			id="ruffle"
-			class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-0 -z-40"
-		></div>
-		<script src="/static/ruffle.js?v={{ .GameVersion }}"></script>
 		<body hx-boost="true" class="h-screen w-screen overflow-hidden">
 			<canvas
 				id="preview"
