@@ -144,7 +144,7 @@ export function createAnimationSystem() {
 				clamp01(
 					(player.position.x + ROOM_EXTENT_X / 2) / ROOM_EXTENT_X,
 				),
-				snapToFloor(clamp01(player.position.y / ROOM_EXTENT_Y)),
+				groundedHeight(),
 				clamp01(
 					(player.position.z + ROOM_EXTENT_Z / 2) / ROOM_EXTENT_Z,
 				),
@@ -161,22 +161,27 @@ export function createAnimationSystem() {
  * compare each other's coordinates, they do not compare them to the scene.
  */
 /**
- * Report an avatar standing on the floor as being at exactly zero.
+ * The SDK's y: how far off the ground the avatar is, not how high up it is.
  *
- * The SDK's y is height above the floor, and avatars test it for *equality*
- * with zero rather than comparing against a tolerance: kawaii fades its drop
- * shadow out whenever `getLogicalLocation()[1] != 0`. Our y comes from a
- * raycast onto the floor mesh, which lands on 1e-16 rather than 0 about as
- * often as not, and that is enough to convince an avatar it is airborne.
+ * These are not the same quantity, and we were reporting the wrong one. Our
+ * world y is the height of whatever surface the avatar walked onto, which a
+ * raycast can land anywhere from 1e-16 (the floor plane) to the top of a
+ * piece of furniture. Standing on a table is still standing on the ground.
+ *
+ * Avatars test this for *equality* with zero rather than against a tolerance
+ * — kawaii fades its drop shadow out whenever `getLogicalLocation()[1] != 0`
+ * — so any leftover height reads as "airborne" and stays that way.
+ *
+ * Nothing in the game can leave the ground: movement is a raycast onto a
+ * surface, so an avatar is by construction standing on something. If flight
+ * or jumping is ever added, this wants a real airborne flag from the movement
+ * system, not a world-space height.
  */
-function snapToFloor(y: number): number {
-	return y < GROUNDED_EPSILON ? 0 : y;
+function groundedHeight(): number {
+	return 0;
 }
 
-const GROUNDED_EPSILON = 1e-4;
-
 const ROOM_EXTENT_X = 20;
-const ROOM_EXTENT_Y = 10;
 const ROOM_EXTENT_Z = 20;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));

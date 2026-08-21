@@ -1754,3 +1754,58 @@ wins), then the measured edge, then the hot spot, which is reached only when
 measurement found nothing — exactly the translucent case it was added for. The
 measuring loop gives up early in favour of the hot spot rather than spending its
 whole timeout, but only after a fair number of frames.
+
+### 15.13 The floor was standing in front of the shadow
+
+The drop shadow survived §15.8 through §15.12 and still did not appear in a
+room. Two things were hiding it, and only one of them was in the renderer.
+
+**The floor plane clipped it.** A Flash avatar's artwork does not stop at its
+feet. Whirled composited an avatar as a whole sprite over the room's floor art,
+so a drop shadow is drawn _below_ the hot spot as a matter of course — kawaii's
+reaches 38 rows of a 1200-row frame below the lowest opaque row, which at the
+billboard's scale is about half a world unit. Standing that sprite upright in a
+3D room puts all of it under the floor plane, where an opaque floor that writes
+depth removes it.
+
+The floor now keeps depth _testing_ and drops only the depth _write_. Furniture
+still occludes it the usual way, because furniture writes its own depth and is
+drawn first; all the change gives up is the floor's ability to hide something
+drawn after it, and the only thing below the floor is avatar artwork that
+belongs on the ground. Measured on a lit floor with the camera above: 7324
+avatar pixels visible with the write, 7797 without, and the ellipse under the
+feet is plainly there in the second.
+
+**And the default room floor is pure black.** A dark, half-transparent shadow
+composited over `color: 0x0` is exactly as dark as the floor it lands on. With
+the floor black the pixel count is 7046 either way — the shadow is present,
+correct, and indistinguishable. That is not a bug to fix in the renderer, but it
+does mean "the shadow does not show" can have nothing to do with the shadow.
+
+### 15.14 Height off the ground is not height
+
+`setLocation` was handed the avatar's world y. That is the wrong quantity. The
+SDK's y is _how far off the ground the avatar is_, and ours was the height of
+whatever surface it walked onto — anywhere from 1e-16 on the floor plane to the
+full height of a piece of furniture. Standing on a table is still standing on
+the ground.
+
+This matters more than a small numeric error would, because avatars test the
+value for equality with zero rather than against a tolerance. kawaii's
+`updateLook` does `if (getLogicalLocation()[1] != 0) onGround = false`, and its
+`enterFrame` then fades the shadow out at 0.1 alpha per frame and leaves it out.
+Nothing brings it back until an appearance edge reads a y of exactly zero again.
+§15.9 patched the raycast's 1e-16 with an epsilon, which addressed the symptom
+on a bare floor and nothing else.
+
+Nothing in this game can leave the ground: movement is a raycast onto a surface,
+so an avatar is by construction standing on something. The reported height is
+now zero, and if flight or jumping is ever added it wants a real airborne flag
+from the movement system rather than a world-space height.
+
+Driving the manager directly and sweeping one input at a time is what separated
+these: orientation, walking, stopping and every registered state all left the
+shadow at ~18200 covered pixels in the bottom band of the frame, while a y of
+0.2 dropped it to 4839 and returning to zero restored it to 18387. The mechanism
+was never in doubt after that; what remained was finding which of the two
+hiding places applied.
