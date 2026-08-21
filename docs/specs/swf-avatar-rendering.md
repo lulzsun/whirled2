@@ -1163,3 +1163,44 @@ releasing anything: textures 18 → 125 → 18, geometries 26 → 236 → 26, ho
 3 → 0, `world.players` 4 → 1, streams 3 → 0, and no errors. The swap path was
 checked separately by removing `AvatarComponent` from a live entity: the old
 avatar is released and detached, the entity and its map entry survive.
+
+### 14.10 Wearing a second avatar: release by registration, not by entity
+
+Changing avatar through My Stuff left the player with no avatar and Ruffle
+throwing. The trace says it plainly — `remove` instrumented across a swap:
+
+```
+t=0ms      add(eid, member.swf)   → releases the outgoing avatar
+t=0ms      remove(eid)            ← from add() itself, correct
+t=19ms     remove(eid)            ← from the render system's exit query,
+                                     destroying the *incoming* avatar mid-load
+t=10023ms  add() finally resolves, having lost its player to two 5 s timeouts
+```
+
+An avatar swap gives one entity two avatars for a moment. `network.ts` removes
+`AvatarComponent` and starts an async `createSwfAvatar`; the exit query fires on
+the very next frame, long before the new SWF has loaded. The cleanup released
+"the avatar for this entity" — and by then that meant the new one.
+
+The fix is to release by **registration** rather than by entity. Each entry gets
+a monotonic token; the billboard carries its own in `userData.swfToken`; and
+`remove(eid, token)` is a no-op when the entity has since been given a different
+avatar. Teardown passes the token of the mesh it is actually tearing down, which
+during a swap is the outgoing one — already released by `add`, so the call
+correctly does nothing.
+
+Two things that made this behave worse than it needed to, also fixed:
+
+-   `add()` kept waiting after its own player had been torn down, burning two
+    5-second timeouts before returning a texture attached to nothing. Entries now
+    carry an `alive` flag that the wait loops check, so a load that loses its
+    player gives up at once.
+-   `player.children[0]` is the _outgoing_ mesh throughout a swap, since a
+    replacement is appended after it. That is what makes the token check land on
+    the right object; it is worth knowing rather than rediscovering.
+
+Verified by replaying the wear path three times in a row (guest → member →
+guest → member): each swap completes in ~1.1 s with a live stream at the right
+size, one mesh on the player, one offscreen player in the DOM, no texture
+accumulation, and no errors. Leaving after a swap still returns everything to
+baseline.

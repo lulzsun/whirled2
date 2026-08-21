@@ -46,6 +46,15 @@ type HostEventType =
 	| "setHotSpot";
 
 type Entry = {
+	/**
+	 * Identifies this registration, as opposed to the entity it belongs to.
+	 *
+	 * An avatar swap gives one entity two avatars for a moment: `add` releases
+	 * the outgoing one and registers the incoming one under the same id, while
+	 * the render system is still on its way to cleaning up the outgoing one.
+	 * Releasing by entity id alone destroys the new avatar mid-load.
+	 */
+	token: number;
 	player: any;
 	stream: SwfStreamRenderer;
 	host: HTMLElement;
@@ -61,6 +70,8 @@ type Entry = {
 	stage: { width: number; height: number };
 	/** Where the feet are, as a fraction from the top of the frame. */
 	ground: number;
+	/** Cleared by `remove`, so a load in flight can give up promptly. */
+	alive: boolean;
 	connected: boolean;
 };
 
@@ -77,6 +88,9 @@ const hostListeners = new Map<
 >();
 
 let hostEventInstalled = false;
+
+/** Source of `Entry.token`. Monotonic for the life of the page. */
+let tokenCounter = 0;
 
 function installHostEventBridge() {
 	if (hostEventInstalled) return;
@@ -131,6 +145,7 @@ export class SwfAssetManager {
 		player.whirledStream = (event: any) => stream.handleEvent(event);
 
 		const entry: Entry = {
+			token: ++tokenCounter,
 			player,
 			stream,
 			host,
@@ -141,6 +156,7 @@ export class SwfAssetManager {
 			preferredY: null,
 			stage: { width: 0, height: 0 },
 			ground: 1,
+			alive: true,
 			connected: false,
 		};
 		this.entries.set(eid, entry);
@@ -176,7 +192,8 @@ export class SwfAssetManager {
 		});
 
 		await this.sizeToAvatar(entry);
-		entry.ground = await waitForGround(stream, this.world.renderer);
+		if (!entry.alive) return stream.target.texture;
+		entry.ground = await waitForGround(entry, this.world.renderer);
 
 		return stream.target.texture;
 	}
@@ -190,7 +207,8 @@ export class SwfAssetManager {
 	 * decides the render target's resolution.
 	 */
 	private async sizeToAvatar(entry: Entry) {
-		const size = await waitForStageSize(entry.player);
+		const size = await waitForStageSize(entry);
+		if (!entry.alive) return;
 		entry.stage = size;
 		entry.host.style.width = `${size.width * RENDER_SCALE}px`;
 		entry.host.style.height = `${size.height * RENDER_SCALE}px`;
@@ -206,9 +224,21 @@ export class SwfAssetManager {
 		return this.entries.get(eid)?.stage;
 	}
 
-	public remove(eid: number) {
+	/**
+	 * Release an avatar's player, render target and textures.
+	 *
+	 * Pass the `token` of the registration you mean to release — from
+	 * `getToken`, or off the billboard's `userData.swfToken` — and the call
+	 * becomes a no-op if the entity has since been given a different avatar.
+	 * Without it, releasing during an avatar swap kills the incoming avatar.
+	 *
+	 * Returns whether anything was released.
+	 */
+	public remove(eid: number, token?: number): boolean {
 		const entry = this.entries.get(eid);
-		if (entry === undefined) return;
+		if (entry === undefined) return false;
+		if (token !== undefined && entry.token !== token) return false;
+		entry.alive = false;
 		hostListeners.delete(String(eid));
 		try {
 			entry.player.remove();
@@ -218,6 +248,12 @@ export class SwfAssetManager {
 		entry.host.remove();
 		entry.stream.dispose();
 		this.entries.delete(eid);
+		return true;
+	}
+
+	/** The token identifying this entity's current avatar registration. */
+	public getToken(eid: number): number | undefined {
+		return this.entries.get(eid)?.token;
 	}
 
 	public getTexture(eid: number): THREE.Texture | undefined {
@@ -408,13 +444,13 @@ const nextFrame = () =>
  * has not initialized yet" rather than "this avatar is empty".
  */
 async function waitForStageSize(
-	player: any,
+	entry: Entry,
 ): Promise<{ width: number; height: number }> {
 	const deadline = performance.now() + CONNECT_TIMEOUT_MS;
-	while (performance.now() < deadline) {
+	while (entry.alive && performance.now() < deadline) {
 		let size: unknown;
 		try {
-			size = player.whirledGetStageSize?.();
+			size = entry.player.whirledGetStageSize?.();
 		} catch {
 			// The shim has not registered its callbacks yet.
 		}
@@ -445,13 +481,14 @@ const GROUND_SAMPLE_FRAMES = 12;
  * edge it sees, which is the avatar at its ground contact.
  */
 async function waitForGround(
-	stream: SwfStreamRenderer,
+	entry: Entry,
 	renderer: THREE.WebGLRenderer,
 ): Promise<number> {
+	const stream = entry.stream;
 	const deadline = performance.now() + CONNECT_TIMEOUT_MS;
 	let ground = 1;
 
-	while (performance.now() < deadline) {
+	while (entry.alive && performance.now() < deadline) {
 		if (stream.composedFrames > 0) {
 			ground = stream.measureBottomEdge(renderer);
 			if (ground < 1) break;
@@ -460,7 +497,7 @@ async function waitForGround(
 	}
 	if (ground === 1) return 1;
 
-	for (let i = 0; i < GROUND_SAMPLE_FRAMES; i++) {
+	for (let i = 0; i < GROUND_SAMPLE_FRAMES && entry.alive; i++) {
 		await nextFrame();
 		const sample = stream.measureBottomEdge(renderer);
 		if (sample < 1) ground = Math.max(ground, sample);

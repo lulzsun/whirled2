@@ -288,6 +288,9 @@ export const createSwfAvatar = async (
 	// frame's alpha so it traces the avatar's silhouette.
 	mesh.userData.outlineAlphaMap = texture;
 	mesh.userData.outlineAlphaTest = SWF_ALPHA_TEST;
+	// Ties this mesh to the registration it was built from, so teardown can
+	// tell it apart from a replacement worn under the same entity id.
+	mesh.userData.swfToken = world.swfAssetManager.getToken(eid);
 	// Stand the avatar on the ground: shift the quad so its lowest opaque row
 	// sits at the entity's origin.
 	mesh.position.y = (bottomNormalized - 0.5) * geometry.parameters.height;

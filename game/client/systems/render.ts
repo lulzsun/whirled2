@@ -252,20 +252,29 @@ export function createRenderSystem(world: World) {
 		for (let x = 0; x < avatarLeave.length; x++) {
 			const eid = avatarLeave[x];
 
-			// Release first: this is the part that has to happen either way.
-			const wasSwf = world.swfAssetManager.getStream(eid) !== undefined;
-			world.swfAssetManager.remove(eid);
-
 			const player = world.players.get(eid)?.player;
-			// this is under the assumption that the first child is the avatar mesh
+			// this is under the assumption that the first child is the avatar
+			// mesh. During a swap that is the *outgoing* one: a replacement is
+			// appended after it, and is not removed until this runs.
 			const avatar = player?.children[0];
+			const token = avatar?.userData?.swfToken as number | undefined;
+
+			// Release by registration, not by entity. An avatar swap gives the
+			// entity a new player and render target under the same id before
+			// this cleanup runs, and releasing "this entity's avatar" would
+			// destroy the incoming one mid-load — which is exactly what made
+			// wearing a second SWF avatar fail with a Ruffle error and no
+			// avatar. Passing the outgoing mesh's token makes that a no-op;
+			// the outgoing avatar was already released by `add`.
+			world.swfAssetManager.remove(eid, token);
+
 			if (player !== undefined && avatar !== undefined) {
 				player.remove(avatar);
 				// Only SWF billboards own their geometry and material outright.
 				// glTF and Spine avatars share loader-cached resources with
 				// every other instance of the same file, so disposing theirs
 				// would blank out other players wearing it.
-				if (wasSwf) disposeMesh(avatar);
+				if (token !== undefined) disposeMesh(avatar);
 			}
 
 			if (entityExists(world, eid)) {
