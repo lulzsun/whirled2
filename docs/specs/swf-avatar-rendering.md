@@ -1316,3 +1316,113 @@ guest → member): each swap completes in ~1.1 s with a live stream at the right
 size, one mesh on the player, one offscreen player in the DOM, no texture
 accumulation, and no errors. Leaving after a swap still returns everything to
 baseline.
+
+## 15. M8 progress: the entity registry and signal routing
+
+The room-side half of W4, built on the current one-player-per-avatar topology
+because — as W4 argues — routing is a host concern and does not need one player.
+
+### 15.1 What Land Sea Animals actually does
+
+The `DuelingLandSeaAnimal.as` source settles what this has to support, and it is
+not what the wiki's "avatars that can duel" suggests. Signals are barely
+involved; the mechanism is **cross-entity property reads**.
+
+On its duel action the animal:
+
+1. reads its own `landseaanimal:inDuelState` — through the host, by entity id,
+   not from a local variable;
+2. reads `EntityControl.PROP_LOCATION_PIXEL` for itself;
+3. calls `getEntityIds(TYPE_AVATAR)` to enumerate the room;
+4. for each other avatar, reads their `landseaanimal:inDuelState` and pixel
+   location, and picks the nearest one it is facing;
+5. **reads `landseaanimal:IKillJoo` on that opponent.**
+
+Step 5 is the kill. The opponent's own `propertyProvider` runs, sees that key,
+and sets its own state to a random death animation. A property read is being
+used as a remote procedure call.
+
+Two consequences for the host:
+
+-   `getEntityProperty` must reach the target avatar's live provider. Answering
+    from a cache would make the game not work at all, not merely go stale.
+-   Property reads have side effects, so they are not safely reorderable,
+    batchable or de-duplicated. Anything that later moves this across an async
+    boundary has to preserve call-for-call semantics.
+
+The only signal LSA sends is `lsa:deathNotice`, guarded by `hasControl()`, and
+its comment says it exists so third-party furni can keep score. The one signal
+handler in the file is commented out as deprecated.
+
+### 15.2 What was built
+
+In the shim: `getMyEntityId_v1`, `getEntityIds_v1`, `getEntityProperty_v1`,
+`sendSignal_v1` and `sendMessage_v1` on the host props, and callbacks for the
+other direction — `whirledGrantControl`, `whirledSignal`, `whirledMessage`,
+`whirledEntityEntered` / `Left` / `Moved`, `whirledLookupProperty`.
+
+In `managers/swf.ts`: the registry itself. Entity ids, `getEntityIds` with a
+type filter, `std:` property resolution, forwarding of everything else to the
+owning avatar's provider, signal broadcast, arrival and departure announcements,
+and location fan-out.
+
+`systems/animation.ts` pushes each avatar's position into the room every frame,
+mapped into the SDK's 0..1 room coordinates and rate-limited by a movement
+threshold. That feeds three things at once: the avatar's own appearance, what
+`std:location_pixel` reports about it, and the `entityMoved` events its
+neighbours receive.
+
+### 15.3 Two things worth knowing
+
+**`ExternalInterface.call` returns values in Ruffle.** The SDK's room queries
+return synchronously, so the shim answers them by calling out to JS and using
+the result — verified: an avatar asking `getEntityIds` gets `["3", "5"]` back
+inside its own call. This is what makes cross-instance queries work _today_, and
+it is exactly the mechanism a worker boundary would take away.
+
+**`_hasControl` starts false and gates almost everything.** Entity awareness,
+signals, chat and the SDK's tick timer are all silent until the host calls
+`gotControl_v1`. The manager now grants control the moment an avatar completes
+its handshake. Without this the registry would look completely inert while being
+completely correct.
+
+(A third, only useful when testing: Ruffle defines its ExternalInterface
+callbacks non-writable but configurable, so instrumenting one from the console
+needs `Object.defineProperty`. Plain assignment fails silently and makes it look
+as though nothing is being called.)
+
+### 15.4 Verified
+
+Two avatars in a room, driving the bridge from the console:
+
+| checked                                              | result                                     |
+| ---------------------------------------------------- | ------------------------------------------ |
+| `getEntityIds("avatar")` from inside an avatar       | `["3", "5"]`                               |
+| `getEntityIds("furni")`                              | `[]`                                       |
+| `std:location_pixel` for self and for the other      | `[210, 0, 200]` / `[280, 0, 200]`          |
+| `std:location_logical`, `std:type`, `std:dimensions` | correct per entity                         |
+| custom key on another entity                         | reaches **that player's** provider         |
+| unknown entity id                                    | `null`, no throw                           |
+| avatar arrives / leaves                              | `entityEntered` / `entityLeft` both ways   |
+| avatar moves                                         | `entityMoved` to every other avatar        |
+| signal sent                                          | delivered to every avatar, sender included |
+
+The custom-key read returns `null` only because a stock avatar registers no
+property provider; the call is observed arriving at the other player.
+
+### 15.5 Not built yet
+
+-   **Memories.** `updateMemory` / `lookupMemory` / `getMemories` are unanswered.
+    They need PocketBase persistence, so they are server work, not client work.
+-   **Anything past this client.** Signals, messages and entity events reach only
+    avatars in this browser. Real interaction between two people needs the game
+    server to fan them out, which also raises the authority question: an avatar
+    that can kill another by reading a property is an avatar that can lie about
+    having done so. Nothing here should be trusted once it crosses a client.
+-   **Control election.** Every avatar is granted control unconditionally. Whirled
+    elected one client per entity; with a single client that distinction does not
+    exist yet, but it will the moment the previous point is addressed.
+-   **Non-SWF entities.** The registry contains SWF avatars only. glTF and Spine
+    players are invisible to `getEntityIds`, as is furniture.
+-   **`getEntityProperty` under a worker.** Still the open question W4 names, and
+    the reason M8 ends at one player per room rather than at this registry.

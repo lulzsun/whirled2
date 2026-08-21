@@ -76,6 +76,12 @@ public class WhirledHost extends Sprite
             var id :String = loaderInfo.parameters["hostId"] as String;
             if (id != null) {
                 _hostId = id;
+                // The room knows this avatar by the same name unless it says
+                // otherwise. Defaulting here rather than waiting for JS to
+                // push it avoids a race: the host cannot call in until these
+                // callbacks are registered, but the avatar can start asking
+                // who it is from its very first frame.
+                _entityId = id;
             }
         }
         if (url != null && url.length > 0) {
@@ -284,6 +290,71 @@ public class WhirledHost extends Sprite
         callAvatar("messageReceived_v1", action, null, true);
     }
 
+    /**
+     * Give the avatar control of itself.
+     *
+     * EntityControl gates entity awareness, signals, chat and its own tick
+     * timer on `_hasControl`, which starts false. Until this is called an
+     * avatar sees nothing of the room it is in.
+     */
+    public function grantControl () :void
+    {
+        callAvatar("gotControl_v1");
+    }
+
+    /** Deliver a transient signal broadcast to the room. */
+    public function receiveSignal (name :String, arg :Object) :void
+    {
+        callAvatar("signalReceived_v1", name, arg);
+    }
+
+    /** Deliver a message sent to this entity. */
+    public function receiveMessage (name :String, arg :Object) :void
+    {
+        callAvatar("messageReceived_v1", name, arg, false);
+    }
+
+    /** Another entity appeared in the room. */
+    public function entityEntered (entityId :String) :void
+    {
+        callAvatar("entityEntered_v1", entityId);
+    }
+
+    /** Another entity left the room. */
+    public function entityLeft (entityId :String) :void
+    {
+        callAvatar("entityLeft_v1", entityId);
+    }
+
+    /**
+     * Another entity moved. `location` is [x, y, z] as a fraction of room
+     * size, the same units appearanceChanged uses.
+     */
+    public function entityMoved (entityId :String, location :Array) :void
+    {
+        callAvatar("entityMoved_v2", entityId, location);
+    }
+
+    /**
+     * Ask this avatar for one of its registered properties.
+     *
+     * This is how one avatar reads another: the host routes
+     * getEntityProperty(key, thatEntity) to this callback on the entity that
+     * owns it. Note that a property read is not necessarily side-effect free —
+     * Land Sea Animals kills its opponent by reading a property on it — so
+     * this must reach the avatar's own provider rather than any cache.
+     */
+    public function lookupProperty (key :String) :Object
+    {
+        return callAvatar("lookupEntityProperty_v1", key);
+    }
+
+    /** Set the id this avatar answers to within the room. */
+    public function setEntityId (entityId :String) :void
+    {
+        _entityId = entityId;
+    }
+
     /** Tell the avatar the wearer spoke, so it can animate its mouth. */
     public function avatarSpoke () :void
     {
@@ -342,17 +413,55 @@ public class WhirledHost extends Sprite
             notifyHost("setHotSpot", [ x, y, height ]);
         };
 
+        // ------------------------------------------------- room awareness
+        //
+        // These are what make avatars aware of each other. getEntityIds and
+        // getEntityProperty return synchronously, so they are answered by a
+        // synchronous ExternalInterface.call out to the host and back — which
+        // works only because every player currently shares one JS context.
+        // See the spec, W4.
+
+        host["getMyEntityId_v1"] = function () :String {
+            return _entityId;
+        };
+        host["getEntityIds_v1"] = function (type :String = null) :Array {
+            var ids :Object = hostQuery("getEntityIds", type, null);
+            return (ids as Array) || [];
+        };
+        host["getEntityProperty_v1"] = function (
+            entityId :String, key :String) :Object {
+            var target :String = (entityId == null) ? _entityId : entityId;
+            // Our own properties do not need to leave the player.
+            if (target == _entityId) {
+                return lookupProperty(key);
+            }
+            return hostQuery("getEntityProperty", target, key);
+        };
+        host["sendSignal_v1"] = function (name :String, arg :Object) :void {
+            notifyHost("sendSignal", [ name, arg ]);
+        };
+        host["sendMessage_v1"] = function (
+            name :String, arg :Object, isAction :Boolean) :void {
+            notifyHost("sendMessage", [ name, arg, isAction ]);
+        };
+
         // Room queries the avatar may make. We answer with benign defaults
         // rather than leaving them undefined, since some avatars use the
         // result without checking.
         host["getRoomBounds_v1"] = function () :Array {
-            return [ _roomWidth, _roomHeight ];
+            // Three axes, not two: EntityControl.getPixelLocation multiplies
+            // this element-wise against a three-element location, and a
+            // missing depth turns the result into NaN.
+            return [ _roomWidth, _roomHeight, _roomDepth ];
         };
         host["getViewerName_v1"] = function () :String {
             return _viewerName;
         };
         host["getInstanceId_v1"] = function () :int {
             return 0;
+        };
+        host["getEntityType_v1"] = function () :String {
+            return "avatar";
         };
         host["canEditRoom_v1"] = function () :Boolean {
             return false;
@@ -400,6 +509,23 @@ public class WhirledHost extends Sprite
         return [ _naturalWidth, _naturalHeight ];
     }
 
+    /**
+     * Exercise the host query channel from inside the player.
+     *
+     * The room-awareness calls are only reachable from avatar code, so without
+     * this there is no way to check the bridge works short of finding an avatar
+     * that uses it. Returns what the host answered, for the client to assert on.
+     */
+    public function selfTest () :Object
+    {
+        var result :Object = new Object();
+        result["entityId"] = _entityId;
+        result["entityIds"] = hostQuery("getEntityIds", "avatar", null);
+        result["roomBounds"] = [ _roomWidth, _roomHeight, _roomDepth ];
+        result["connected"] = _connected;
+        return result;
+    }
+
     /** Whether the avatar registered a given userProps function. */
     protected function hasAvatarFunc (name :String) :Boolean
     {
@@ -441,6 +567,15 @@ public class WhirledHost extends Sprite
             ExternalInterface.addCallback("whirledGetStates", getStates);
             ExternalInterface.addCallback("whirledGetActions", getActions);
             ExternalInterface.addCallback("whirledPlayAction", playAction);
+            ExternalInterface.addCallback("whirledSetEntityId", setEntityId);
+            ExternalInterface.addCallback("whirledGrantControl", grantControl);
+            ExternalInterface.addCallback("whirledSignal", receiveSignal);
+            ExternalInterface.addCallback("whirledMessage", receiveMessage);
+            ExternalInterface.addCallback("whirledEntityEntered", entityEntered);
+            ExternalInterface.addCallback("whirledEntityLeft", entityLeft);
+            ExternalInterface.addCallback("whirledEntityMoved", entityMoved);
+            ExternalInterface.addCallback("whirledLookupProperty", lookupProperty);
+            ExternalInterface.addCallback("whirledSelfTest", selfTest);
             ExternalInterface.addCallback("whirledAvatarSpoke", avatarSpoke);
             ExternalInterface.addCallback("whirledIsConnected", isConnected);
             ExternalInterface.addCallback("whirledGetPreferredY", getPreferredY);
@@ -453,6 +588,27 @@ public class WhirledHost extends Sprite
             // Ruffle without script access, or a security sandbox that
             // disallows it. The avatar still renders; it just cannot be driven.
         }
+    }
+
+    /**
+     * Ask the host a question and get an answer back, synchronously.
+     *
+     * `ExternalInterface.call` returns whatever the JS function returned, which
+     * is what lets the SDK's synchronous room queries work at all. Null on any
+     * failure, which every caller here already treats as "no result".
+     */
+    protected function hostQuery (query :String, a :Object, b :Object) :Object
+    {
+        if (!ExternalInterface.available) {
+            return null;
+        }
+        try {
+            return ExternalInterface.call(
+                "whirledHostQuery", _hostId, query, a, b);
+        } catch (e :Error) {
+            // No host listener yet, or script access is off.
+        }
+        return null;
     }
 
     /** Push an event up to JS. Best-effort; never throws. */
@@ -507,10 +663,14 @@ public class WhirledHost extends Sprite
         return _preferredY;
     }
 
-    public function setRoomBounds (width :Number, height :Number) :void
+    public function setRoomBounds (
+        width :Number, height :Number, depth :Number = 0) :void
     {
         _roomWidth = width;
         _roomHeight = height;
+        if (depth > 0) {
+            _roomDepth = depth;
+        }
     }
 
     public function setViewerName (name :String) :void
@@ -528,6 +688,8 @@ public class WhirledHost extends Sprite
     protected var _preferredY :int = 0;
     protected var _roomWidth :Number = 700;
     protected var _roomHeight :Number = 500;
+    protected var _roomDepth :Number = 400;
+    protected var _entityId :String = "";
     protected var _viewerName :String = "Guest";
 
     /** Which SDK base class this avatar was built against; "" until connected. */

@@ -43,7 +43,22 @@ type HostEventType =
 	| "setLocation"
 	| "setMoveSpeed"
 	| "setPreferredY"
-	| "setHotSpot";
+	| "setHotSpot"
+	| "sendSignal"
+	| "sendMessage";
+
+/**
+ * Nominal room size in Whirled units, used to turn a room-relative location
+ * into the pixel coordinates `std:location_pixel` reports.
+ *
+ * Avatars use those pixels for distance and facing maths — Land Sea Animals
+ * picks its duel opponent that way — so the numbers only have to be
+ * self-consistent, not to match anything in the 3D scene.
+ */
+const ROOM_BOUNDS = { width: 700, height: 500, depth: 400 };
+
+/** How far an avatar must move before the room is told about it, in room units. */
+const MOVE_EPSILON = 0.002;
 
 type Entry = {
 	/**
@@ -72,6 +87,10 @@ type Entry = {
 	ground: number;
 	/** Cleared by `remove`, so a load in flight can give up promptly. */
 	alive: boolean;
+	/** This avatar's id within the room, as the SDK sees it. */
+	entityId: string;
+	/** Room-relative location, [x, y, z] in 0..1. */
+	location: [number, number, number];
 	connected: boolean;
 };
 
@@ -85,6 +104,12 @@ type Entry = {
 const hostListeners = new Map<
 	string,
 	(type: HostEventType, value: any) => void
+>();
+
+/** Synchronous room queries, keyed the same way as `hostListeners`. */
+const hostQueries = new Map<
+	string,
+	(query: string, a: any, b: any) => unknown
 >();
 
 let hostEventInstalled = false;
@@ -102,6 +127,15 @@ function installHostEventBridge() {
 	) => {
 		hostListeners.get(String(hostId))?.(type, value);
 	};
+	// Synchronous counterpart: the SDK's room queries return a value inline, so
+	// this has to answer within the caller's own AVM tick. That is only
+	// possible while every player shares this JS context — see the spec, W4.
+	(window as any).whirledHostQuery = (
+		hostId: string,
+		query: string,
+		a: any,
+		b: any,
+	) => hostQueries.get(String(hostId))?.(query, a, b) ?? null;
 }
 
 export class SwfAssetManager {
@@ -157,6 +191,8 @@ export class SwfAssetManager {
 			stage: { width: 0, height: 0 },
 			ground: 1,
 			alive: true,
+			entityId: String(eid),
+			location: [0.5, 0, 0.5],
 			connected: false,
 		};
 		this.entries.set(eid, entry);
@@ -165,15 +201,41 @@ export class SwfAssetManager {
 			switch (type) {
 				case "connected":
 					entry.connected = true;
+					// Entity awareness, signals and the SDK's own tick timer
+					// are gated on hasControl, which starts false. Nothing
+					// about the room reaches an avatar until this is granted.
+					// Re-assert identity and room size here as well as at load:
+					// the shim registers its callbacks on its own first frame,
+					// which can land after load() resolves.
+					this.call(eid, "whirledSetEntityId", entry.entityId);
+					this.call(
+						eid,
+						"whirledSetRoomBounds",
+						ROOM_BOUNDS.width,
+						ROOM_BOUNDS.height,
+						ROOM_BOUNDS.depth,
+					);
+					this.call(eid, "whirledGrantControl");
+					this.announceEntered(eid);
 					break;
 				case "setPreferredY":
 					entry.preferredY = Number(value);
+					break;
+				case "sendSignal":
+					this.routeSignal(eid, value);
+					break;
+				case "sendMessage":
+					this.routeMessage(eid, value);
 					break;
 				// setState/setOrientation come back when the avatar changes
 				// itself. Nothing consumes them yet; the room is the authority
 				// on both, so acting on them would fight the movement system.
 			}
 		});
+
+		hostQueries.set(String(eid), (query, a, b) =>
+			this.answerQuery(eid, query, a, b),
+		);
 
 		// The shim loads the avatar itself, from the `avatar` flashvar, then
 		// scales it to fill whatever box it is given. The box is set below,
@@ -190,6 +252,15 @@ export class SwfAssetManager {
 			preferredRenderer: "three",
 			parameters: { avatar: url, hostId: String(eid) },
 		});
+
+		this.call(eid, "whirledSetEntityId", entry.entityId);
+		this.call(
+			eid,
+			"whirledSetRoomBounds",
+			ROOM_BOUNDS.width,
+			ROOM_BOUNDS.height,
+			ROOM_BOUNDS.depth,
+		);
 
 		await this.sizeToAvatar(entry);
 		if (!entry.alive) return stream.target.texture;
@@ -239,7 +310,9 @@ export class SwfAssetManager {
 		if (entry === undefined) return false;
 		if (token !== undefined && entry.token !== token) return false;
 		entry.alive = false;
+		this.announceLeft(eid, entry.entityId);
 		hostListeners.delete(String(eid));
+		hostQueries.delete(String(eid));
 		try {
 			entry.player.remove();
 		} catch {
@@ -314,16 +387,14 @@ export class SwfAssetManager {
 
 	/**
 	 * Appearance is one call in the SDK, not a set of independent setters, so
-	 * moving and orientation are pushed together from the cached pair.
-	 * Location stays at the origin: avatars use it for room-relative effects we
-	 * do not model, and the room drives position in three.js instead.
+	 * moving, orientation and location are pushed together from cached values.
 	 */
 	private pushAppearance(entry: Entry) {
 		try {
 			entry.player.whirledSetAppearance?.(
-				0,
-				0,
-				0,
+				entry.location[0],
+				entry.location[1],
+				entry.location[2],
 				entry.orientation,
 				entry.moving,
 				false,
@@ -391,9 +462,158 @@ export class SwfAssetManager {
 		}
 	}
 
+	// ------------------------------------------------------------- the room
+	//
+	// Everything below is what makes two avatars aware of each other. The SDK
+	// never lets one avatar touch another: every call goes to the host and the
+	// host routes it, which is why this lives here rather than in the shim.
+
+	/**
+	 * Tell an avatar where it is, in room-relative coordinates (0..1).
+	 *
+	 * Drives three things at once: the avatar's own appearance, what
+	 * `std:location_pixel` reports about it to others, and the entityMoved
+	 * events other avatars receive.
+	 */
+	public setLocation(eid: number, x: number, y: number, z: number) {
+		const entry = this.entries.get(eid);
+		if (entry === undefined) return;
+		const [px, py, pz] = entry.location;
+		if (
+			Math.abs(px - x) < MOVE_EPSILON &&
+			Math.abs(py - y) < MOVE_EPSILON &&
+			Math.abs(pz - z) < MOVE_EPSILON
+		) {
+			return;
+		}
+		entry.location = [x, y, z];
+		this.pushAppearance(entry);
+		for (const other of this.entries.keys()) {
+			if (other === eid) continue;
+			this.call(other, "whirledEntityMoved", entry.entityId, [x, y, z]);
+		}
+	}
+
+	/** Broadcast a transient signal to every avatar in the room. */
+	private routeSignal(_from: number, value: any) {
+		const [name, arg] = unpackPair(value);
+		if (name === null) return;
+		// Including the sender: Whirled delivers a signal to every entity in
+		// the room, and LSA relies on that to hear its own death notice.
+		for (const eid of this.entries.keys()) {
+			this.call(eid, "whirledSignal", name, arg);
+		}
+	}
+
+	/**
+	 * Deliver a message.
+	 *
+	 * The SDK sends a message to every instance of the sending entity, which
+	 * in a single-client room means the sender itself. Actions arrive here too
+	 * — `sendMessage(name, arg, true)` is how the SDK triggers one — and are
+	 * delivered the same way.
+	 */
+	private routeMessage(from: number, value: any) {
+		const [name, arg] = unpackPair(value);
+		if (name === null) return;
+		this.call(from, "whirledMessage", name, arg);
+	}
+
+	/**
+	 * Answer one of the SDK's synchronous room queries.
+	 *
+	 * The asking entity is not needed yet — both queries are room-wide — but it
+	 * is what a permission check would key on, so the channel carries it.
+	 */
+	private answerQuery(
+		_asker: number,
+		query: string,
+		a: any,
+		b: any,
+	): unknown {
+		switch (query) {
+			case "getEntityIds":
+				// `a` is a type filter; every entity we host is an avatar.
+				if (a !== null && a !== undefined && a !== "avatar") return [];
+				return [...this.entries.values()].map((e) => e.entityId);
+
+			case "getEntityProperty":
+				return this.entityProperty(String(a), String(b));
+
+			default:
+				console.warn(`swf: unknown host query ${query}`);
+				return null;
+		}
+	}
+
+	/**
+	 * Read a property of another entity.
+	 *
+	 * `std:` keys are the host's to answer. Everything else belongs to the
+	 * entity that registered it, so it is forwarded to that avatar's own
+	 * provider — and forwarded live, not from a cache: a property read is not
+	 * necessarily side-effect free. Land Sea Animals kills its opponent by
+	 * reading `landseaanimal:IKillJoo` on it, and the death happens inside the
+	 * target's provider.
+	 */
+	private entityProperty(entityId: string, key: string): unknown {
+		const target = this.byEntityId(entityId);
+		if (target === undefined) return null;
+
+		switch (key) {
+			case "std:location_pixel":
+				return [
+					target.location[0] * ROOM_BOUNDS.width,
+					target.location[1] * ROOM_BOUNDS.height,
+					target.location[2] * ROOM_BOUNDS.depth,
+				];
+			case "std:location_logical":
+				return [...target.location];
+			case "std:orientation":
+				return target.orientation;
+			case "std:type":
+				return "avatar";
+			case "std:dimensions":
+				return [target.stage.width, target.stage.height];
+		}
+
+		return this.callEntry(target, "whirledLookupProperty", key);
+	}
+
+	/** Tell the room an avatar arrived, and the avatar who is already here. */
+	private announceEntered(eid: number) {
+		const entry = this.entries.get(eid);
+		if (entry === undefined) return;
+		for (const [other, target] of this.entries) {
+			if (other === eid) continue;
+			this.call(other, "whirledEntityEntered", entry.entityId);
+			this.call(eid, "whirledEntityEntered", target.entityId);
+		}
+	}
+
+	private announceLeft(eid: number, entityId: string) {
+		for (const other of this.entries.keys()) {
+			if (other === eid) continue;
+			this.call(other, "whirledEntityLeft", entityId);
+		}
+	}
+
+	private byEntityId(entityId: string): Entry | undefined {
+		for (const entry of this.entries.values()) {
+			if (entry.entityId === entityId) return entry;
+		}
+		return undefined;
+	}
+
 	/** Invoke one of the shim's ExternalInterface callbacks. */
 	private call(eid: number, name: string, ...args: unknown[]): unknown {
-		const player = this.entries.get(eid)?.player;
+		const entry = this.entries.get(eid);
+		if (entry === undefined) return undefined;
+		return this.callEntry(entry, name, ...args);
+	}
+
+	private callEntry(entry: Entry, name: string, ...args: unknown[]): unknown {
+		const player = entry.player;
 		if (player === undefined) return undefined;
 		const fn = player[name];
 		if (typeof fn !== "function") return undefined;
@@ -415,6 +635,21 @@ export class SwfAssetManager {
 		}
 		return this.container;
 	}
+}
+
+/**
+ * Unpack a [name, value] pair as it arrives from the shim.
+ *
+ * ExternalInterface hands arrays across as array-likes rather than as real
+ * Arrays in some Ruffle paths, so this is deliberately forgiving.
+ */
+function unpackPair(value: any): [string | null, unknown] {
+	if (value === null || value === undefined) return [null, null];
+	if (Array.isArray(value)) return [String(value[0]), value[1] ?? null];
+	if (typeof value === "object" && "0" in value) {
+		return [String(value[0]), value[1] ?? null];
+	}
+	return [String(value), null];
 }
 
 /** Animation names carry a state_/action_ prefix the SDK does not use. */
