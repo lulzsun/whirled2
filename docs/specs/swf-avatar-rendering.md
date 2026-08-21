@@ -377,31 +377,107 @@ Ruffle's own rasterizer but pointing it at a texture we own — one cross-contex
 copy per _SWF_ frame instead of one readback per _display_ frame. Strictly worse
 than W2, but still much better than today.
 
-### W3 — Worker isolation
+### W3 — Out-of-process isolation
 
-Move every Ruffle player into **one** dedicated Web Worker. The frame buffers
-from W2 are small (kilobytes) and transferable, so this boundary is cheap in a
-way the current `ImageBitmap`-per-avatar boundary is not.
+Revised after M4. The original text called for a Web Worker and dismissed the
+iframe; the reasoning was sound about _opaque_ origins and wrong about iframes
+in general. What follows replaces it. See §16 for the plan.
 
-It is also a better isolation boundary than the current iframe:
+**What we actually have to contain.** A `.swf` on this site is user-uploaded
+content with no MIME or extension check on the `file` field
+([utils/db.go](../../utils/db.go)), and M4 runs it in the page with
+`allowScriptAccess: true`. `ExternalInterface.call` resolves a name against the
+host page, so an uploaded avatar reaches arbitrary page JS. `pb_auth` is
+`HttpOnly`, so a token cannot be read — but same-origin requests carry it
+automatically, so this is account takeover for everyone who walks into the
+room, not merely a data leak. That is the whole threat, and it ends the moment
+Flash executes somewhere that is not our origin.
 
--   A worker has **no DOM at all**, so there is nothing to reach into. The current
-    iframe's defense is a CSP, `sandbox="allow-scripts"`, and a hopeful
-    `window.parent.location.href` probe at the top of `swf.ts`.
--   Flash bytecode never executes on the main thread, so a runaway avatar cannot
-    stall rendering. Today it can. (G4)
--   One wasm module serves all avatars instead of N. Note this is not the same
-    as one Ruffle _player_: W4 argues for that too, and W3 should be built so it
-    stays possible.
+**Any separate origin closes it.** Worker or iframe is a secondary question:
+what matters is that the code executes against an origin that holds no session
+and cannot touch our DOM. Both qualify. They differ in cost.
 
-With W1 in place the avatar no longer needs `ExternalInterface` at all, so
-Ruffle can additionally be configured with `allowScriptAccess: false` and
-networking denied.
+**Why the iframe attempt failed, and why that is not an argument against
+iframes.** §12.4 built the sandbox with `sandbox="allow-scripts"` and no
+`allow-same-origin`, which gives the document an **opaque** origin — and an
+opaque origin is treated as public by Private Network Access, so its subresource
+loads to a loopback address are blocked. `ruffle.js` never loaded in dev. The
+only way to restore it was `allow-same-origin`, which on a same-origin `src`
+hands the frame our own origin back and defeats the entire exercise.
 
-Risk: `ruffle_web` is written against `web_sys` DOM APIs (canvas, audio, input,
-navigator). A worker build needs those paths stubbed or feature-gated. W2's
-backend removes the canvas dependency, which is the largest one, but audio and
-input still need attention. **W3 should not start until W2 lands.**
+The mistake was reaching for an opaque origin at all. An iframe pointed at a
+**different** origin needs no `sandbox` attribute to be isolated: it is
+cross-origin, so it cannot touch our DOM, our storage, or our cookies, and it
+still has a real origin, so its own subresources load normally — in dev as well
+as in production. This is the ordinary pattern for running untrusted code in a
+page, and it is what the sandbox should have been.
+
+**Cross-origin iframe versus worker.**
+
+|                           | Cross-origin iframe                 | Worker                                    |
+| ------------------------- | ----------------------------------- | ----------------------------------------- |
+| Isolation from our origin | Yes                                 | Yes                                       |
+| Ruffle changes needed     | None — it is a normal page          | `ruffle_web` is written against `web_sys` |
+| `<ruffle-player>` element | Works as-is                         | No DOM; drive `ruffle_core` directly      |
+| Audio                     | Works as-is                         | No `AudioContext` on a worker thread      |
+| Element sizing (`§14.2`)  | Works as-is                         | Viewport must be set on the core player   |
+| Blocks our render loop    | No — Chrome site-isolates it        | No                                        |
+| One wasm module for all   | Yes, if one frame hosts all avatars | Yes                                       |
+
+The worker's remaining edge is that it has no DOM at all rather than a DOM we
+cannot reach. That is a smaller difference than the Rust work it costs, and the
+work is speculative: nobody has established that `ruffle_web` builds for a
+worker target. **Build the cross-origin iframe. Keep the boundary abstract
+enough that a worker can be dropped in behind it**, because everything
+expensive — serializing the command stream, turning the control protocol into
+message passing — is shared between the two and none of it is wasted.
+
+**One sandbox for every avatar, never one per avatar.** This is forced, not a
+preference. `whirledHostQuery` answers the SDK's room queries _synchronously_,
+inside the calling avatar's own AVM tick, and `entityProperty` resolves a
+property by calling synchronously into a **different** avatar
+([managers/swf.ts](../../game/client/managers/swf.ts), `whirledLookupProperty`).
+No message boundary can serve a synchronous call. Inside one shared JS context
+it is a function call, exactly as it is today. So the boundary goes between the
+page and _all_ of Flash, not between the page and each avatar — which is also
+what W4 wants.
+
+**The consequence: room state has to be mirrored.** Those synchronous queries
+have to be answerable from inside the sandbox with no round trip, so the host
+pushes room state in (entity ids, locations, orientations, properties) and the
+sandbox answers locally from its copy. The mirror is small and already exists in
+substance — it is `Entry.location`, `Entry.entityId` and friends — but it has to
+move across, and it becomes the sandbox's copy rather than the page's.
+
+**What crosses, and how.** The command stream is already shaped for this. The
+backend packs each frame into one `Float32Array` of fixed-width records and
+hands bulk data over as typed arrays built with `Float32Array::from`, which
+copies into the JS heap rather than viewing wasm memory
+([render/stream/src/js_sink.rs](https://github.com/ruffle-rs/ruffle)). They are
+therefore already detached-transfer-ready: `postMessage` with a transfer list
+moves them without a second copy. Control goes the other way as an RPC: today's
+`this.call(eid, name, …)` is fire-and-forget in every case but two
+(`whirledGetStates`, `whirledGetActions`), and both already sit inside `async`
+methods, so they become awaited messages without changing their callers.
+
+**Flash's own security domains are a separate boundary.** The shim reaches into
+the avatar's `userProps` after loading it, which requires the two to share a
+security domain. Serving the sandbox page from one origin while the avatar file
+comes from another puts the avatar in a different domain and breaks the
+handshake. The sandbox origin should therefore **serve the avatar bytes itself**,
+proxying from the app, so that from Flash's point of view everything is local.
+That proxy is also the natural place to enforce a size cap and to reject
+anything that is not a SWF.
+
+**The origin must be a different site, not a subdomain.** `pb_auth` is host-only
+and `SameSite=Lax`, so a subdomain does not receive it on its own requests — but
+a subdomain is _same-site_, so the cookie still rides along on requests the
+sandbox makes **to** the app origin. CORS stops the response being read and a
+JSON content type forces a preflight, which is defence, not isolation. Two Fly
+apps are genuinely cross-site, because `fly.dev` is on the Public Suffix List.
+In dev, `localhost` and `127.0.0.1` are different hosts with different cookie
+jars and both are private addresses, so the sandbox can be served from the same
+Go server on the other name — no second dev server, and no repeat of §12.4.
 
 ### W4 — One player, one room: avatars that interact
 
@@ -551,7 +627,7 @@ the player to boot — which also removes the last reason for the
 | M3  | Command stream renders a real avatar correctly                                                         | Side-by-side with Ruffle's wgpu output: shapes, bitmaps, masks, color transforms all match |
 | M4  | Integrated: render targets, billboards, outline pass, picking **(done, section 14)**                   | G5 holds; visually indistinguishable from today                                            |
 | M5  | W1b AVM1 path + upload-time AVM/label extraction in `api/stuff.go`                                     | G1b: an AS2 avatar from the corpus renders, animates, and follows its frame labels         |
-| M6  | W3 worker                                                                                              | Zero Flash execution on the main thread; `swfsandbox.tsx` and `swf.ts` deleted             |
+| M6  | W3 out-of-process isolation (§16)                                                                      | Zero Flash execution on our origin; `swfsandbox.tsx` and `swf.ts` deleted                  |
 | M7  | Perf target                                                                                            | G2: 20 avatars at 60 fps                                                                   |
 | M8  | W4 one player per room: entity registry, signals, atlas rendering                                      | Two SDK avatars in a room can see each other and exchange signals (LSA-style)              |
 
@@ -1809,3 +1885,98 @@ shadow at ~18200 covered pixels in the bottom band of the frame, while a y of
 0.2 dropped it to 4839 and returning to zero restored it to 18387. The mechanism
 was never in doubt after that; what remained was finding which of the two
 hiding places applied.
+
+## 16. M6 plan: moving Flash off our origin
+
+Written in response to the merge review. Nothing in §15 is a prerequisite; this
+is independent of the renderer and can start now.
+
+### 16.1 The stopgap, and why it is not the fix
+
+`.github/workflows/fly.yml` deploys on push to `master`, so merging ships M4's
+in-page Flash. Until M6 lands, SWF avatars should be **compiled out of
+production builds** behind `import.meta.env.DEV`, the same shape as the guard
+already in `swfsandbox.tsx`. Vite substitutes it at build time, so the shipped
+bundle contains no branch to flip.
+
+That is a gate, not a fix: it means the feature this branch exists for cannot be
+used by anyone. M6 is what turns it back on.
+
+### 16.2 Shape
+
+One page, served from a second origin, hosting every avatar in the room.
+
+```
+  our origin                        │  sandbox origin
+                                    │
+  SwfAssetManager                   │  sandbox.html
+    add / remove / setState  ──────►│    SwfHostBridge
+    setLocation / setMoving         │      ├─ N × <ruffle-player>   (whirled-host.swf)
+                                    │      ├─ room-state mirror     (answers sync queries)
+    SwfStreamRenderer      ◄────────│      └─ /avatar proxy          (same Flash domain)
+    (three.js, unchanged)           │
+```
+
+The manager keeps its public surface. `SwfStreamRenderer` does not change at
+all: it already consumes the packed-record events, and they arrive the same way
+whether a function call or a `message` event delivered them.
+
+### 16.3 Steps
+
+1. **Draw the seam where Flash is today.** Extract everything in
+   `managers/swf.ts` that touches `RufflePlayer`, `player[name](…)`,
+   `whirledHostEvent` and `whirledHostQuery` behind one interface — call it
+   `SwfHost` — with an in-page implementation that is exactly today's code. No
+   behaviour change, nothing crosses a boundary yet, and the branch stays
+   shippable. This is the step that keeps a worker possible later.
+2. **Move the room-state mirror behind the seam.** The synchronous query
+   handlers (`answerQuery`, `entityProperty`, `routeSignal`, `routeMessage`) and
+   the state they read move to the `SwfHost` side; the page pushes changes in.
+   Still in-page, still synchronous, still no boundary — but now the queries no
+   longer read page state, which is what makes them answerable remotely.
+3. **Build the sandbox page and the message protocol.** A second `SwfHost`
+   implementation that talks `postMessage` to `sandbox.html`. Commands out;
+   stream events and host events back, transferring the typed arrays. Serve
+   `sandbox.html`, `ruffle.js`, the wasm, `whirled-host.swf` and an `/avatar`
+   proxy from the sandbox origin.
+4. **Serve the second origin.** Dev: the same Go server on `localhost` while the
+   app runs on `127.0.0.1`. Production: a second Fly app. The client picks the
+   sandbox origin from a build-time constant next to `API_URL`.
+5. **Tighten the sandbox.** Deny Ruffle networking; cap the proxy's file size and
+   reject non-SWF bytes (`utils/swf` already parses enough to tell); a CSP on
+   the sandbox document that permits only its own origin. `allowScriptAccess`
+   stays on — the shim needs `ExternalInterface` — but it now reaches only the
+   sandbox's own JS, which holds no session and no DOM of ours.
+6. **Delete the old pipeline.** `game/client/swf.ts`, `ui/swfsandbox.tsx`, the
+   `swf.js` entry in `vite.config.ts`, and the misleading global
+   `preferredRenderer: "canvas"` in `main.ts` and `preview.ts`.
+7. **Remove the production gate** from §16.1 and confirm on a deployed build.
+
+### 16.4 Done when
+
+-   An uploaded avatar that calls `ExternalInterface.call("eval", …)` runs it and
+    reaches nothing: no page DOM, no `pb_auth`, no authenticated request it can
+    make. Write that avatar; it is the acceptance test, and it is a better one
+    than any amount of reading.
+-   Two SDK avatars in one room still see each other and exchange signals — the
+    §15 entity registry works through the boundary, which is the thing the
+    synchronous queries put at risk.
+-   Frame cost is unchanged within noise at 5 and 20 avatars against the M4
+    numbers in §14.7.
+-   `grep -r ruffle` finds nothing loaded by the app origin.
+
+### 16.5 Known unknowns
+
+-   **Whether Chrome gives the frame its own process.** Site isolation is the
+    reason a runaway avatar stops blocking our render loop (G4). It is very
+    likely and it is not guaranteed; measure it rather than assuming it, because
+    the G4 claim rests on it entirely.
+-   **Audio.** Still unaddressed (§9). It becomes easier here than in a worker —
+    the sandbox is a normal document with a normal `AudioContext` — but a sound
+    playing from an invisible cross-origin frame needs an autoplay story.
+-   **The proxy is now the upload boundary.** Anything it will not serve, an
+    avatar cannot load. That is the point, but it means the SWF sniffing has to
+    be right or working avatars break.
+-   **`API_URL` reads `window.parent.location`** for the `about:` case, a
+    leftover of the old iframe pipeline that will throw cross-origin. It has to
+    go when the sandbox page gets its own constant.
