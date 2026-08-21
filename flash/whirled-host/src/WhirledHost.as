@@ -374,7 +374,7 @@ public class WhirledHost extends Sprite
     {
         var host :Object = new Object();
 
-        host["setState_v1"] = function (state :String) :void {
+        host["setState_v1"] = function (state :String = "") :void {
             _state = state;
             notifyHost("setState", state);
         };
@@ -390,28 +390,38 @@ public class WhirledHost extends Sprite
             }
             return _state;
         };
-        host["setOrientation_v1"] = function (orient :Number) :void {
+        host["setOrientation_v1"] = function (orient :Number = 0) :void {
             _orient = orient;
             notifyHost("setOrientation", orient);
         };
         host["setLocation_v1"] = function (
-            x :Number, y :Number, z :Number, orient :Number) :void {
+            x :Number = 0, y :Number = 0, z :Number = 0,
+            orient :Number = 0) :void {
             notifyHost("setLocation", [ x, y, z, orient ]);
         };
-        host["setMoveSpeed_v1"] = function (pixelsPerSecond :Number) :void {
+        host["setMoveSpeed_v1"] = function (pixelsPerSecond :Number = 0) :void {
             notifyHost("setMoveSpeed", pixelsPerSecond);
         };
 
         // This is the one that replaces the client's CPU alpha scan: the
         // avatar tells us how far above the floor it wants to sit.
-        host["setPreferredY_v1"] = function (pixels :int) :void {
+        host["setPreferredY_v1"] = function (pixels :int = 0) :void {
             _preferredY = pixels;
             notifyHost("setPreferredY", pixels);
         };
         host["setHotSpot_v1"] = function (
-            x :Number, y :Number, height :Number) :void {
+            x :Number = 0, y :Number = 0, height :Number = NaN) :void {
             notifyHost("setHotSpot", [ x, y, height ]);
         };
+
+        // Every parameter below has a default. That is not decoration: the
+        // SDK vintages disagree about arity, and AVM2 throws
+        // "Argument count mismatch" on a call with too few arguments, which
+        // aborts the avatar's frame script and takes the rest of its
+        // initialization with it. The older WhirledControl calls
+        // setHotSpot_v1 with two arguments where the newer one passes three,
+        // and that alone was enough to stop stock avatars registering their
+        // states. See also the appearanceChanged arity negotiation above.
 
         // ------------------------------------------------- room awareness
         //
@@ -429,7 +439,7 @@ public class WhirledHost extends Sprite
             return (ids as Array) || [];
         };
         host["getEntityProperty_v1"] = function (
-            entityId :String, key :String) :Object {
+            entityId :String = null, key :String = null) :Object {
             var target :String = (entityId == null) ? _entityId : entityId;
             // Our own properties do not need to leave the player.
             if (target == _entityId) {
@@ -437,11 +447,13 @@ public class WhirledHost extends Sprite
             }
             return hostQuery("getEntityProperty", target, key);
         };
-        host["sendSignal_v1"] = function (name :String, arg :Object) :void {
+        host["sendSignal_v1"] = function (
+            name :String = null, arg :Object = null) :void {
             notifyHost("sendSignal", [ name, arg ]);
         };
         host["sendMessage_v1"] = function (
-            name :String, arg :Object, isAction :Boolean) :void {
+            name :String = null, arg :Object = null,
+            isAction :Boolean = false) :void {
             notifyHost("sendMessage", [ name, arg, isAction ]);
         };
 

@@ -1426,3 +1426,29 @@ property provider; the call is observed arriving at the other player.
     players are invisible to `getEntityIds`, as is furniture.
 -   **`getEntityProperty` under a worker.** Still the open question W4 names, and
     the reason M8 ends at one player per room rather than at this registry.
+
+### 15.6 Two bugs found while checking merge readiness
+
+**Host props must give every parameter a default.** Stock `guest.swf` was
+throwing `Error #1063: Argument count mismatch` out of
+`EntityControl.setHotSpot()` on every single load, aborting the avatar's frame-1
+script and taking the rest of its initialization with it. The cause is the same
+two-vintage problem as section 12.2: the older `WhirledControl` calls
+`setHotSpot_v1` with two arguments where the newer one passes three, and an AVM2
+function with fixed parameters throws rather than padding. Every host prop now
+has defaults on its parameters. This was pre-existing, and had been visible in
+the console for as long as the shim has existed.
+
+**Waits must not count time while the tab is hidden.** Everything the loader
+waits for is driven by requestAnimationFrame — the shim's first frame, the
+stream's first composition — and a hidden tab gets no rAF at all. Counting
+wall-clock time meant a room opened in a background tab burned all three
+5-second timeouts and settled for a fallback 200x200 stage and a guessed ground
+line, permanently, with no error anywhere. The timeouts now only count down
+while the document is visible, so a hidden tab waits instead of guessing.
+
+This surfaced while trying to explain the item-upload preview running at 1.5 fps.
+It was not the preview: the Browser pane had been backgrounded, and the main
+game page measured the same 2 fps at that moment, having measured 120 fps
+earlier in the same session. Worth remembering before reading any frame-rate
+number off a pane that is not on screen.

@@ -442,8 +442,8 @@ export class SwfAssetManager {
 	 */
 	private async waitForConnection(entry: Entry) {
 		if (entry.connected) return;
-		const deadline = performance.now() + CONNECT_TIMEOUT_MS;
-		while (!entry.connected && performance.now() < deadline) {
+		const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
+		while (!entry.connected && !expired()) {
 			try {
 				if (entry.player.whirledIsConnected?.()) {
 					entry.connected = true;
@@ -672,6 +672,30 @@ const nextFrame = () =>
 	new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 /**
+ * A timeout that only counts down while the page is visible.
+ *
+ * Every wait in the load path is driven by requestAnimationFrame — the shim's
+ * first frame, the stream's first composition — and a hidden tab gets no rAF
+ * at all. Counting wall-clock time would expire every wait within seconds of
+ * the tab being backgrounded and leave the avatar with a fallback stage size
+ * and a guessed ground line: wrong, permanently, and only on the machines
+ * where someone opened the room in a background tab.
+ *
+ * Waiting longer is the right failure here. A hidden tab is not rendering, so
+ * nothing is waiting on the answer.
+ */
+function visibleDeadline(ms: number): () => boolean {
+	let remaining = ms;
+	let last = performance.now();
+	return () => {
+		const now = performance.now();
+		if (!document.hidden) remaining -= now - last;
+		last = now;
+		return remaining <= 0;
+	};
+}
+
+/**
  * Wait until the loaded avatar reports a stage size.
  *
  * Ruffle's own `metadata` describes the shim, not the SWF the shim loaded, so
@@ -681,8 +705,8 @@ const nextFrame = () =>
 async function waitForStageSize(
 	entry: Entry,
 ): Promise<{ width: number; height: number }> {
-	const deadline = performance.now() + CONNECT_TIMEOUT_MS;
-	while (entry.alive && performance.now() < deadline) {
+	const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
+	while (entry.alive && !expired()) {
 		let size: unknown;
 		try {
 			size = entry.player.whirledGetStageSize?.();
@@ -720,10 +744,10 @@ async function waitForGround(
 	renderer: THREE.WebGLRenderer,
 ): Promise<number> {
 	const stream = entry.stream;
-	const deadline = performance.now() + CONNECT_TIMEOUT_MS;
+	const expired = visibleDeadline(CONNECT_TIMEOUT_MS);
 	let ground = 1;
 
-	while (entry.alive && performance.now() < deadline) {
+	while (entry.alive && !expired()) {
 		if (stream.composedFrames > 0) {
 			ground = stream.measureBottomEdge(renderer);
 			if (ground < 1) break;
