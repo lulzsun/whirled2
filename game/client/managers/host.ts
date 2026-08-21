@@ -220,6 +220,13 @@ export class InPageSwfHost implements SwfHost {
 				`${this.shimUrl}` +
 				`?avatar=${encodeURIComponent(options.avatarUrl)}&hostId=${id}`,
 			allowScriptAccess: true,
+			// The one browser-interaction API CSP cannot reach: navigateToURL
+			// out of the SWF becomes a page navigation, not a fetch. Denied
+			// outright — nothing in an avatar has business steering a browser.
+			// (`allowNetworking` stays at its default: Flash's stricter levels
+			// also disable ExternalInterface, which the shim is built on. The
+			// sandbox document's connect-src is what fences URLLoader in.)
+			openUrlMode: "deny",
 			autoplay: "on",
 			splashScreen: false,
 			unmuteOverlay: "hidden",

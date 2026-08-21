@@ -1923,7 +1923,7 @@ whether a function call or a `message` event delivered them.
 
 ### 16.3 Steps
 
-Steps 1 to 4 have landed. Flash runs in `web/static/sandbox.html`, driven over
+Steps 1 to 5 have landed. Flash runs in `web/static/sandbox.html`, driven over
 `postMessage` from `managers/host-frame.ts`, and the sandbox is on a different
 origin: in dev the page and the sandbox take opposite loopback names
 (`127.0.0.1` vs `localhost`) of the same Go server, so each has its own cookie
@@ -1933,15 +1933,25 @@ so its `frame-ancestors` admits the app. Unset, both fall back to the app's
 own origin — functional, isolating nothing. LAN-IP dev has no second loopback
 name and always falls back.
 
+Step 5's hardening: the sandbox document carries a full CSP (`main.go`,
+`buildSandboxCSP`) whose `connect-src 'self'` is what "deny Ruffle networking"
+means in a browser — every URLLoader/Loader an avatar opens goes through the
+document's fetch and can only reach the sandbox origin, where the only user
+content is `/avatar` (`api/avatar.go`): the proxy that caps size at 8 MiB,
+requires the bytes to parse as a SWF (`utils/swf`), and allowlists upstream
+paths. `resolveAvatarUrl` routes every avatar through it, and `openUrlMode:
+"deny"` on the player closes `navigateToURL`, the one browser-interaction API
+CSP cannot see. In production the proxy fetches from `APP_ORIGIN`; without it
+(and in dev) it loops back to its own server, where the files live.
+
 Verified cross-origin in dev: the page gets `SecurityError` reaching the
-frame's document, avatars load in ~500ms with stage/ground/animation numbers
-identical to in-page, and two avatars compose at 24fps each.
+frame's document; through the proxy and under the CSP, guest.swf connects,
+reports its real 200x200 stage, and streams 38fps with zero CSP violations.
+The proxy 403s non-avatar paths and traversal, 415s non-SWF bytes.
 
 Still open before the §16.1 gate can lift: the production sandbox deployment
-itself, step 5's hardening (the avatar proxy with size cap and SWF sniffing
-belongs there — in dev both names hit one server, so no proxy exists yet), and
-the §16.4 eval-avatar acceptance test against the deployed pair.
-
+itself, step 6's deletion of the old in-page pipeline, and the §16.4
+eval-avatar acceptance test against the deployed pair.
 
 1. **Draw the seam where Flash is today.** Extract everything in
    `managers/swf.ts` that touches `RufflePlayer`, `player[name](…)`,
@@ -2029,3 +2039,23 @@ the SDK handshake would not work. `resolveAvatarUrl` now resolves against
 `SANDBOX_ORIGIN`. In dev that is a rewrite between two names for one Go server;
 in production the sandbox is a separate app and will have to serve those bytes
 itself, which is where step 5's size cap and SWF sniffing belong.
+
+### 16.7 What step 5 turned up
+
+**The sandbox CSP needs `'unsafe-eval'`, and that is fine.** Ruffle implements
+the outbound half of `ExternalInterface` — every `whirledHostEvent` the shim
+sends — as `new Function(...)` in its wasm-bindgen glue. Under a CSP without
+`'unsafe-eval'` the failure is quiet and asymmetric: inbound callbacks keep
+answering (JS calling into wasm needs no eval), so `whirledGetStageSize`
+returns real numbers, while `connected`, `stageSize` and every other event
+never arrives. Measured directly — same probe, only the directive changed.
+Granting it costs nothing here: this document hands avatars arbitrary JS in
+itself by design (`allowScriptAccess` _is_ an eval service), and the
+directives that actually confine an avatar — `connect-src`, `default-src`,
+`frame-ancestors` — stay tight.
+
+For the same reason `allowNetworking` stays at its default: Flash's stricter
+levels also disable `ExternalInterface`, which the shim is built on. The
+network denial lives in `connect-src 'self'`, where the browser enforces it,
+plus `openUrlMode: "deny"` for `navigateToURL` — the one API that becomes a
+page navigation rather than a fetch, which CSP on this document cannot see.

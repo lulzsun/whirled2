@@ -541,16 +541,17 @@ function toStringArray(value: unknown): string[] {
  */
 function resolveAvatarUrl(swfFile: string): string {
 	if (swfFile === "") {
-		return `${SANDBOX_ORIGIN}/static/assets/avatars/guest.swf`;
+		return `${SANDBOX_ORIGIN}/avatar/static/assets/avatars/guest.swf`;
 	}
 	if (swfFile.startsWith("data:")) return swfFile;
 	if (/^https?:/.test(swfFile)) {
 		// An absolute URL from elsewhere in the app; keep the path, take the
-		// sandbox's origin.
+		// sandbox's /avatar proxy — the size-capped, SWF-sniffed route that is
+		// the only way user bytes reach Flash (M6 step 5).
 		const url = new URL(swfFile);
-		return `${SANDBOX_ORIGIN}${url.pathname}${url.search}`;
+		return `${SANDBOX_ORIGIN}/avatar${url.pathname}${url.search}`;
 	}
-	return `${SANDBOX_ORIGIN}${swfFile}`;
+	return `${SANDBOX_ORIGIN}/avatar${swfFile}`;
 }
 
 const nextFrame = () =>

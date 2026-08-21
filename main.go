@@ -17,41 +17,80 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// Origins allowed to frame the Flash sandbox document.
-//
-// PocketBase defaults to X-Frame-Options: SAMEORIGIN, which is right for every
-// page here except one: web/static/sandbox.html exists to be framed by the app,
-// and the whole point of M6 is that the app is somewhere else. See
+// The Content-Security-Policy for the Flash sandbox document. See
 // docs/specs/swf-avatar-rendering.md section 16.
 //
-// This is a list of who may frame it, not of who it may talk to. The sandbox
-// itself pins its parent on first contact and holds nothing worth reaching.
-var sandboxFrameAncestors = "'self'"
+// Two jobs in one header. `frame-ancestors` says who may frame the sandbox:
+// PocketBase defaults to X-Frame-Options: SAMEORIGIN, which is right for every
+// page here except the one that exists to be framed by the app — and the whole
+// point of M6 is that the app is somewhere else, so main.go drops XFO for this
+// document and this directive takes over. Everything else says what the
+// sandbox itself may load: its own origin only, which is what "deny Ruffle
+// networking" actually means in a browser — every URLLoader/Loader an avatar
+// opens goes through the document's fetch, and the document can only reach
+// 'self', where the only user content is the sniffed, size-capped /avatar
+// proxy (api/avatar.go).
+//
+// 'unsafe-eval' is not a concession, it is load-bearing: Ruffle implements the
+// outbound half of ExternalInterface — every whirledHostEvent the shim sends —
+// as `new Function(...)` in its wasm-bindgen glue, and without it the shim
+// goes silent while inbound callbacks keep working (measured: queries
+// answered, zero events). It also costs nothing here: this document grants
+// avatars arbitrary JS in itself by design (`allowScriptAccess` *is* an eval
+// service), and the directives that actually confine an avatar — connect-src,
+// default-src, frame-ancestors — stay tight. 'unsafe-inline' styles are for
+// the styles Ruffle injects into its shadow DOM and, in dev, vite's HMR.
+var sandboxCSP = "default-src 'none'"
 
-func sandboxAncestors(debug bool, localIPs []string) string {
-	if !debug {
-		// One origin in production: the app. Without it, only same-origin
-		// framing works, which is the state M6 is trying to leave.
-		if origin := os.Getenv("APP_ORIGIN"); origin != "" {
-			return "'self' " + origin
+func buildSandboxCSP(debug bool, localIPs []string) string {
+	self := []string{"'self'"}
+	viteHTTP := []string{}
+	viteWS := []string{}
+	ancestors := []string{"'self'"}
+
+	if debug {
+		// Dev serves the app from three places: the Go server on either
+		// loopback spelling, and vite. 'self' covers neither loopback spelling
+		// but its own, and localhost vs 127.0.0.1 is exactly the pairing step
+		// 4 uses to get two origins out of one server. The vite origins are in
+		// script/connect because the dev fallback in sandbox.html loads
+		// sandbox.ts (and its HMR websocket) straight from vite.
+		viteHTTP = []string{"http://127.0.0.1:6969", "http://localhost:6969"}
+		viteWS = []string{"ws://127.0.0.1:6969", "ws://localhost:6969"}
+		ancestors = append(ancestors,
+			"http://127.0.0.1:42069", "http://localhost:42069",
+			"http://127.0.0.1:6969", "http://localhost:6969",
+		)
+		for _, ip := range localIPs {
+			viteHTTP = append(viteHTTP, "http://"+ip+":6969")
+			viteWS = append(viteWS, "ws://"+ip+":6969")
+			ancestors = append(ancestors,
+				"http://"+ip+":42069", "http://"+ip+":6969")
 		}
-		return "'self'"
+	} else if origin := os.Getenv("APP_ORIGIN"); origin != "" {
+		// One framing origin in production: the app. Without it, only
+		// same-origin framing works, which is the state M6 is trying to leave.
+		ancestors = append(ancestors, origin)
 	}
-	// Dev serves the app from three places: the Go server on either loopback
-	// spelling, and vite. 'self' covers neither loopback spelling but its own,
-	// and localhost vs 127.0.0.1 is exactly the pairing step 4 uses to get two
-	// origins out of one server.
-	allowed := []string{
-		"'self'",
-		"http://127.0.0.1:42069",
-		"http://localhost:42069",
-		"http://127.0.0.1:6969",
-		"http://localhost:6969",
+
+	directives := []string{
+		"default-src 'none'",
+		"script-src " + strings.Join(
+			append(append([]string{}, self...), viteHTTP...), " ") +
+			" 'unsafe-eval' 'wasm-unsafe-eval'",
+		"connect-src " + strings.Join(
+			append(append(append([]string{}, self...), viteHTTP...),
+				viteWS...), " "),
+		"img-src 'self' data: blob:",
+		"media-src 'self' blob:",
+		"font-src 'self' data:",
+		"style-src 'self' 'unsafe-inline'",
+		"object-src 'none'",
+		"base-uri 'none'",
+		"form-action 'none'",
+		"frame-ancestors " + strings.Join(ancestors, " "),
 	}
-	for _, ip := range localIPs {
-		allowed = append(allowed, "http://"+ip+":42069", "http://"+ip+":6969")
-	}
-	return strings.Join(allowed, " ")
+	return strings.Join(directives, "; ")
 }
 
 func main() {
@@ -71,7 +110,7 @@ func main() {
 		log.Println("Debug mode enabled")
 		godotenv.Load(".env.local")
 		localIPs, err := utils.GetLocalIP()
-		sandboxFrameAncestors = sandboxAncestors(true, localIPs)
+		sandboxCSP = buildSandboxCSP(true, localIPs)
 		if err == nil {
 			os.Args = append(os.Args, "--http=0.0.0.0:42069", "--origins=http://127.0.0.1:6969,http://"+localIPs[0]+":6969,null")
 		} else {
@@ -79,7 +118,7 @@ func main() {
 		}
 	} else {
 		godotenv.Load()
-		sandboxFrameAncestors = sandboxAncestors(false, nil)
+		sandboxCSP = buildSandboxCSP(false, nil)
 	}
 
 	utils.Start()
@@ -94,6 +133,7 @@ func main() {
 		api.AddProfileRoutes,
 		api.AddRoomRoutes,
 		api.AddStuffRoutes,
+		api.AddAvatarRoutes,
 		server.AddAuthRoutes,
 		// Add more routes here
 	}
@@ -122,9 +162,7 @@ func main() {
 			if strings.HasSuffix(e.Request.URL.Path, "/sandbox.html") {
 				e.Response.Header().Del("X-Frame-Options")
 				e.Response.Header().Set(
-					"Content-Security-Policy",
-					"frame-ancestors "+sandboxFrameAncestors,
-				)
+					"Content-Security-Policy", sandboxCSP)
 			}
 			return apis.Static(os.DirFS("./web/static"), false)(e)
 		})
