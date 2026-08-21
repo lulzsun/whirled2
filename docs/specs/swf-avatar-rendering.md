@@ -390,7 +390,9 @@ It is also a better isolation boundary than the current iframe:
     `window.parent.location.href` probe at the top of `swf.ts`.
 -   Flash bytecode never executes on the main thread, so a runaway avatar cannot
     stall rendering. Today it can. (G4)
--   One wasm instance serves all avatars instead of N.
+-   One wasm module serves all avatars instead of N. Note this is not the same
+    as one Ruffle _player_: W4 argues for that too, and W3 should be built so it
+    stays possible.
 
 With W1 in place the avatar no longer needs `ExternalInterface` at all, so
 Ruffle can additionally be configured with `allowScriptAccess: false` and
@@ -400,6 +402,115 @@ Risk: `ruffle_web` is written against `web_sys` DOM APIs (canvas, audio, input,
 navigator). A worker build needs those paths stubbed or feature-gated. W2's
 backend removes the canvas dependency, which is the largest one, but audio and
 input still need attention. **W3 should not start until W2 lands.**
+
+### W4 — One player, one room: avatars that interact
+
+Not scheduled. Recorded now because it changes what W3 should build, and
+building W3 the obvious way would foreclose it.
+
+The goal is avatars that can see and act on each other — Whirled's
+[Land Sea Animals](https://wiki.whirled.club/wiki/Land_Sea_Animals) are the
+canonical example: avatars that duel, "LAND WHAAALE" shooting "LAND SHAAARK",
+built on a `DuelingLandSeaAnimal(_ctrl, duelState, duelAction, deadState)`
+helper that drives ordinary SDK states and actions. The wiki page is a stub and
+does not document the mechanism, so what follows is read out of the SDK itself
+(decompiled `com.whirled.EntityControl`) rather than from LSA's source.
+
+#### What the SDK actually provides
+
+| Direction     | Call                                      | Notes                                            |
+| ------------- | ----------------------------------------- | ------------------------------------------------ |
+| avatar → host | `getEntityIds(type?)`                     | **returns synchronously**                        |
+| avatar → host | `getMyEntityId()`                         | **returns synchronously**                        |
+| avatar → host | `getEntityProperty(key, entityId?)`       | **returns synchronously**, from _another_ entity |
+| avatar → host | `sendMessage(name, arg)`                  | fire and forget                                  |
+| avatar → host | `sendSignal(name, arg)`                   | fire and forget, transient                       |
+| avatar → host | `updateMemory/lookupMemory/getMemories`   | persistent per-entity state                      |
+| host → avatar | `entityEntered_v1` / `entityLeft_v1`      | gated on `_hasControl`                           |
+| host → avatar | `entityMoved_v2(id, location)`            | gated on `_hasControl`                           |
+| host → avatar | `signalReceived_v1(name, arg)`            | gated on `_hasControl`                           |
+| host → avatar | `messageReceived_v1(name, arg, isAction)` | **not** gated — this is the action path          |
+| host → avatar | `gotControl_v1()`                         | flips `_hasControl` on                           |
+| host → avatar | `lookupEntityProperty_v1(key)`            | how _this_ avatar answers others' queries        |
+
+**The headline: no avatar ever touches another avatar.** Every one of these is a
+call to the host, and the host routes. Two avatars interacting is a feature of
+the room, not of the emulator, so most of this can be built on the current
+one-player-per-avatar topology.
+
+**The second finding, which will otherwise cost a day of confusion:**
+`_hasControl` starts `false`, and entity awareness, signals, chat and the SDK's
+tick timer are all gated on it. An avatar sees nothing of the room until the
+host calls its `gotControl_v1()`. Only `messageReceived_v1` is ungated, which is
+why action triggering works today without any of this.
+
+#### Why one player, then
+
+Three reasons, in increasing order of force.
+
+**Fidelity.** Real Whirled ran an entire room in a single Flash player. LSA was
+authored against that: one frame rate, one tick, one display list. Anything
+authored to assume it will be subtly wrong in N players — most visibly because a
+Flash player has one frame rate, taken from the root SWF, so avatars authored at
+12 and 30 fps currently run at their own rates and would not under one player.
+
+**Cost.** Every player is a full AVM, display list, audio mixer and timer set.
+One player amortizes all of it, and collapses N command streams into one.
+
+**Synchronous cross-entity reads.** `getEntityProperty(key, otherId)` returns
+inline, which means the host has to call the _other_ avatar's
+`lookupEntityProperty_v1` and get a value back within the caller's own AVM tick.
+Today both players are in one JS context, so that is a synchronous JS call into
+a second wasm instance — awkward and re-entrant, but possible. **Under W3 it
+becomes impossible**: a worker boundary is asynchronous, and there is no way to
+turn an `await` into a synchronous AS3 return value.
+
+So W3 and cross-avatar interaction are in tension — unless every avatar lives in
+the same worker _and_ the same player, where the host answers the query with an
+ordinary AS3 call and the tension disappears. That is the real argument, and it
+is why this is written down before W3 starts.
+
+#### What it changes on our side
+
+The shim stops being a per-avatar loader and becomes **the room**: one stage, N
+child `Loader`s, each still in its own `ApplicationDomain`, plus the entity
+registry and message routing the API above needs.
+
+Rendering follows: one player means one stage and one command stream, so the
+per-avatar render target has to go. The natural replacement is a **texture
+atlas** — the shim packs each avatar into a cell of the stage, reports the
+layout, and each billboard samples its own cell through UV offset and scale.
+Avatars are billboards positioned by the ECS, so the stage layout is free to be
+a packing grid rather than anything resembling the room. Open questions to
+settle when this is built: per-cell resolution budget, what happens when an
+avatar draws outside its cell (probably a mask per cell), and the maximum useful
+stage size.
+
+Two costs to weigh honestly:
+
+-   **One failure domain.** A runaway avatar currently stalls only itself. Under
+    one player it stalls the room. W3 contains that to the worker rather than the
+    page, which makes it survivable but not invisible.
+-   **Weaker separation between avatars.** `ApplicationDomain(null)` keeps class
+    definitions from colliding; it is not a security boundary. Two avatars in one
+    AVM can reach each other in ways two AVMs cannot. Since the point of the
+    exercise is letting them interact, this is partly the feature — but "can duel"
+    and "can tamper" are not the same permission, and the host should stay the
+    only route between them.
+
+#### Sequencing
+
+Most of the host work does not depend on the topology and can be built and
+tested now, on the current N-player setup: the entity registry mapping SDK
+entity ids to ECS entities, `gotControl_v1`, signal and message routing, and
+`entityEntered`/`Left`/`Moved` fan-out. Only `getEntityProperty` genuinely needs
+one player.
+
+Two pieces reach past the client and are their own work: signals and messages
+have to be fanned out through the game server to reach other people's clients at
+all, and memories need persistence in PocketBase. Both raise an authority
+question this spec has so far been able to ignore — an avatar that can duel is
+an avatar that can lie about the outcome.
 
 ## 6. Client changes outside the renderer
 
@@ -442,6 +553,7 @@ the player to boot — which also removes the last reason for the
 | M5  | W1b AVM1 path + upload-time AVM/label extraction in `api/stuff.go`                                     | G1b: an AS2 avatar from the corpus renders, animates, and follows its frame labels         |
 | M6  | W3 worker                                                                                              | Zero Flash execution on the main thread; `swfsandbox.tsx` and `swf.ts` deleted             |
 | M7  | Perf target                                                                                            | G2: 20 avatars at 60 fps                                                                   |
+| M8  | W4 one player per room: entity registry, signals, atlas rendering                                      | Two SDK avatars in a room can see each other and exchange signals (LSA-style)              |
 
 The old iframe pipeline stays in place and untouched through M1–M3; the cutover
 happens at M4. There is no interim main-thread-canvas step (decision 2).
