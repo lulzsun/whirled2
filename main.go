@@ -78,7 +78,11 @@ func buildSandboxCSP(debug bool, localIPs []string) string {
 		"script-src " + strings.Join(
 			append(append([]string{}, self...), viteHTTP...), " ") +
 			" 'unsafe-eval' 'wasm-unsafe-eval'",
-		"connect-src " + strings.Join(
+		// `data:` is the upload preview: a file that is not on any server
+		// yet reaches the shim as a data: URL, and Ruffle loads SWFs through
+		// fetch, so the scheme has to be connectable. It grants nothing — a
+		// data: URL carries its own bytes and cannot reach the network.
+		"connect-src data: " + strings.Join(
 			append(append(append([]string{}, self...), viteHTTP...),
 				viteWS...), " "),
 		"img-src 'self' data: blob:",
