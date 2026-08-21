@@ -2142,3 +2142,39 @@ Costs, honestly: Chrome's process isolation for an opaque-origin frame is less
 certain than for a genuinely different site, so §16.5's "measure G4" caveat
 leans harder on measurement; and requests arriving with `Origin: null` must
 never be treated as trusted anywhere on the server (today nothing does).
+
+### 16.9 What the eval-probe caught in production
+
+The §16.4 avatar earned itself on its first real run. Uploaded to a deployed
+build it came up **green in the room and red in the upload preview** — and the
+red was not an artifact of the preview loading a local file, it was a genuine
+hole.
+
+The item-upload preview renders into an `about:srcdoc` iframe
+(`components/preview.gohtml`), deliberately same-origin with the app so
+`previewUpload` can call `iframe.contentWindow.createPlayer`. A srcdoc document
+reports `location.origin === "null"` and an empty `location.hostname` while
+still being same-origin with its parent. `SANDBOX_OPAQUE` compared
+`SANDBOX_ORIGIN` against `window.location.origin`, that comparison failed
+against the string `"null"`, and the sandbox attribute was silently omitted —
+so an untrusted, **not yet uploaded** SWF ran in a frame sharing the app's
+origin, with the previewing user's session. `API_URL` and `SANDBOX_ORIGIN` both
+already handled this case with a `window.parent.location` fallback;
+`SANDBOX_OPAQUE` did not.
+
+The vector is worth naming because it does not require an upload to complete:
+hand someone a .swf, get them to preview it, and the file is running on the app
+origin as them.
+
+Fixed by deciding from `SANDBOX_ORIGIN !== API_URL` (in a single-origin
+deployment `SANDBOX_ORIGIN` literally returns `API_URL`, so the comparison is
+exact) plus the effective hostname read through the parent, and never from
+`window.location.origin`. Measured in a real srcdoc iframe: effective hostname
+resolves through the parent, dev's loopback pair still yields `false`, and the
+host predicate classifies public hosts `true` and every private/loopback form
+`false`.
+
+The lesson generalises past this bug: **every context that runs the client is a
+context the isolation decision has to be right in**, and the preview world is
+easy to forget because it is a second `createWorld` inside a document with no
+URL of its own.

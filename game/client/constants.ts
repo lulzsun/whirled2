@@ -76,10 +76,33 @@ export const SANDBOX_URL = `${SANDBOX_ORIGIN}/static/sandbox.html`;
  * addresses — the frame would load nothing (the original §12.4 failure). Dev
  * keeps its loopback-pair isolation and never takes this path; LAN-IP dev
  * falls through to an unisolated same-origin frame, as before.
+ *
+ * Deliberately decided from `SANDBOX_ORIGIN` vs `API_URL` and the effective
+ * hostname, never from `window.location.origin`. The item-upload preview runs
+ * this module inside an `about:srcdoc` iframe, and a srcdoc document reports
+ * `location.origin === "null"` and an empty `location.hostname` while still
+ * being same-origin with the app. Comparing against `location.origin` there
+ * silently answered "false" and left an untrusted, not-yet-uploaded SWF
+ * running in a frame that shared the app's origin — caught in production by
+ * the §16.4 eval-probe avatar, which came up red in the preview and green in
+ * the room. Read the host the way API_URL does, through the parent.
  */
 export const SANDBOX_OPAQUE = (() => {
-	if (SANDBOX_ORIGIN !== window.location.origin) return false;
-	const hostname = window.location.hostname;
+	// A separately configured sandbox origin is isolated on its own; the
+	// attribute would add nothing and complicate its subresource loads.
+	if (SANDBOX_ORIGIN !== API_URL) return false;
+	let hostname = window.location.hostname;
+	if (!hostname) {
+		try {
+			hostname = window.parent.location.hostname;
+		} catch {
+			// A cross-origin parent we cannot read. API_URL is already broken
+			// in that case, so nothing here works regardless; treat the host
+			// as unknown rather than claiming it is public.
+			hostname = "";
+		}
+	}
+	if (!hostname) return false;
 	const isPrivate =
 		hostname === "localhost" ||
 		hostname.endsWith(".localhost") ||
