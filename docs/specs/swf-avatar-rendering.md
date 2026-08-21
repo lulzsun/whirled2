@@ -1652,3 +1652,70 @@ when that avatar is replaced. That is the current design, not a regression:
 W4's single-player-per-room is unscheduled, and §15 was built deliberately on
 the one-player-per-avatar topology because routing is a host concern that does
 not need it. Only `getEntityProperty` genuinely does.
+
+### 15.11 The shadow was cut off at the billboard, and "" is not null
+
+Two more, both found by testing the wrong layer and then the right one.
+
+**The billboard discarded the shadow.** §15.8 got the shadow into the render
+target and §15.9 got the avatar to stop believing it was airborne, and it still
+did not appear in a room. The composed target was right the whole time; the
+billboard threw the shadow away one step later. Its fragment shader cuts every
+texel below `SWF_ALPHA_TEST`, which was 0.5, and the shadow's alpha peaks at
+about 0.35:
+
+| alpha, bottom fifth of kawaii's frame | texels |
+| ------------------------------------- | ------ |
+| 0.0 – 0.1                             | 8585   |
+| 0.1 – 0.2                             | 4114   |
+| 0.2 – 0.3                             | 2895   |
+| 0.3 – 0.4                             | 2733   |
+| 0.4 – 0.5                             | 465    |
+| 1.0                                   | 21404  |
+
+Every one of those sub-0.5 texels was discarded. The harnesses missed it because
+they read the render target directly with `readRenderTargetPixels`, which is
+upstream of the material — a good reminder that verifying a stage is not
+verifying the pipeline.
+
+The constant was doing two jobs. The outline pass wants the character's
+silhouette and nothing else, so it keeps 0.5 as `SWF_OUTLINE_ALPHA_TEST`;
+otherwise the outline wraps the drop shadow. The billboard now cuts at 0.02 —
+just enough to keep empty frame out of the depth buffer — and blends the rest,
+because avatars contain genuinely semi-transparent artwork and a cutout cannot
+express it.
+
+**`getState_v1` returned "" where Whirled returned null.** Spooky Ghost rendered
+nothing at all, under our renderer _and_ under Ruffle's canvas renderer, which
+ruled out the render path immediately. Its body is a `MovieClipBody`:
+
+```as3
+startState = null;
+if (_ctrl.isConnected()) { startState = _ctrl.getState(); }
+if (startState == null) { startState = "default"; }
+switchToState(startState);          // getMovie("state_" + state), or return
+```
+
+"No state yet" and "the state is the empty string" are different answers, and
+avatars branch on the difference — both `AvatarControl.getState`, which falls
+back to the first registered state, and this, which falls back to `"default"`.
+Returning `""` walks past both and sends the avatar looking for a movie named
+`state_`, which does not exist, so `switchToState` returns having done nothing.
+No error, no artwork. Spooky Ghost registers no states at all, so this is the
+only branch it ever takes.
+
+**Ground offset from the hot spot.** The same avatar exposed a second problem:
+`measureBottomEdge` scans for the lowest row with alpha above 127, which asks
+the wrong question of a translucent avatar. A ghost never reaches it, so the
+scan finds nothing, spends its entire timeout doing so, and falls back to a
+guess. `setHotSpot`'s y _is_ the feet line — Spooky Ghost reports 375 of its
+400-pixel stage — so the ground offset now prefers it and only measures when no
+hot spot was reported. `setPreferredY` still wins over both, being a request
+rather than a description.
+
+**And a bound on the visible-time waits.** §15.6 made loader timeouts count only
+visible time, which is right — a hidden tab gets no rAF, so wall-clock time
+there just burns the timeout. But counting _only_ visible time means a tab that
+is never shown waits forever, and nothing downstream has a timeout of its own,
+so the avatar simply never appears. The waits now expire on either clock, with
+the wall-clock ceiling set well above the visible budget.

@@ -387,6 +387,16 @@ public class WhirledHost extends Sprite
                 if (states.length > 0) {
                     return states[0] as String;
                 }
+                // Null, never "". "No state yet" is a distinct answer from
+                // "the state is the empty string", and avatars branch on it:
+                // both AvatarControl.getState (which falls back to the first
+                // registered state) and MovieClipBody (which falls back to
+                // "default") test for null. Returning "" walks past both and
+                // sends the avatar looking for a movie named "state_", which
+                // it does not have, so it renders nothing at all and reports
+                // no error. Spooky Ghost registers no states, so this is the
+                // only branch it ever takes.
+                return null;
             }
             return _state;
         };
@@ -695,7 +705,8 @@ public class WhirledHost extends Sprite
     protected var _userProps :Object;
     protected var _connected :Boolean = false;
 
-    protected var _state :String = "";
+    /** Null until something sets one; see getState_v1 on why not "". */
+    protected var _state :String = null;
     protected var _orient :Number = 0;
     protected var _preferredY :int = 0;
     protected var _roomWidth :Number = 700;

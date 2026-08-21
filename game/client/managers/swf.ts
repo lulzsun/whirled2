@@ -86,6 +86,11 @@ type Entry = {
 	 * argument. Null when the avatar passes only two, as guest.swf does.
 	 */
 	hotSpotHeight: number | null;
+	/**
+	 * The y of the hot spot in stage pixels: the avatar's own answer to where
+	 * its feet are, which is what the ground offset otherwise has to measure.
+	 */
+	hotSpotY: number | null;
 	/** The avatar's own stage size, which decides its size in the world. */
 	stage: { width: number; height: number };
 	/** Where the feet are, as a fraction from the top of the frame. */
@@ -194,6 +199,7 @@ export class SwfAssetManager {
 			orientation: 0,
 			preferredY: null,
 			hotSpotHeight: null,
+			hotSpotY: null,
 			stage: { width: 0, height: 0 },
 			ground: 1,
 			alive: true,
@@ -235,6 +241,9 @@ export class SwfAssetManager {
 					const height = Number(indexOf(value, 2));
 					entry.hotSpotHeight =
 						Number.isFinite(height) && height > 0 ? height : null;
+					const hotY = Number(indexOf(value, 1));
+					entry.hotSpotY =
+						Number.isFinite(hotY) && hotY > 0 ? hotY : null;
 					break;
 				}
 				case "sendSignal":
@@ -380,11 +389,27 @@ export class SwfAssetManager {
 	 * Measured once at load, when the first frame with any artwork in it has
 	 * been composed.
 	 */
+	/**
+	 * Where the avatar's feet are, as a fraction from the top of its frame.
+	 *
+	 * Preferring what the avatar says over what the frame looks like. Measuring
+	 * it means scanning for the lowest sufficiently opaque row, which asks the
+	 * wrong question of a translucent avatar — Spooky Ghost never reaches any
+	 * sensible opacity threshold, so the scan finds nothing, spends its whole
+	 * timeout doing so, and then guesses. setHotSpot's y is the avatar's own
+	 * answer to the same question and costs nothing.
+	 */
 	public getGroundOffset(eid: number): number {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return 1;
-		if (entry.preferredY !== null && entry.stage.height > 0) {
-			return entry.preferredY / entry.stage.height;
+		if (entry.stage.height > 0) {
+			// setPreferredY is a request about where to sit, so it wins.
+			if (entry.preferredY !== null) {
+				return entry.preferredY / entry.stage.height;
+			}
+			if (entry.hotSpotY !== null) {
+				return Math.min(1, entry.hotSpotY / entry.stage.height);
+			}
 		}
 		return entry.ground;
 	}
@@ -770,13 +795,26 @@ const nextFrame = () =>
 function visibleDeadline(ms: number): () => boolean {
 	let remaining = ms;
 	let last = performance.now();
+	const started = last;
 	return () => {
 		const now = performance.now();
 		if (!document.hidden) remaining -= now - last;
 		last = now;
-		return remaining <= 0;
+		// Two clocks, and either one can expire it. The visible budget is the
+		// point of this: everything being waited for is driven by rAF, which a
+		// hidden tab does not get, so counting wall-clock time there just
+		// burns the timeout and settles for a guess.
+		//
+		// The wall-clock ceiling is the backstop. Counting *only* visible time
+		// means a tab that is never shown waits forever, and a load that never
+		// finishes is worse than one that gives up: nothing downstream has a
+		// timeout of its own, so the avatar simply never appears.
+		return remaining <= 0 || now - started >= ms * VISIBLE_WAIT_CEILING;
 	};
 }
+
+/** How many times its visible budget a wait may spend in wall-clock time. */
+const VISIBLE_WAIT_CEILING = 12;
 
 /**
  * Wait until the loaded avatar reports a stage size.
@@ -831,6 +869,10 @@ async function waitForGround(
 	let ground = 1;
 
 	while (entry.alive && !expired()) {
+		// The avatar answering for itself beats measuring it, and stops a
+		// translucent avatar burning the whole timeout on a scan that will
+		// never find a row it considers solid.
+		if (entry.hotSpotY !== null) return 1;
 		if (stream.composedFrames > 0) {
 			ground = stream.measureBottomEdge(renderer);
 			if (ground < 1) break;

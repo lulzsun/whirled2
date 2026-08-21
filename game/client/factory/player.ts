@@ -287,7 +287,7 @@ export const createSwfAvatar = async (
 	// means outlining the rectangle instead of the character. Point it at the
 	// frame's alpha so it traces the avatar's silhouette.
 	mesh.userData.outlineAlphaMap = texture;
-	mesh.userData.outlineAlphaTest = SWF_ALPHA_TEST;
+	mesh.userData.outlineAlphaTest = SWF_OUTLINE_ALPHA_TEST;
 	// Ties this mesh to the registration it was built from, so teardown can
 	// tell it apart from a replacement worn under the same entity id.
 	mesh.userData.swfToken = world.swfAssetManager.getToken(eid);
@@ -304,12 +304,27 @@ export const createSwfAvatar = async (
 };
 
 /**
- * Alpha below which a SWF billboard's texel is not part of the avatar.
+ * Alpha below which a texel is not part of the avatar's *silhouette*.
  *
- * Shared by the billboard's own cutout and the outline pass, so the outline
- * traces exactly what is drawn.
+ * Used by the outline pass, which wants the character's shape and nothing
+ * else: trace soft texels too and the outline wraps the drop shadow and every
+ * feathered edge instead of the avatar.
  */
-const SWF_ALPHA_TEST = 0.5;
+const SWF_OUTLINE_ALPHA_TEST = 0.5;
+
+/**
+ * Alpha below which a billboard texel is discarded outright.
+ *
+ * Deliberately far lower than the outline's threshold. These used to be one
+ * constant, which meant the billboard threw away everything the outline did
+ * not consider part of the silhouette — including all of a soft drop shadow,
+ * whose alpha peaks around 0.35. The shadow was composed into the render
+ * target correctly and then cut away one step later, at the billboard.
+ *
+ * This only needs to be high enough that fully empty texels take no part in
+ * depth; anything with real coverage is blended instead of cut.
+ */
+const SWF_BILLBOARD_ALPHA_TEST = 0.02;
 
 /** World units per SWF stage pixel. Matches the old pipeline's apparent size. */
 const SWF_WORLD_SCALE = 0.04;
@@ -320,15 +335,20 @@ const SWF_WORLD_SCALE = 0.04;
  * The target holds premultiplied alpha — the stream composes onto a
  * transparent clear — so a stock `MeshBasicMaterial` would draw every
  * partially transparent texel too dark and tinted, most visibly around soft
- * edges and shadows. This undoes the premultiply before the alpha cutout,
- * which keeps the hard-edged, depth-writing look the scene already relies on
- * for sorting against furniture.
+ * edges and shadows. This undoes the premultiply, which leaves straight alpha,
+ * exactly what normal blending expects.
+ *
+ * Blended rather than purely cut out, because avatars genuinely contain
+ * semi-transparent artwork and a cutout has no way to express it. Depth is
+ * still written so the scene keeps sorting avatars against furniture the way
+ * it always has; the low cutout is what keeps empty parts of the frame out of
+ * the depth buffer.
  */
 function createSwfBillboardMaterial(texture: THREE.Texture) {
 	return new THREE.ShaderMaterial({
 		uniforms: {
 			uMap: { value: texture },
-			uAlphaTest: { value: SWF_ALPHA_TEST },
+			uAlphaTest: { value: SWF_BILLBOARD_ALPHA_TEST },
 		},
 		vertexShader: `
 varying vec2 vUv;
@@ -348,7 +368,7 @@ void main() {
 }
 `,
 		side: THREE.DoubleSide,
-		transparent: false,
+		transparent: true,
 		depthWrite: true,
 		depthTest: true,
 	});
