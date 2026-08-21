@@ -14,6 +14,7 @@
 		"build-client": "vite build ./game/client && npm run build-css",
 		"build-ruffle": "node tools/build-ruffle.mjs",
 		"build-shim": "node tools/build-shim.mjs",
+		"build-evil-avatar": "node tools/build-evil-avatar.mjs",
 		"build-server": "go build .",
 		"pretty": "prettier --write ."
 	},

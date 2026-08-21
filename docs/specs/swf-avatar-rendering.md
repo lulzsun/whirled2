@@ -2002,6 +2002,26 @@ acceptance test against that build.
     reaches nothing: no page DOM, no `pb_auth`, no authenticated request it can
     make. Write that avatar; it is the acceptance test, and it is a better one
     than any amount of reading.
+
+    **This avatar exists.** `flash/evil-avatar/src/EvilAvatar.as`, built by
+    `npm run build-evil-avatar` to `web/static/assets/avatars/eval-probe.swf`.
+    It is a battery of escapes — read this document's cookies, read the app's
+    cookies and URL across the frame, reach `window.top` globals, write a flag
+    onto the app page, fire a credentialed XHR at the app's `/api`, and
+    `navigateToURL` the top window — each run through `eval` and each classified
+    from its own return value, then painted onto the avatar's stage: green means
+    every probe was blocked, red means one leaked. Upload it as an avatar on a
+    **deployed** build (the opaque mode is untestable locally, §16.8) and read
+    the stage.
+
+    Validated by negative control while building it: loaded with the sandbox
+    forced _same-origin_ as the page, the `window.top.__evilAvatarBreach = 1`
+    write succeeds — the flag appears in the page — which proves the probes are
+    real and that same-origin is the breach the opaque origin closes. Two probes
+    the avatar cannot self-report, for the tester to confirm on the deployed
+    build: the room must not navigate away (openUrlMode), and
+    `window.__evilAvatarBreach` must be `undefined` in the app page console.
+
 -   Two SDK avatars in one room still see each other and exchange signals — the
     §15 entity registry works through the boundary, which is the thing the
     synchronous queries put at risk.
