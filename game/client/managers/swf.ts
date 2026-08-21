@@ -81,6 +81,11 @@ type Entry = {
 	orientation: number;
 	/** Reported by the avatar through setPreferredY_v1, if it reports one. */
 	preferredY: number | null;
+	/**
+	 * The avatar's own height in stage pixels, from setHotSpot_v1's third
+	 * argument. Null when the avatar passes only two, as guest.swf does.
+	 */
+	hotSpotHeight: number | null;
 	/** The avatar's own stage size, which decides its size in the world. */
 	stage: { width: number; height: number };
 	/** Where the feet are, as a fraction from the top of the frame. */
@@ -188,6 +193,7 @@ export class SwfAssetManager {
 			moving: false,
 			orientation: 0,
 			preferredY: null,
+			hotSpotHeight: null,
 			stage: { width: 0, height: 0 },
 			ground: 1,
 			alive: true,
@@ -221,6 +227,16 @@ export class SwfAssetManager {
 				case "setPreferredY":
 					entry.preferredY = Number(value);
 					break;
+				case "setHotSpot": {
+					// [x, y, height]. The height is the interesting one: it is
+					// what Whirled positioned the name label from. It is
+					// optional in the SDK and arrives as NaN when the avatar
+					// passes only x and y.
+					const height = Number(indexOf(value, 2));
+					entry.hotSpotHeight =
+						Number.isFinite(height) && height > 0 ? height : null;
+					break;
+				}
 				case "sendSignal":
 					this.routeSignal(eid, value);
 					break;
@@ -361,6 +377,31 @@ export class SwfAssetManager {
 			return entry.preferredY / entry.stage.height;
 		}
 		return entry.ground;
+	}
+
+	/**
+	 * How tall the avatar says it is, as a fraction of its own stage height.
+	 *
+	 * The SWF's stage is a canvas, not a silhouette: an avatar authored with
+	 * headroom for a jump animation leaves the top of the frame empty, and a
+	 * nameplate placed at the top of the frame floats far above the character.
+	 * setHotSpot's third argument is the avatar's own answer to "how tall am
+	 * I", and it is what Whirled positioned the name label from — kawaii
+	 * passes `avatar.character.height + 10`, padding included.
+	 *
+	 * Null when the avatar never reported one, in which case the frame is the
+	 * only thing left to measure against.
+	 */
+	public getHeightFraction(eid: number): number | null {
+		const entry = this.entries.get(eid);
+		if (entry === undefined) return null;
+		if (entry.hotSpotHeight === null || entry.stage.height <= 0) {
+			return null;
+		}
+		// Clamped: the height is measured from the hot spot, and an avatar
+		// that reports more than its own frame would put the nameplate
+		// outside the artwork it is supposed to sit above.
+		return Math.min(1, entry.hotSpotHeight / entry.stage.height);
 	}
 
 	public setState(eid: number, state: string) {
@@ -662,6 +703,19 @@ export class SwfAssetManager {
  * ExternalInterface hands arrays across as array-likes rather than as real
  * Arrays in some Ruffle paths, so this is deliberately forgiving.
  */
+/**
+ * Read one element of a value that crossed ExternalInterface.
+ *
+ * An AS3 Array can arrive as a real array or as a plain object with numeric
+ * keys depending on how it was marshalled, so neither form can be assumed.
+ */
+function indexOf(value: any, index: number): unknown {
+	if (value === null || value === undefined) return undefined;
+	if (Array.isArray(value)) return value[index];
+	if (typeof value === "object") return value[String(index)];
+	return undefined;
+}
+
 function unpackPair(value: any): [string | null, unknown] {
 	if (value === null || value === undefined) return [null, null];
 	if (Array.isArray(value)) return [String(value[0]), value[1] ?? null];

@@ -144,7 +144,7 @@ export function createAnimationSystem() {
 				clamp01(
 					(player.position.x + ROOM_EXTENT_X / 2) / ROOM_EXTENT_X,
 				),
-				clamp01(player.position.y / ROOM_EXTENT_Y),
+				snapToFloor(clamp01(player.position.y / ROOM_EXTENT_Y)),
 				clamp01(
 					(player.position.z + ROOM_EXTENT_Z / 2) / ROOM_EXTENT_Z,
 				),
@@ -160,6 +160,21 @@ export function createAnimationSystem() {
  * coordinates the Whirled SDK speaks. Only self-consistency matters: avatars
  * compare each other's coordinates, they do not compare them to the scene.
  */
+/**
+ * Report an avatar standing on the floor as being at exactly zero.
+ *
+ * The SDK's y is height above the floor, and avatars test it for *equality*
+ * with zero rather than comparing against a tolerance: kawaii fades its drop
+ * shadow out whenever `getLogicalLocation()[1] != 0`. Our y comes from a
+ * raycast onto the floor mesh, which lands on 1e-16 rather than 0 about as
+ * often as not, and that is enough to convince an avatar it is airborne.
+ */
+function snapToFloor(y: number): number {
+	return y < GROUNDED_EPSILON ? 0 : y;
+}
+
+const GROUNDED_EPSILON = 1e-4;
+
 const ROOM_EXTENT_X = 20;
 const ROOM_EXTENT_Y = 10;
 const ROOM_EXTENT_Z = 20;

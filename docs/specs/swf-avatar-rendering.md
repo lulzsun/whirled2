@@ -1552,3 +1552,65 @@ alpha multiply was below 1, so a material that once carried a fade and was later
 reused for an opaque draw stayed faded forever. Materials are pooled across
 frames, so this was permanent and depended on draw order — which is what makes
 a bug look like "it only happens after switching states".
+
+### 15.9 Nameplate height, and the floor that was not quite the floor
+
+**The SDK does report a height.** `EntityControl.setHotSpot(x, y, height)` takes
+an optional third argument, and it is what Whirled positioned the name label
+from. `x, y` is the hot spot — the point in the avatar's own coordinates that
+sits at its location, i.e. the feet. `height` is how tall the avatar says it is,
+in its own stage pixels.
+
+This matters because a SWF's stage is a canvas, not a silhouette. An avatar
+authored with headroom for a jump leaves the top of its frame empty, and a
+nameplate placed at the top of the billboard floats well above the character.
+Measured:
+
+| avatar         | stage   | reported height | fraction of frame |
+| -------------- | ------- | --------------- | ----------------- |
+| Kawaii_Basic_F | 300x400 | 235.8           | 0.59              |
+| guest.swf      | 200x200 | none            | —                 |
+| member.swf     | 200x150 | none            | —                 |
+
+kawaii passes `avatar.character.height + 10`, padding included, and uses only
+the bottom 59% of its frame — which is exactly the gap that was showing. The
+two stock avatars call `setHotSpot` with two arguments and report nothing, so
+they keep falling back to the frame; there is nothing better to measure against.
+
+The shim already forwarded this as `notifyHost("setHotSpot", [x, y, height])`
+and `swf.ts` already declared the event — the value was simply dropped. It is
+now kept on the entry and exposed as `getHeightFraction`, which the render
+system multiplies into the billboard's bounding box.
+
+**And the floor.** kawaii's shadow still did not appear in a real room after
+§15.8, for an unrelated reason on our side. The SDK's `y` is height above the
+floor, and avatars test it for _equality_ with zero rather than against a
+tolerance:
+
+```as3
+if (_ctrl.getLogicalLocation()[1] != 0) { onGround = false; }
+...
+if (!onGround && avatar.character.shadow.shadow.alpha > 0) {
+    avatar.character.shadow.shadow.alpha -= 0.1;
+}
+```
+
+Our `y` comes from a raycast onto the floor mesh, which lands on something like
+1e-16 rather than 0 about as often as not. That is enough to convince an avatar
+it is airborne and fade its shadow out. It only bites while _walking_: with the
+avatar standing still, `MOVE_EPSILON` swallows a y that small and nothing is
+pushed at all, which is why it survived the harness and not the room.
+
+`snapToFloor` now reports anything within 1e-4 of the floor as exactly zero.
+Measured by frame coverage, with the avatar walking so the location actually
+reaches it:
+
+| y pushed              | covered pixels | shadow  |
+| --------------------- | -------------- | ------- |
+| standing, never moved | 119977         | on      |
+| 1.1e-17 (raw raycast) | 112548         | **off** |
+| snapped to 0          | 119968         | on      |
+| 0.4 (genuinely up)    | 112548         | off     |
+
+The raw-raycast figure is identical to the airborne one, which is the whole
+bug in a single number. A real jump still turns the shadow off, as it should.

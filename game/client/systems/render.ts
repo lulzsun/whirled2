@@ -159,7 +159,20 @@ export function createRenderSystem(world: World) {
 			if (player !== undefined && nameplate !== undefined) {
 				// Get the player's bounding box
 				const boundingBox = new THREE.Box3().setFromObject(player);
-				const playerHeight = boundingBox.max.y - boundingBox.min.y;
+				let playerHeight = boundingBox.max.y - boundingBox.min.y;
+
+				// A SWF avatar's bounding box is its billboard, and that is
+				// the whole Flash stage — a canvas with however much empty
+				// headroom the author left for a jump or a hat. Measuring the
+				// nameplate against it floats the name well above the
+				// character. The avatar reports its own height through
+				// setHotSpot, so prefer that, as a fraction of the same box.
+				const owner = NameplateComponent.owner[nameplates[x]];
+				if (hasComponent(world, SwfComponent, owner)) {
+					const fraction =
+						world.swfAssetManager.getHeightFraction(owner);
+					if (fraction !== null) playerHeight *= fraction;
+				}
 
 				// Start with the player's world position
 				const nameplateWorldPos = new THREE.Vector3();
