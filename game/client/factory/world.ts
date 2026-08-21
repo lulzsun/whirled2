@@ -77,6 +77,12 @@ export const createWorld = (isPreview: boolean = false): World => {
 		// See the floor plane below: the grid sits a centimetre above it and
 		// would clip the same artwork.
 		(gridHelper.material as THREE.Material).depthWrite = false;
+		// With neither the grid nor the floor writing depth, whichever draws
+		// last wins the overlap, and opaque sorting orders by material id —
+		// the grid's is older, so the black floor was overdrawing the lines.
+		// Draw the grid after the floor; depth testing still lets furniture
+		// occlude it.
+		gridHelper.renderOrder = 1;
 
 		var textureEquirec = textureLoader.load(
 			`${API_URL}/static/assets/backdrops/clear_sky.png`,

@@ -1858,6 +1858,16 @@ the floor black the pixel count is 7046 either way — the shadow is present,
 correct, and indistinguishable. That is not a bug to fix in the renderer, but it
 does mean "the shadow does not show" can have nothing to do with the shadow.
 
+**Follow-up: this fix erased the floor grid.** The grid helper sits a
+centimetre above the plane and had its depth write dropped in the same commit,
+for the same reason. With neither writing depth, the overlap goes to whichever
+draws last — and three's opaque sort orders by material id before depth, the
+grid's material is created first, so the black floor drew second and overdrew
+every line. Before the change the grid's depth write is what defended it. The
+grid now takes `renderOrder = 1` so it draws after the floor; depth testing
+still lets furniture occlude it, and neither writes depth, so the shadow
+artwork below the plane stays visible.
+
 ### 15.14 Height off the ground is not height
 
 `setLocation` was handed the avatar's world y. That is the wrong quantity. The
