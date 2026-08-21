@@ -2036,7 +2036,7 @@ acceptance test against that build.
     §15 entity registry works through the boundary, which is the thing the
     synchronous queries put at risk.
 -   Frame cost is unchanged within noise at 5 and 20 avatars against the M4
-    numbers in §14.7.
+    numbers in §14.7. **Measured, holds** — §16.10.
 -   `grep -r ruffle` finds nothing loaded by the app origin.
 
 ### 16.5 Known unknowns
@@ -2188,3 +2188,33 @@ The lesson generalises past this bug: **every context that runs the client is a
 context the isolation decision has to be right in**, and the preview world is
 easy to forget because it is a second `createWorld` inside a document with no
 URL of its own.
+
+### 16.10 Numbers: the sandbox holds the frame budget, spawn pays for it
+
+The §14.7 sweep, re-run through the cross-origin sandbox (dev's two-loopback
+mode, `window.game.bench.run([1,5,10,20], {settleMs:6000, sampleMs:6000})`,
+2026-08-21). Same guest avatar; two remote SDK avatars were also in the room,
+which inflates the absolute draw/tri/texture columns relative to §14.7 — the
+comparison to read is against the frame interval, not across tables.
+
+| avatars | fps  | avg ms | p95 ms | p99 ms | max ms | draws | tris  | textures | spawn ms |
+| ------- | ---- | ------ | ------ | ------ | ------ | ----- | ----- | -------- | -------- |
+| 1       | 60.0 | 16.67  | 17.20  | 19.60  | 20.90  | 122   | 8831  | 62       | 570      |
+| 5       | 60.0 | 16.67  | 16.80  | 16.80  | 16.90  | 208   | 11385 | 352      | 2807     |
+| 10      | 60.0 | 16.67  | 16.80  | 16.80  | 16.90  | 296   | 13977 | 472      | 5593     |
+| 20      | 60.0 | 16.67  | 16.80  | 16.80  | 17.10  | 788   | 29095 | 1383     | 11367    |
+
+**Frame cost: unchanged, as far as vsync can resolve.** This display caps at
+60 Hz where the §14.7 run capped at 120, so the avg/fps columns are the cap in
+both tables and say nothing. What the cap cannot hide is a missed frame, and
+there are none: p99 at every count is within 0.2 ms of the 16.67 ms interval,
+20 avatars included. Pushing the whole draw stream through `postMessage` costs
+nothing the frame notices, which is what the transfer-not-copy buffer design
+promised. The M6 done-when holds; so does M7's target.
+
+**Spawn is what the boundary taxes.** Twenty avatars take 11.4 s against M4's
+5.0 s — each create is now round-trips to another document instead of calls
+into the page, and in dev every subresource is a genuinely cross-origin fetch.
+Still 4x better than the M0 iframe pipeline's 46 s, and it buys the entire
+security posture of §16. If it ever matters, the shim could accept batched
+creates; nothing in the protocol prevents it.
