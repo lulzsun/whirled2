@@ -378,17 +378,16 @@ export class SwfStreamRenderer {
 				createGradientMaterial(ramp.texture, ramp.spec, matrix);
 		}
 
-		if (draw.kind === KIND_BITMAP && draw.bitmap !== undefined) {
+		if (
+			draw.kind === KIND_BITMAP &&
+			draw.bitmap !== undefined &&
+			draw.matrix !== undefined
+		) {
 			const map = this.bitmaps.get(draw.bitmap);
 			if (map !== undefined) {
-				return () =>
-					new THREE.MeshBasicMaterial({
-						map,
-						transparent: true,
-						depthTest: false,
-						depthWrite: false,
-						side: THREE.DoubleSide,
-					});
+				const matrix = draw.matrix;
+				const repeating = draw.repeating === true;
+				return () => createBitmapMaterial(map, matrix, repeating);
 			}
 		}
 
@@ -398,13 +397,15 @@ export class SwfStreamRenderer {
 		}
 
 		return () =>
-			new THREE.MeshBasicMaterial({
-				vertexColors: true,
-				transparent: true,
-				depthTest: false,
-				depthWrite: false,
-				side: THREE.DoubleSide,
-			});
+			withColorTransform(
+				new THREE.MeshBasicMaterial({
+					vertexColors: true,
+					transparent: true,
+					depthTest: false,
+					depthWrite: false,
+					side: THREE.DoubleSide,
+				}),
+			);
 	}
 
 	/**
@@ -429,7 +430,36 @@ export class SwfStreamRenderer {
 	private registerBitmap(event: BitmapEvent) {
 		const existing = this.bitmaps.get(event.id);
 		if (existing !== undefined) {
-			existing.dispose();
+			// Update in place, keeping the texture *object*.
+			//
+			// A shape's material factory captures its bitmap at shape
+			// registration and every pooled instance holds that same texture.
+			// Swapping in a new object here left all of them sampling a
+			// disposed texture — drawn, opaque, correctly transformed, and
+			// completely invisible, permanently, because materials are pooled
+			// and never rebuilt. Ruffle updates bitmap pixels in place
+			// routinely: it is how a soft drop shadow arrives, which is why
+			// kawaii's shadow never appeared while its geometry was in the
+			// scene the whole time.
+			const image = existing.image as unknown as {
+				data: Uint8Array;
+				width: number;
+				height: number;
+			};
+			if (image.width !== event.width || image.height !== event.height) {
+				// A resize has to throw the GPU allocation away, but the
+				// object identity still has to survive.
+				existing.dispose();
+				existing.image = {
+					data: new Uint8Array(event.rgba),
+					width: event.width,
+					height: event.height,
+				} as unknown as typeof existing.image;
+			} else {
+				image.data.set(event.rgba);
+			}
+			existing.needsUpdate = true;
+			return;
 		}
 
 		const texture = new THREE.DataTexture(
@@ -552,13 +582,15 @@ export class SwfStreamRenderer {
 		if (mesh === undefined) {
 			mesh = new THREE.Mesh(
 				bitmapQuad(),
-				new THREE.MeshBasicMaterial({
-					map: texture,
-					transparent: true,
-					depthTest: false,
-					depthWrite: false,
-					side: THREE.DoubleSide,
-				}),
+				withColorTransform(
+					new THREE.MeshBasicMaterial({
+						map: texture,
+						transparent: true,
+						depthTest: false,
+						depthWrite: false,
+						side: THREE.DoubleSide,
+					}),
+				),
 			);
 			mesh.frustumCulled = false;
 			pool.meshes[pool.used] = mesh;
@@ -725,6 +757,68 @@ function makeRampTexture(data: Uint8Array): THREE.DataTexture {
 	return texture;
 }
 
+const BITMAP_VERTEX_SHADER = `
+uniform mat3 uTextureMatrix;
+varying vec2 vTexCoord;
+void main() {
+	vTexCoord = (uTextureMatrix * vec3(position.xy, 1.0)).xy;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const BITMAP_FRAGMENT_SHADER = `
+uniform sampler2D uTexture;
+uniform int uRepeating;
+uniform vec4 uMult;
+uniform vec4 uAdd;
+varying vec2 vTexCoord;
+void main() {
+	vec2 uv = uRepeating != 0 ? fract(vTexCoord) : clamp(vTexCoord, 0.0, 1.0);
+	vec4 color = texture2D(uTexture, uv);
+	color = clamp(uMult * color + uAdd, 0.0, 1.0);
+	if (color.a < 0.001) discard;
+	gl_FragColor = color;
+}
+`;
+
+/**
+ * Material for a shape filled with a bitmap.
+ *
+ * A bitmap fill is not a textured quad: the fill has its own matrix mapping
+ * shape space to the bitmap, and the tessellated geometry carries no UVs at
+ * all — only position and colour. Drawing it with a stock MeshBasicMaterial
+ * and a `map` therefore sampled texel (0,0) across the whole shape, because
+ * three had no `uv` attribute to read. When that corner texel happened to be
+ * transparent the entire fill vanished, which is exactly what happened to
+ * kawaii's drop shadow: geometry present, material opaque, nothing on screen.
+ *
+ * The matrix arrives already inverted and scaled by the bitmap's size
+ * (`swf_bitmap_to_gl_matrix`), so it maps vertex position straight to 0..1,
+ * the same convention the gradient fills use.
+ */
+function createBitmapMaterial(
+	texture: THREE.Texture,
+	matrix: Float32Array,
+	repeating: boolean,
+): THREE.ShaderMaterial {
+	return new THREE.ShaderMaterial({
+		uniforms: {
+			uTexture: { value: texture },
+			uRepeating: { value: repeating ? 1 : 0 },
+			uMult: { value: new THREE.Vector4(1, 1, 1, 1) },
+			uAdd: { value: new THREE.Vector4(0, 0, 0, 0) },
+			// Columns, not rows — see createGradientMaterial.
+			uTextureMatrix: { value: new THREE.Matrix3().fromArray(matrix) },
+		},
+		vertexShader: BITMAP_VERTEX_SHADER,
+		fragmentShader: BITMAP_FRAGMENT_SHADER,
+		transparent: true,
+		depthTest: false,
+		depthWrite: false,
+		side: THREE.DoubleSide,
+	});
+}
+
 const GRADIENT_VERTEX_SHADER = `
 uniform mat3 uGradientMatrix;
 varying vec2 vGradientUv;
@@ -796,6 +890,39 @@ void main() {
 	gl_FragColor = color;
 }
 `;
+
+/**
+ * Give a stock three material Flash's full colour transform.
+ *
+ * Flash multiplies and offsets all four channels; MeshBasicMaterial can only
+ * express the alpha multiply through `opacity`, so the RGB terms used to be
+ * dropped. That is not a rounding error — an avatar's drop shadow is its own
+ * artwork drawn again under a multiply of about 0.35, so discarding the
+ * multiply does not dim the shadow, it renders it as a second full-brightness
+ * copy of the character.
+ *
+ * Patched into the stock shader rather than replaced by a bespoke one so that
+ * vertex colours, bitmap sampling and three's own uniform handling keep
+ * working. The uniform objects are held on the material so applyRecord can
+ * reach them without going through the compiled program.
+ */
+function withColorTransform<T extends THREE.Material>(material: T): T {
+	const uMult = { value: new THREE.Vector4(1, 1, 1, 1) };
+	const uAdd = { value: new THREE.Vector4(0, 0, 0, 0) };
+	material.onBeforeCompile = (shader) => {
+		shader.uniforms.uMult = uMult;
+		shader.uniforms.uAdd = uAdd;
+		shader.fragmentShader =
+			"uniform vec4 uMult;\nuniform vec4 uAdd;\n" +
+			shader.fragmentShader.replace(
+				"#include <output_fragment>",
+				"#include <output_fragment>" +
+					"\ngl_FragColor = clamp(uMult * gl_FragColor + uAdd, 0.0, 1.0);",
+			);
+	};
+	material.userData.colorTransform = { uMult, uAdd };
+	return material;
+}
 
 function createGradientMaterial(
 	ramp: THREE.DataTexture,
@@ -871,16 +998,34 @@ function applyRecord(mesh: THREE.Mesh, records: Float32Array, base: number) {
 		return;
 	}
 
-	// MeshBasicMaterial can only express the alpha term; full RGB
-	// multiply/add would need its own shader. Alpha alone covers fades, which
-	// is what avatars actually use it for.
-	const alphaMultiply = records[base + 11];
-	if (alphaMultiply < 1) {
-		(material as THREE.MeshBasicMaterial).opacity = Math.max(
-			0,
-			Math.min(1, alphaMultiply),
+	const transform = material.userData.colorTransform as
+		| { uMult: { value: THREE.Vector4 }; uAdd: { value: THREE.Vector4 } }
+		| undefined;
+	if (transform !== undefined) {
+		transform.uMult.value.set(
+			records[base + 8],
+			records[base + 9],
+			records[base + 10],
+			records[base + 11],
 		);
+		transform.uAdd.value.set(
+			records[base + 12],
+			records[base + 13],
+			records[base + 14],
+			records[base + 15],
+		);
+		return;
 	}
+
+	// Fallback for any material without the hook. Set unconditionally, because
+	// materials are pooled across frames: one that once carried a fade and is
+	// later reused for an opaque draw must be told so, or it keeps the old
+	// value forever.
+	const alphaMultiply = records[base + 11];
+	(material as THREE.MeshBasicMaterial).opacity = Math.max(
+		0,
+		Math.min(1, alphaMultiply),
+	);
 }
 
 /**

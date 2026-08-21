@@ -1495,3 +1495,60 @@ rendered frames:
 | guest.swf      | 0 → 19 frames   | 90 → 2 frames        |
 | member.swf     | 0 → 17 frames   | 90 → 2 frames        |
 | Kawaii_Basic_F | 0 → 20 frames   | 90 → 2 frames        |
+
+### 15.8 Bitmap fills were sampling one texel
+
+kawaii's drop shadow never appeared, and its eyes went dark after a state
+change and stayed dark. Both were the same root cause, and it was not the one
+the symptoms suggested.
+
+What the evidence ruled out, in order: the mask/stencil path (turning masks off
+changed the missing-pixel count by 1%), missing commands (every draw the backend
+emits is rendered — the silent-drop counters stay at zero), Ruffle's
+`render_offscreen` gap (this SWF carries no `PlaceObject3Tag`, so no filters and
+no blend modes, and its ActionScript sets none at runtime), and the colour
+transform (the shadow's mesh was in the scene with `mult` of exactly 1). The
+decisive measurement was driving the _same manager_ against Ruffle's canvas
+renderer: the shadow appeared. Since AVM state cannot depend on the render
+backend, the draw had to be present and drawn invisibly.
+
+It was. A bitmap fill is not a textured quad. The tessellated geometry carries
+`position` and `color` and **no UVs at all** — the fill's own matrix is what maps
+shape space onto the bitmap. Drawing it with a stock `MeshBasicMaterial` and a
+`map` meant three had no `uv` attribute to read, so every vertex sampled texel
+(0,0). For the shadow that corner texel is transparent, so the whole fill
+vanished; for other shapes it is whatever colour happens to sit in the corner.
+
+`swf_bitmap_to_gl_matrix` already inverts the matrix and scales it by the
+bitmap's size, so it maps vertex position straight to 0..1 — the same convention
+the gradient fills use, and the backend already forwards it along with
+`smoothed` and `repeating`. Bitmap fills now get their own `ShaderMaterial`
+built on that matrix, mirroring `createGradientMaterial`.
+
+| kawaii, pixels covered in Ruffle but not in ours | before | after |
+| ------------------------------------------------ | ------ | ----- |
+| idle                                             | 20971  | 4269  |
+| walk                                             | 17214  | 2286  |
+| dance                                            | 23762  | 1612  |
+| back to default                                  | 18038  | 1201  |
+
+Mean per-pixel difference over the same frames fell from 5.5/10.3/2.9/2.4 to
+4.8/2.6/2.0/1.7. `smoothed` is still ignored — the texture is shared between
+draws, so per-draw filtering would need per-draw texture views.
+
+Two further bugs fixed alongside, both found by measurement rather than by the
+report:
+
+**The colour transform dropped its RGB terms.** `MeshBasicMaterial` can only
+express the alpha multiply through `opacity`, so the multiply and offset on
+R, G and B were discarded. That is not a subtle shift: 34 of kawaii's draws
+carry a multiply of 0.35, and dropping it renders a darkened copy at full
+brightness. The stock materials are now patched through `onBeforeCompile` to
+apply `clamp(uMult * color + uAdd, 0, 1)`, which keeps three's own vertex-colour
+and bitmap handling intact.
+
+**Pooled materials kept a stale opacity.** `opacity` was only assigned when the
+alpha multiply was below 1, so a material that once carried a fade and was later
+reused for an opaque draw stayed faded forever. Materials are pooled across
+frames, so this was permanent and depended on draw order — which is what makes
+a bug look like "it only happens after switching states".
