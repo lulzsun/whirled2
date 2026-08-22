@@ -12,6 +12,8 @@ import { Object, createObject } from "./object";
 import { Editor } from "../systems/editor";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { SwfAssetManager } from "../managers/swf";
+import { SwfStreamRenderer } from "../managers/stream";
+import { Benchmark } from "../systems/benchmark";
 
 export type World = {
 	players: Map<number, { player: Player; nameplate: Nameplate }>;
@@ -29,7 +31,10 @@ export type World = {
 	network: Network;
 	spineAssetManager: spine.AssetManager;
 	swfAssetManager: SwfAssetManager;
+	/** Live SWF command-stream renderers, composed once per frame. */
+	swfStreams: Set<SwfStreamRenderer>;
 	editor: Editor;
+	benchmark: Benchmark;
 	isPreview: boolean;
 };
 
@@ -69,6 +74,15 @@ export const createWorld = (isPreview: boolean = false): World => {
 		//@ts-ignore
 		gridHelper.ignoreIntersect = true;
 		gridHelper.position.y = 0.01;
+		// See the floor plane below: the grid sits a centimetre above it and
+		// would clip the same artwork.
+		(gridHelper.material as THREE.Material).depthWrite = false;
+		// With neither the grid nor the floor writing depth, whichever draws
+		// last wins the overlap, and opaque sorting orders by material id —
+		// the grid's is older, so the black floor was overdrawing the lines.
+		// Draw the grid after the floor; depth testing still lets furniture
+		// occlude it.
+		gridHelper.renderOrder = 1;
 
 		var textureEquirec = textureLoader.load(
 			`${API_URL}/static/assets/backdrops/clear_sky.png`,
@@ -83,6 +97,21 @@ export const createWorld = (isPreview: boolean = false): World => {
 			new THREE.MeshBasicMaterial({
 				color: 0x0,
 				side: THREE.DoubleSide,
+				// The ground does not write depth.
+				//
+				// A SWF avatar is a flat billboard standing on this plane, and
+				// its artwork does not stop at the feet: Flash avatars draw
+				// their drop shadow *below* the hot spot, because in Whirled's
+				// 2.5D rooms a sprite was composited whole over the floor art.
+				// Standing that sprite up in 3D puts the shadow underneath the
+				// floor plane — kawaii's reaches about half a world unit down
+				// — where an opaque floor depth-tests it away.
+				//
+				// Depth *testing* stays on, so furniture still occludes the
+				// floor normally. Dropping only the write means the floor
+				// cannot hide anything drawn after it, and the only thing
+				// below it is avatar artwork that belongs on the ground.
+				depthWrite: false,
 			}),
 		);
 		planeMesh.position.z = 0;
@@ -196,7 +225,10 @@ export const createWorld = (isPreview: boolean = false): World => {
 	world.spineAssetManager = new spine.AssetManager(
 		`${API_URL}/static/assets/avatars/`,
 	);
-	world.swfAssetManager = new SwfAssetManager();
+	// The manager creates stream renderers, which register themselves here, so
+	// the registry has to exist first.
+	world.swfStreams = new Set();
+	world.swfAssetManager = new SwfAssetManager(world);
 
 	return world;
 };

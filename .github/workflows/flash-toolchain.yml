@@ -1,0 +1,141 @@
+# CI for the two toolchains most contributors never install.
+#
+# The repo commits build outputs — web/static/whirled-host.swf, the probe
+# avatars, and the forked Ruffle bundle — precisely so that a normal checkout
+# needs neither Apache Flex nor a Rust/wasm toolchain (spec §9, "build
+# complexity"). The cost of that convenience is silent bit-rot: nothing
+# proves the committed artifacts still build from source until someone needs
+# to change one. This workflow is that proof.
+#
+# The shim job runs on changes to the Flash sources and monthly; the fork job
+# is manual/monthly only, because a cold Ruffle wasm build is a long one.
+
+name: Flash toolchain
+
+on:
+    pull_request:
+        paths:
+            - "flash/**"
+            - "tools/build-shim.mjs"
+            - "tools/build-evil-avatar.mjs"
+            - "tools/build-signal-probe.mjs"
+            - ".github/workflows/flash-toolchain.yml"
+    push:
+        branches:
+            - master
+        paths:
+            - "flash/**"
+            - "tools/build-shim.mjs"
+            - "tools/build-evil-avatar.mjs"
+            - "tools/build-signal-probe.mjs"
+            - ".github/workflows/flash-toolchain.yml"
+    schedule:
+        # Monthly, to catch the toolchain downloads rotting out from under
+        # us: the Apache archive is stable, the Adobe playerglobal URL less
+        # so, and a loud failure here beats a quiet one at the next real
+        # shim change.
+        - cron: "17 6 1 * *"
+    workflow_dispatch:
+
+jobs:
+    shim:
+        name: Shim and probe avatars (Flex)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: "21"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Cache the Flex SDK and playerglobal
+              uses: actions/cache@v4
+              with:
+                  path: .flex-sdk
+                  key: flex-4.16.1-playerglobal-32.0
+
+            - name: Install Apache Flex 4.16.1 and playerglobal.swc
+              # Mirrors the setup notes in tools/build-shim.mjs. The Apache
+              # distribution deliberately ships without playerglobal.swc
+              # (Adobe-licensed); it is fetched from the same Adobe URL the
+              # Flex SDK Installer used. Neither download is redistributed —
+              # they live only in this runner and its cache.
+              run: |
+                  set -euo pipefail
+                  SDK=.flex-sdk/apache-flex-sdk-4.16.1-bin
+                  if [ ! -x "$SDK/bin/mxmlc" ]; then
+                    curl -fLO https://archive.apache.org/dist/flex/4.16.1/binaries/apache-flex-sdk-4.16.1-bin.tar.gz
+                    mkdir -p .flex-sdk
+                    tar -xzf apache-flex-sdk-4.16.1-bin.tar.gz -C .flex-sdk
+                    rm apache-flex-sdk-4.16.1-bin.tar.gz
+                  fi
+                  PLAYER="$SDK/frameworks/libs/player/32.0"
+                  if [ ! -f "$PLAYER/playerglobal.swc" ]; then
+                    mkdir -p "$PLAYER"
+                    curl -fL -o "$PLAYER/playerglobal.swc" \
+                      https://fpdownload.macromedia.com/get/flashplayer/updaters/32/playerglobal32_0.swc
+                  fi
+
+            - name: Build the shim and both probe avatars
+              run: |
+                  node tools/build-shim.mjs
+                  node tools/build-evil-avatar.mjs
+                  node tools/build-signal-probe.mjs
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+
+            - name: Parse the outputs the way the upload boundary will
+              # utils/swf is the gate every avatar passes through in
+              # api/avatar.go; a build that produces something it rejects is
+              # a failed build, whatever mxmlc said.
+              run: |
+                  go run ./tools/swfinfo web/static/whirled-host.swf
+                  go run ./tools/swfinfo web/static/assets/avatars/eval-probe.swf
+                  go run ./tools/swfinfo web/static/assets/avatars/signal-probe.swf
+
+    fork:
+        name: Ruffle fork (wasm)
+        # Long build, so never on PRs — manual and monthly only. Requires the
+        # fork branch to exist at lulzsun/ruffle#feat/three-command-stream;
+        # until it is pushed there this job fails at checkout, which is
+        # accurate: an unpushed fork is a bus-factor problem CI cannot paper
+        # over.
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        timeout-minutes: 90
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/checkout@v4
+              with:
+                  repository: lulzsun/ruffle
+                  ref: feat/three-command-stream
+                  path: ruffle
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: wasm32-unknown-unknown
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: ruffle
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Install the fork's web dependencies
+              run: npm ci
+              working-directory: ruffle/web
+
+            - name: Build the bundle with the stream backend
+              run: node tools/build-ruffle.mjs
+              env:
+                  RUFFLE_DIR: ${{ github.workspace }}/ruffle

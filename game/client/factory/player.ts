@@ -15,7 +15,6 @@ import * as THREE from "three";
 import * as spine from "@esotericsoftware/spine-threejs";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { API_URL } from "../constants";
-import { createSwfSandbox } from "../ui/swfsandbox";
 
 export type Player = THREE.Group & { eid: number };
 export enum Avatar {
@@ -100,7 +99,13 @@ export const createPlayer = async (
 			break;
 		case Avatar.SWF:
 			entity.add(
-				await createSwfAvatar(world, eid, avatarFile, initialScale),
+				await createSwfAvatar(
+					world,
+					eid,
+					avatarFile,
+					initialScale,
+					name,
+				),
 			);
 			break;
 		default:
@@ -257,43 +262,45 @@ export const createSwfAvatar = async (
 	eid: number,
 	avatarFile: string,
 	initialScale: number = 1,
+	name: string = "",
 ) => {
-	if (avatarFile === "") avatarFile = "/static/assets/avatars/guest.swf";
-	if (!avatarFile.startsWith("data:")) avatarFile = `${API_URL}${avatarFile}`;
+	const texture = await world.swfAssetManager.add(eid, avatarFile, name);
 
-	let mesh: THREE.Mesh<
-		THREE.PlaneGeometry,
-		THREE.MeshBasicMaterial,
-		THREE.Object3DEventMap
-	> = new THREE.Mesh();
-
-	var swfTexture = await world.swfAssetManager.add(eid, avatarFile);
-
-	const textureWidth = swfTexture.image.width;
-	const textureHeight = swfTexture.image.height;
-	const scale = 0.01;
+	// Size the billboard from the SWF's stage, not from the texture. They are
+	// no longer the same thing: the render target's resolution is a quality
+	// knob (RENDER_SCALE x devicePixelRatio), while the avatar's size in the
+	// world is a property of the artwork. The old pipeline conflated them, so
+	// avatars came out half as large on a non-retina display.
+	const stage = world.swfAssetManager.getStageSize(eid) ?? {
+		width: 200,
+		height: 200,
+	};
 	const geometry = new THREE.PlaneGeometry(
-		textureWidth * scale,
-		textureHeight * scale,
+		stage.width * SWF_WORLD_SCALE * initialScale,
+		stage.height * SWF_WORLD_SCALE * initialScale,
 	);
 
-	const material = new THREE.MeshBasicMaterial({
-		map: swfTexture,
-		alphaTest: 0.5,
-		side: THREE.DoubleSide,
-		depthWrite: true,
-		depthTest: true,
-	});
+	const material = createSwfBillboardMaterial(texture);
 
-	const offset = swfTexture.userData.spriteOffset;
-	const spriteHeight = geometry.parameters.height;
-	console.log(offset.bottomNormalized);
-	const spriteBottomLocal = (offset.bottomNormalized - 0.5) * spriteHeight;
+	// Where the avatar's feet are, as a fraction from the top of the frame.
+	// The SDK's own answer (setPreferredY) wins when the avatar gives one,
+	// since it does not wander with the animation; otherwise it is the lowest
+	// opaque row of the first frame that had artwork in it, which is what the
+	// old pipeline measured off the ImageBitmap.
+	const bottomNormalized = world.swfAssetManager.getGroundOffset(eid);
 
-	mesh = new THREE.Mesh(geometry, material);
-	mesh.material.needsUpdate;
-	mesh.position.y = spriteBottomLocal;
-	mesh.scale.y = -1;
+	const mesh = new THREE.Mesh(geometry, material);
+	// The outline pass masks by geometry by default, which for a billboard
+	// means outlining the rectangle instead of the character. Point it at the
+	// frame's alpha so it traces the avatar's silhouette.
+	mesh.userData.outlineAlphaMap = texture;
+	mesh.userData.outlineAlphaTest = SWF_OUTLINE_ALPHA_TEST;
+	// Ties this mesh to the registration it was built from, so teardown can
+	// tell it apart from a replacement worn under the same entity id.
+	mesh.userData.swfToken = world.swfAssetManager.getToken(eid);
+	// Stand the avatar on the ground: shift the quad so its lowest opaque row
+	// sits at the entity's origin.
+	mesh.position.y = (bottomNormalized - 0.5) * geometry.parameters.height;
 	//@ts-ignore
 	mesh.animations = await world.swfAssetManager.getAnimations(eid);
 
@@ -302,6 +309,84 @@ export const createSwfAvatar = async (
 	addComponent(world, AvatarComponent, eid);
 	return mesh;
 };
+
+/**
+ * Alpha below which a texel is not part of the avatar's *silhouette*.
+ *
+ * Used by the outline pass, which wants the character's shape and nothing
+ * else: trace soft texels too and the outline wraps the drop shadow and every
+ * feathered edge instead of the avatar.
+ */
+const SWF_OUTLINE_ALPHA_TEST = 0.5;
+
+/**
+ * Alpha below which a billboard texel is discarded outright.
+ *
+ * Deliberately far lower than the outline's threshold. These used to be one
+ * constant, which meant the billboard threw away everything the outline did
+ * not consider part of the silhouette — including all of a soft drop shadow,
+ * whose alpha peaks around 0.35. The shadow was composed into the render
+ * target correctly and then cut away one step later, at the billboard.
+ *
+ * This only needs to be high enough that fully empty texels take no part in
+ * depth; anything with real coverage is blended instead of cut.
+ */
+const SWF_BILLBOARD_ALPHA_TEST = 0.02;
+
+/** World units per SWF stage pixel. Matches the old pipeline's apparent size. */
+const SWF_WORLD_SCALE = 0.04;
+
+/**
+ * Billboard material for a SWF render target.
+ *
+ * The target holds premultiplied alpha — the stream composes onto a
+ * transparent clear — so the texel is fed to premultiplied blending
+ * (`ONE, ONE_MINUS_SRC_ALPHA`) exactly as it comes out, with no conversion.
+ *
+ * Emphatically *not* by dividing the colour back out and blending normally.
+ * That division is unbounded as alpha approaches zero: at the 0.02 cutout a
+ * texel's colour is multiplied by fifty, so every soft edge and the whole of a
+ * drop shadow blow out to white, and they shimmer as the artwork moves and
+ * different texels land in the low-alpha band. Premultiplied blending is what
+ * premultiplied data wants, and it has no such failure mode.
+ *
+ * Blended rather than purely cut out, because avatars genuinely contain
+ * semi-transparent artwork and a cutout has no way to express it. Depth is
+ * still written so the scene keeps sorting avatars against furniture the way
+ * it always has; the low cutout is what keeps empty parts of the frame out of
+ * the depth buffer.
+ */
+function createSwfBillboardMaterial(texture: THREE.Texture) {
+	return new THREE.ShaderMaterial({
+		uniforms: {
+			uMap: { value: texture },
+			uAlphaTest: { value: SWF_BILLBOARD_ALPHA_TEST },
+		},
+		vertexShader: `
+varying vec2 vUv;
+void main() {
+	vUv = uv;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`,
+		fragmentShader: `
+uniform sampler2D uMap;
+uniform float uAlphaTest;
+varying vec2 vUv;
+void main() {
+	vec4 texel = texture2D(uMap, vUv);
+	if (texel.a < uAlphaTest) discard;
+	// Already premultiplied; the material blends it as such.
+	gl_FragColor = texel;
+}
+`,
+		side: THREE.DoubleSide,
+		transparent: true,
+		premultipliedAlpha: true,
+		depthWrite: true,
+		depthTest: true,
+	});
+}
 
 const createSpineMesh = (
 	assetManager: spine.AssetManager,

@@ -133,18 +133,58 @@ export function createAnimationSystem() {
 				player.quaternion.z,
 				world.camera.quaternion.w,
 			);
-			for (let y = 0; y < player.children.length; y++) {
-				const material: THREE.MeshBasicMaterial =
-					//@ts-ignore
-					player.children[y]?.material?.map;
-				if (material === undefined || material === null) continue;
-				material.needsUpdate = true;
-			}
+			// Tell the room where this avatar is. The SDK reports it to other
+			// avatars as std:location_pixel, which is what an avatar that
+			// interacts with its neighbours navigates by — Land Sea Animals
+			// picks its duel opponent from these coordinates. The manager
+			// ignores movement too small to matter, so this is cheap to call
+			// every frame.
+			world.swfAssetManager.setLocation(
+				eid,
+				clamp01(
+					(player.position.x + ROOM_EXTENT_X / 2) / ROOM_EXTENT_X,
+				),
+				groundedHeight(),
+				clamp01(
+					(player.position.z + ROOM_EXTENT_Z / 2) / ROOM_EXTENT_Z,
+				),
+			);
 		}
 
 		return world;
 	});
 }
+
+/**
+ * Room size in world units, for mapping a position into the 0..1 room
+ * coordinates the Whirled SDK speaks. Only self-consistency matters: avatars
+ * compare each other's coordinates, they do not compare them to the scene.
+ */
+/**
+ * The SDK's y: how far off the ground the avatar is, not how high up it is.
+ *
+ * These are not the same quantity, and we were reporting the wrong one. Our
+ * world y is the height of whatever surface the avatar walked onto, which a
+ * raycast can land anywhere from 1e-16 (the floor plane) to the top of a
+ * piece of furniture. Standing on a table is still standing on the ground.
+ *
+ * Avatars test this for *equality* with zero rather than against a tolerance
+ * — kawaii fades its drop shadow out whenever `getLogicalLocation()[1] != 0`
+ * — so any leftover height reads as "airborne" and stays that way.
+ *
+ * Nothing in the game can leave the ground: movement is a raycast onto a
+ * surface, so an avatar is by construction standing on something. If flight
+ * or jumping is ever added, this wants a real airborne flag from the movement
+ * system, not a world-space height.
+ */
+function groundedHeight(): number {
+	return 0;
+}
+
+const ROOM_EXTENT_X = 20;
+const ROOM_EXTENT_Z = 20;
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 export function getStateNames(
 	anims: THREE.AnimationClip[] | undefined,

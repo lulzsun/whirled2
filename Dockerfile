@@ -1,6 +1,13 @@
 # Stage 1: Build client
 FROM node:20 as build-client
 
+# Origin of the Flash sandbox deployment (a second instance of this app on a
+# different site), baked into the client bundle. Unset, SWF avatars fall back
+# to running Flash on the app's own origin, which isolates nothing — see
+# docs/specs/swf-avatar-rendering.md section 16.
+ARG VITE_SANDBOX_ORIGIN
+ENV VITE_SANDBOX_ORIGIN=${VITE_SANDBOX_ORIGIN}
+
 WORKDIR /build
 
 COPY package.json package-lock.json ./
