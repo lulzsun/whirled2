@@ -18,6 +18,16 @@ import { FromSandbox, ToSandbox } from "./protocol";
 /** How long to wait for the sandbox document to come up. */
 const READY_TIMEOUT_MS = 15000;
 
+/** How often the throttle watchdog samples the sandbox's frame rate. */
+const WATCHDOG_INTERVAL_MS = 2000;
+
+/**
+ * Per-avatar stream frames per second below which the sandbox counts as
+ * render-throttled. Healthy is the stage rate, ~24+; Chrome's stuck throttle
+ * is ~1. Low enough that a legitimately slow SWF never trips it.
+ */
+const STARVED_FPS = 4;
+
 type Instance = Pick<SwfInstanceOptions, "onStream" | "onEvent">;
 
 export class FrameSwfHost implements SwfHost {
@@ -39,6 +49,19 @@ export class FrameSwfHost implements SwfHost {
 	private backlog: { message: ToSandbox; transfer: Transferable[] }[] = [];
 
 	private instances = new Map<string, Instance>();
+
+	// ----- throttle watchdog state (see checkThrottle) -----
+	/** Stream messages since the watchdog last sampled. */
+	private streamEvents = 0;
+	/** Set once any stream message has arrived; the watchdog waits for it. */
+	private everStreamed = false;
+	/** Consecutive starved samples; two in a row means stuck, not jank. */
+	private starvedSamples = 0;
+	/** Alternates the nudge so consecutive nudges are real mutations. */
+	private nudgeParity = false;
+	/** One warning per stuck episode, not one per nudge. */
+	private warnedStuck = false;
+	private readonly watchdogId: number;
 	private pending = new Map<
 		number,
 		{ resolve: (value: unknown) => void; reject: (error: Error) => void }
@@ -68,29 +91,39 @@ export class FrameSwfHost implements SwfHost {
 		if (opaque) {
 			this.frame.setAttribute("sandbox", "allow-scripts");
 		}
-		// Inside the viewport, deliberately. The obvious thing is to park it
-		// off-screen the way the players themselves are parked, and it does not
-		// work: Chrome throttles requestAnimationFrame in a cross-origin iframe
-		// that intersects nothing, and Ruffle's whole tick rides on rAF. An
-		// avatar in an off-screen frame emitted 2 draw frames in 6 seconds
-		// where an in-page one emits 48 in 2. So it stays on-screen and is
-		// made invisible instead — the same trick the old in-page pipeline's
-		// #ruffle container used, before M6 removed it.
+		// Every part of this style is a throttle scar; change nothing here
+		// without re-measuring against spec §16.13. Chrome has (at least) two
+		// separate mechanisms that quietly park a cross-origin frame's rAF at
+		// ~1 fps, and Ruffle's whole tick rides on rAF:
 		//
-		// 8x8, not 1x1, and opacity is the only thing hiding it. At 1x1,
-		// Chrome's cross-origin frame throttling has a second bite: a frame
-		// classified while the tab is hidden (an avatar loading mid tab-switch)
-		// comes back render-throttled and STAYS at ~1 fps after the tab is
-		// shown again, until a style mutation forces reclassification.
-		// Measured: stuck at 1 fps at 1x1; any resize unthrottles; 8x8 never
-		// sticks. Firefox never throttled either shape.
+		// Intersection/size: a frame that intersects nothing, or a 1x1 frame
+		// classified while the tab is hidden, is render-throttled — the
+		// latter STICKS after the tab is shown until a style mutation forces
+		// reclassification. Hence inside the viewport and 8x8.
+		//
+		// Paint: a frame that never contributes pixels (opacity:0, or parked
+		// behind the page at z-index:-1) is eventually marked hidden outright
+		// — DevTools/CDP attach churn is one reclassification moment — and
+		// once marked, no amount of resizing or opacity fiddling revives it;
+		// only actually painting does. Measured live: stuck at 1 fps through
+		// dozens of resize nudges, back to 24 the moment the frame sat on top
+		// with nonzero opacity. Hence topmost and opacity 0.01: an 8x8 dot at
+		// 1% opacity is imperceptible, pointer-events:none keeps it inert,
+		// and the frame stays genuinely painted every frame.
+		//
+		// Firefox throttles none of these shapes.
 		this.frame.style.cssText =
 			"position:fixed;left:0;top:0;width:8px;height:8px;border:0;" +
-			"opacity:0;pointer-events:none;z-index:-1;";
+			"opacity:0.01;pointer-events:none;z-index:2147483647;";
 		this.frame.src = sandboxUrl;
 
 		window.addEventListener("message", this.onMessage);
 		document.body.appendChild(this.frame);
+
+		this.watchdogId = window.setInterval(
+			this.checkThrottle,
+			WATCHDOG_INTERVAL_MS,
+		);
 
 		window.setTimeout(() => {
 			if (this.ready) return;
@@ -151,6 +184,7 @@ export class FrameSwfHost implements SwfHost {
 
 	/** Tear down the sandbox itself. Every avatar in it goes with it. */
 	public dispose() {
+		window.clearInterval(this.watchdogId);
 		window.removeEventListener("message", this.onMessage);
 		this.failAllPending(new Error("swf sandbox disposed"));
 		this.instances.clear();
@@ -215,6 +249,8 @@ export class FrameSwfHost implements SwfHost {
 			}
 
 			case "stream":
+				this.streamEvents++;
+				this.everStreamed = true;
 				this.instances.get(message.id)?.onStream(message.event);
 				return;
 
@@ -223,6 +259,82 @@ export class FrameSwfHost implements SwfHost {
 					.get(message.id)
 					?.onEvent(message.type, message.value);
 				return;
+		}
+	};
+
+	/**
+	 * Detect Chrome's stuck render-throttle and mutate our way out of it.
+	 *
+	 * The 8x8 opacity-hidden shape (spec §16.13) stopped the tab-switch
+	 * trigger, but Chrome can reclassify the frame as throttleable during
+	 * other layout/overlay churn — opening or closing DevTools, or hovering
+	 * the frame in the Elements panel, reproduces it — and once stuck it
+	 * stays at ~1 fps indefinitely. The triggers keep growing, but the cure
+	 * is constant and measured: any style mutation forces reclassification.
+	 * So instead of chasing triggers, watch the symptom. Stream frames ride
+	 * the sandbox's rAF (one submit_frame per tick), so their arrival rate
+	 * *is* the sandbox's frame rate; when it starves while the tab is
+	 * visible and avatars exist, nudge the frame's width and let Chrome
+	 * re-decide. A nudge on a healthy frame is harmless, so the detector
+	 * only has to be conservative, not perfect.
+	 */
+	private checkThrottle = () => {
+		const frames = this.streamEvents;
+		this.streamEvents = 0;
+		// Debug visibility for throttle reports: the last few samples, newest
+		// last, as frames-per-second per avatar. Read it from the console as
+		// window.swfSandboxStats when chasing a Chrome reclassification.
+		const stats = ((window as any).swfSandboxStats ??= {
+			samples: [] as number[],
+			nudges: 0,
+		});
+		stats.samples.push(
+			this.instances.size === 0
+				? -1
+				: frames / this.instances.size / (WATCHDOG_INTERVAL_MS / 1000),
+		);
+		if (stats.samples.length > 30) stats.samples.shift();
+		if (!this.ready || this.failed !== null) return;
+		// Nothing to measure until an avatar has produced frames at all —
+		// a slow first load is not a throttle.
+		if (this.instances.size === 0 || !this.everStreamed) {
+			this.starvedSamples = 0;
+			return;
+		}
+		// Hidden tabs are throttled legitimately; only count starvation
+		// while visible. (Coming back stuck after a tab switch still gets
+		// caught: the next two visible samples starve and trip the nudge.)
+		if (document.visibilityState !== "visible") {
+			this.starvedSamples = 0;
+			return;
+		}
+		const perAvatar =
+			frames / this.instances.size / (WATCHDOG_INTERVAL_MS / 1000);
+		if (perAvatar >= STARVED_FPS) {
+			this.starvedSamples = 0;
+			if (this.warnedStuck) {
+				// Recovered: put the rescue opacity back to imperceptible.
+				this.frame.style.opacity = "0.01";
+				this.warnedStuck = false;
+			}
+			return;
+		}
+		this.starvedSamples++;
+		if (this.starvedSamples < 2) return;
+		// Two cures for two mechanisms: the resize forces the intersection
+		// classifier to re-decide, and full opacity forces a real paint for
+		// the paint-based one. Both are restored by the healthy branch above.
+		this.nudgeParity = !this.nudgeParity;
+		this.frame.style.width = this.nudgeParity ? "9px" : "8px";
+		this.frame.style.opacity = "1";
+		stats.nudges++;
+		if (!this.warnedStuck) {
+			this.warnedStuck = true;
+			console.warn(
+				"swf: sandbox frame looks render-throttled " +
+					`(${perAvatar.toFixed(1)} fps/avatar); ` +
+					"nudging its style to force reclassification",
+			);
 		}
 	};
 

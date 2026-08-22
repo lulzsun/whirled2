@@ -2354,6 +2354,36 @@ combination. Worth re-checking on the deployed opaque frame after any
 Chrome-driven regression report; the dev loopback frame reproduced this one
 faithfully.
 
+**Addendum (2026-08-22): there is a second mechanism, and it is paint-based.**
+The 8x8 shape did not end it. Chrome DevTools re-throttled the frame — opening
+or closing DevTools, or hovering the sandbox iframe in the Elements panel,
+sometimes immediately (Firefox DevTools does not) — and this variant was then
+reproduced and dissected live through the CDP-driven browser pane, which
+attaches the same way DevTools does. Measured on the stuck state, page rAF at
+120 fps, sandbox at 1: resizes do nothing (dozens of 8px/9px toggles), opacity
+0.01 alone does nothing, 256x256 alone does nothing. What cured it, instantly
+and every time, was making the frame actually paint: topmost z-index plus
+nonzero opacity, 1 → 24 fps within a sample. The old shape never painted — an
+`opacity:0` frame at `z-index:-1` behind an opaque page contributes no pixels
+— so Chrome eventually marks the out-of-process frame hidden outright, and
+once marked, only painting revives it. This is a different mechanism from
+16.13's intersection/size classifier, whose stuck state a resize _did_ cure.
+
+The frame is therefore now kept genuinely painted at all times: 8x8, `opacity:
+0.01`, `z-index:2147483647`, `pointer-events:none` — an imperceptible inert
+dot in the corner. Under that shape the same CDP/DevTools churn produces only
+transient dips that recover by themselves; nothing sticks. `FrameSwfHost` also
+keeps a watchdog as backstop for whatever Chrome ships next: stream frames
+ride the sandbox's rAF (one `submit_frame` per tick), so their arrival rate is
+the sandbox's frame rate; two consecutive 2 s samples under 4 fps per avatar
+while the tab is visible trigger a rescue (width toggle for the classifier
+variant, opacity 1 for the paint variant, restored on recovery) and one
+console warning per episode. Debug counters live at `window.swfSandboxStats`.
+The standing constraint now reads: **the sandbox frame must stay inside the
+viewport, a few pixels square, and genuinely painted — topmost, nonzero
+opacity — never `display:none`, `visibility:hidden`, `opacity:0`, negative
+z-index, or 1x1.**
+
 ### 16.14 The guest stood on its chin: SDK answers now outrank the scan
 
 The guest ghost surfaced both halves of a placement question at once: its
