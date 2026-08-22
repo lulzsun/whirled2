@@ -2318,3 +2318,33 @@ immutable), so a rebuilt probe needs a cache-busting query or the sandbox
 replays the hour-old one. Undefined-shaped results — keys missing entirely
 rather than null — are the tell.
 
+### 16.13 G4 measured, and the frame that came back at 1 fps
+
+**G4 holds on the deployed build.** Measured by hand (2026-08-21): the
+sandbox subframe runs in a different OS process from the page
+(`chrome://process-internals`), and ending that process in Chrome's task
+manager froze every avatar while the room kept rendering and responding.
+That is G4 verbatim — Flash died, the render loop did not notice — and it
+closes the §16.5 known unknown for the opaque-origin shape.
+
+**The same testing found Chrome re-throttling the sandbox frame.** Tab away
+from the room and back, and every avatar crawled at ~1 fps — Firefox
+unaffected. Reproduced in dev and narrowed by mutating the live frame:
+opacity is irrelevant, z-index is irrelevant, size is the trigger. A 1x1
+cross-origin frame whose classification happens while the tab is hidden (an
+avatar loading mid tab-switch was the reliable reproduction) comes back
+render-throttled and stays so indefinitely; any style mutation forces
+reclassification and un-throttles it. Chrome ships this policy family as
+`ThrottleDisplayNoneAndVisibilityHiddenCrossOriginIframes` — `opacity:0`
+is not on that list, and measurement agrees it never triggered alone.
+
+The frame is now 8x8 (still `opacity:0`, still `z-index:-1`), which never
+sticks: an avatar loaded entirely in a hidden tab came up at a steady 24 fps
+the moment the tab was shown, after a brief Ruffle catch-up burst. This
+amends §16.6's "1x1 and invisible" — the standing constraint is now _inside
+the viewport, a few pixels square, and hidden by opacity alone_: never
+`display:none` or `visibility:hidden` (the named policy), never 1x1
+(classification while hidden sticks), and never opacity on a 1x1 in
+combination. Worth re-checking on the deployed opaque frame after any
+Chrome-driven regression report; the dev loopback frame reproduced this one
+faithfully.

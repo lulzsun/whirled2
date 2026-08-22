@@ -76,8 +76,16 @@ export class FrameSwfHost implements SwfHost {
 		// where an in-page one emits 48 in 2. So it stays on-screen and is made
 		// invisible instead, which is what web/templates/pages/index.gohtml
 		// already does with its own #ruffle container.
+		//
+		// 8x8, not 1x1, and opacity is the only thing hiding it. At 1x1,
+		// Chrome's cross-origin frame throttling has a second bite: a frame
+		// classified while the tab is hidden (an avatar loading mid tab-switch)
+		// comes back render-throttled and STAYS at ~1 fps after the tab is
+		// shown again, until a style mutation forces reclassification.
+		// Measured: stuck at 1 fps at 1x1; any resize unthrottles; 8x8 never
+		// sticks. Firefox never throttled either shape.
 		this.frame.style.cssText =
-			"position:fixed;left:0;top:0;width:1px;height:1px;border:0;" +
+			"position:fixed;left:0;top:0;width:8px;height:8px;border:0;" +
 			"opacity:0;pointer-events:none;z-index:-1;";
 		this.frame.src = sandboxUrl;
 
