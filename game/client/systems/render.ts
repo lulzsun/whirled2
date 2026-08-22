@@ -77,6 +77,20 @@ export function createRenderSystem(world: World) {
 
 	world.composer = composer;
 
+	// The canvas size this system last computed, attribute-for-attribute.
+	// Someone else writes these attributes too: imgui's Impl.Init (and its
+	// window-resize listener) sets `canvas.width = canvas.scrollWidth` — CSS
+	// pixels, no devicePixelRatio — on this same canvas. At 100% OS scaling
+	// the numbers coincide and nothing shows; at 125%/150% the clobber
+	// shrinks the buffer under a viewport still sized for dpr, and the scene
+	// draws scaled and cropped with every overlay misaligned. Init resolves
+	// asynchronously after the initial sizing, so the page LOADS into that
+	// state and stays there until the next resize. The render loop compares
+	// against these and re-runs setGameSize when they drift, which heals the
+	// Init clobber after one frame and any future clobberer the same way.
+	let sizedWidth = 0;
+	let sizedHeight = 0;
+
 	const setGameSize = () => {
 		// https://threejs.org/manual/#en/responsive
 		// https://stackoverflow.com/a/60506772
@@ -102,6 +116,8 @@ export function createRenderSystem(world: World) {
 		world.renderer.setSize(width, height, false);
 		world.composer?.setSize(width, height);
 		world.renderer.setViewport(0, 0, width, height);
+		sizedWidth = width;
+		sizedHeight = height;
 	};
 
 	var observer = new window.ResizeObserver(() => {
@@ -142,6 +158,12 @@ export function createRenderSystem(world: World) {
 
 	return defineSystem((world: World) => {
 		if (isDragging || isZooming) {
+			setGameSize();
+		} else if (
+			canvas.width !== sizedWidth ||
+			canvas.height !== sizedHeight
+		) {
+			// See sizedWidth above: someone clobbered the canvas attributes.
 			setGameSize();
 		}
 
