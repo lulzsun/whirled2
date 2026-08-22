@@ -74,6 +74,9 @@ export function createRenderSystem(world: World) {
 	);
 	playerOutlinePass.visibleEdgeColor.set(0x57aed1);
 	playerOutlinePass.hiddenEdgeColor.set(0x57aed1);
+	playerOutlinePass.edgeStrength = 6.0;
+	playerOutlinePass.edgeGlow = 1.0;
+	playerOutlinePass.edgeThickness = 2.0;
 	playerOutlinePass.overlayMaterial.blending = THREE.CustomBlending;
 	composer.addPass(playerOutlinePass);
 
