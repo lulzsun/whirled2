@@ -296,7 +296,13 @@ export class InPageSwfHost implements SwfHost {
 	private invoke(id: string, name: string, args: unknown[]): unknown {
 		const player = this.instances.get(id)?.player;
 		if (player === undefined) return undefined;
-		const fn = player[name];
+		// The shim registers its callbacks with the host id in the name, and
+		// that is what makes cross-avatar routing correct: Ruffle dispatches
+		// an inbound callback to the currently executing movie whenever the
+		// NAME matches one of its own, whichever player was called. Unique
+		// names confine that re-entrant path to the one movie it is correct
+		// for. See registerExternalInterface in WhirledHost.as.
+		const fn = player[`${name}_${id}`] ?? player[name];
 		// Callbacks are not registered until the shim's first frame, so a
 		// missing one means "too early", not "wrong name".
 		if (typeof fn !== "function") return undefined;

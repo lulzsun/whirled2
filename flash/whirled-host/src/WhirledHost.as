@@ -65,8 +65,6 @@ public class WhirledHost extends Sprite
             });
         }
 
-        registerExternalInterface();
-
         var url :String = null;
         if (loaderInfo != null && loaderInfo.parameters != null) {
             url = loaderInfo.parameters["avatar"] as String;
@@ -84,6 +82,10 @@ public class WhirledHost extends Sprite
                 _entityId = id;
             }
         }
+
+        // After the flashvars: the callback names carry the host id.
+        registerExternalInterface();
+
         if (url != null && url.length > 0) {
             loadAvatar(url);
         }
@@ -575,37 +577,54 @@ public class WhirledHost extends Sprite
     /**
      * The fixed ExternalInterface surface. Identical for every avatar, which
      * is the entire point of this shim.
+     *
+     * Every name is suffixed with the host id, and that is load-bearing, not
+     * namespacing hygiene. Ruffle's web glue keeps one CURRENT_CONTEXT for
+     * the whole wasm module: while any movie is inside an outbound
+     * ExternalInterface.call, an inbound callback is first looked up by NAME
+     * in that movie's own registry, whichever player element was actually
+     * called (web/src/lib.rs, call_exposed_callback). With every shim
+     * registering the same names, a signal fanned out while the sender was
+     * still inside sendSignal ran every delivery in the sender — and an
+     * LSA-style kill read killed the asker instead of the target. Unique
+     * names make the cross-movie lookup miss, which drops Ruffle to its
+     * per-player path and routes correctly; the same movie's re-entrant
+     * calls (an avatar receiving its own signal mid-send, getState round
+     * trips) still match and still work. This is the inbound twin of what
+     * whirledHostEvent(hostId, ...) already does outbound, and for the same
+     * reason.
      */
     protected function registerExternalInterface () :void
     {
         if (!ExternalInterface.available) {
             return;
         }
+        var suffix :String = (_hostId == "") ? "" : "_" + _hostId;
         try {
-            ExternalInterface.addCallback("whirledLoadAvatar", loadAvatar);
-            ExternalInterface.addCallback("whirledUnloadAvatar", unloadAvatar);
-            ExternalInterface.addCallback("whirledSetAppearance", setAppearance);
-            ExternalInterface.addCallback("whirledSetState", setState);
-            ExternalInterface.addCallback("whirledGetStates", getStates);
-            ExternalInterface.addCallback("whirledGetActions", getActions);
-            ExternalInterface.addCallback("whirledPlayAction", playAction);
-            ExternalInterface.addCallback("whirledSetEntityId", setEntityId);
-            ExternalInterface.addCallback("whirledGrantControl", grantControl);
-            ExternalInterface.addCallback("whirledSignal", receiveSignal);
-            ExternalInterface.addCallback("whirledMessage", receiveMessage);
-            ExternalInterface.addCallback("whirledEntityEntered", entityEntered);
-            ExternalInterface.addCallback("whirledEntityLeft", entityLeft);
-            ExternalInterface.addCallback("whirledEntityMoved", entityMoved);
-            ExternalInterface.addCallback("whirledLookupProperty", lookupProperty);
-            ExternalInterface.addCallback("whirledSelfTest", selfTest);
-            ExternalInterface.addCallback("whirledAvatarSpoke", avatarSpoke);
-            ExternalInterface.addCallback("whirledIsConnected", isConnected);
-            ExternalInterface.addCallback("whirledGetPreferredY", getPreferredY);
-            ExternalInterface.addCallback("whirledSetRoomBounds", setRoomBounds);
-            ExternalInterface.addCallback("whirledSetViewerName", setViewerName);
-            ExternalInterface.addCallback("whirledGetStageSize", getStageSize);
-            ExternalInterface.addCallback("whirledGetCapabilities", getCapabilities);
-            ExternalInterface.addCallback("whirledGetSdkVintage", getSdkVintage);
+            ExternalInterface.addCallback("whirledLoadAvatar" + suffix, loadAvatar);
+            ExternalInterface.addCallback("whirledUnloadAvatar" + suffix, unloadAvatar);
+            ExternalInterface.addCallback("whirledSetAppearance" + suffix, setAppearance);
+            ExternalInterface.addCallback("whirledSetState" + suffix, setState);
+            ExternalInterface.addCallback("whirledGetStates" + suffix, getStates);
+            ExternalInterface.addCallback("whirledGetActions" + suffix, getActions);
+            ExternalInterface.addCallback("whirledPlayAction" + suffix, playAction);
+            ExternalInterface.addCallback("whirledSetEntityId" + suffix, setEntityId);
+            ExternalInterface.addCallback("whirledGrantControl" + suffix, grantControl);
+            ExternalInterface.addCallback("whirledSignal" + suffix, receiveSignal);
+            ExternalInterface.addCallback("whirledMessage" + suffix, receiveMessage);
+            ExternalInterface.addCallback("whirledEntityEntered" + suffix, entityEntered);
+            ExternalInterface.addCallback("whirledEntityLeft" + suffix, entityLeft);
+            ExternalInterface.addCallback("whirledEntityMoved" + suffix, entityMoved);
+            ExternalInterface.addCallback("whirledLookupProperty" + suffix, lookupProperty);
+            ExternalInterface.addCallback("whirledSelfTest" + suffix, selfTest);
+            ExternalInterface.addCallback("whirledAvatarSpoke" + suffix, avatarSpoke);
+            ExternalInterface.addCallback("whirledIsConnected" + suffix, isConnected);
+            ExternalInterface.addCallback("whirledGetPreferredY" + suffix, getPreferredY);
+            ExternalInterface.addCallback("whirledSetRoomBounds" + suffix, setRoomBounds);
+            ExternalInterface.addCallback("whirledSetViewerName" + suffix, setViewerName);
+            ExternalInterface.addCallback("whirledGetStageSize" + suffix, getStageSize);
+            ExternalInterface.addCallback("whirledGetCapabilities" + suffix, getCapabilities);
+            ExternalInterface.addCallback("whirledGetSdkVintage" + suffix, getSdkVintage);
         } catch (e :Error) {
             // Ruffle without script access, or a security sandbox that
             // disallows it. The avatar still renders; it just cannot be driven.

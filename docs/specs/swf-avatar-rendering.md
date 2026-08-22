@@ -2035,7 +2035,9 @@ acceptance test against that build.
 
 -   Two SDK avatars in one room still see each other and exchange signals — the
     §15 entity registry works through the boundary, which is the thing the
-    synchronous queries put at risk.
+    synchronous queries put at risk. **Measured, holds — after fixing a
+    routing bug the check itself uncovered**, one that predates M6 and that
+    §15.4's console-driven verification could not see. §16.11.
 -   Frame cost is unchanged within noise at 5 and 20 avatars against the M4
     numbers in §14.7. **Measured, holds** — §16.10.
 -   `grep -r ruffle` finds nothing loaded by the app origin.
@@ -2223,3 +2225,64 @@ into the page, and in dev every subresource is a genuinely cross-origin fetch.
 Still 4x better than the M0 iframe pipeline's 46 s, and it buys the entire
 security posture of §16. If it ever matters, the shim could accept batched
 creates; nothing in the protocol prevents it.
+
+### 16.11 The signal exchange holds — once signals stopped delivering to the sender
+
+The §16.4 two-avatar criterion, verified 2026-08-21 with a purpose-built probe
+avatar rather than two logged-in sessions — §15.5 is explicit that signals and
+entity events reach only avatars in one client (cross-client fan-out is M8),
+so what the criterion actually tests is the registry working through the
+sandbox boundary, and a probe page driving `FrameSwfHost` exercises exactly
+that seam.
+
+**The probe** (`flash/signal-probe/`, `npm run build-signal-probe`,
+committed like the eval-probe) is an avatar that speaks the `controlConnect`
+handshake by hand and, on a "probe:run" message, runs the §15.4 table from
+inside the AVM, modeled call-for-call on `DuelingLandSeaAnimal.as`: it reads
+its _own_ `std:location_pixel` through the host (which the shim routes to the
+avatar's own provider, so the probe implements `std:` keys the way
+`EntityControl` does), enumerates the room, reads the other avatar's custom
+key, performs the kill — a property read whose side effect is the _target's_
+provider re-reading its own duel state and calling `setState("dead")`, all
+inside the asker's synchronous query — and sends the death notice, an Object
+payload guarded by `hasControl()`. Everything observed is returned as JSON
+through `whirledLookupProperty("probe:results")`. Twenty checks; all pass.
+
+**What the first run caught.** Eighteen passed; the two failures unmasked a
+bug older than M6. Each avatar's kill read ran in _its own_ provider — A's
+"kill B" killed A — and each death notice was delivered back to its sender
+twice, never to the other avatar. Yet the same invocations routed perfectly
+when they originated from page messages (`entityEntered`/`Moved`/`Left`).
+The difference is nesting. Ruffle's web glue keeps one `CURRENT_CONTEXT` for
+the whole wasm module (`web/src/lib.rs`): while any movie is inside an
+outbound `ExternalInterface.call`, an inbound callback is looked up by
+**name** in that movie's own registry first, whichever player element was
+actually called, and every shim registered the same names. So any delivery
+made while the sender was still inside `sendSignal` — which is every
+avatar-initiated signal and every cross-avatar property read — ran in the
+sender. §15.4 verified this path from the console, where nothing is ever
+nested, and saw it work.
+
+**The fix is the outbound trick, inbound.** `whirledHostEvent(hostId, ...)`
+already exists because every player shares one JS namespace; the shim's
+callbacks now carry the same id (`whirledSignal_A`), and
+`InPageSwfHost.invoke` calls the suffixed name. A cross-movie call no longer
+matches the executing movie's registry, so Ruffle falls through to its
+per-player path and routes correctly; the same movie's re-entrant calls — an
+avatar receiving its own signal mid-send, `getState` round trips — still
+match `CURRENT_CONTEXT` and still work. No fork change: the alternative was
+teaching `call_exposed_callback` to compare the stored context's player
+against the called instance, and a shim rebuild is a lighter tool than a
+wasm rebuild for the same routing outcome. The unique names are load-bearing;
+a future "cleanup" back to fixed names would silently reintroduce self-kills.
+
+**Also fixed, found in the probe's logs:** the room announced not-yet-present
+occupants to a newcomer, so an avatar heard `entityEntered` twice for a
+neighbour that entered after it — once while the neighbour was still
+control-less and invisible, once for real. `enter` now announces only
+present occupants, and `update` fans out movement only between present ones,
+which is the principle the room already stated for the other direction.
+
+The probe page itself was a throwaway and is deleted; the probe avatar and
+its build script are committed for the M8 network fan-out work, which will
+need the same battery run across two real clients.
