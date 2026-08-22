@@ -613,8 +613,18 @@ export class SwfStreamRenderer {
 	 * row 0 of the buffer is the *bottom* of the artwork — which is exactly
 	 * where the feet are, hence scanning upward from it.
 	 */
-	public measureBottomEdge(renderer: THREE.WebGLRenderer): number {
-		if (this.width === 0 || this.height === 0) return 1;
+	/**
+	 * Both edges of the drawn artwork, as fractions from the top of the
+	 * frame: `bottom` is the lowest sufficiently opaque row (the ground
+	 * line), `top` the highest (where a nameplate belongs just above). `1`
+	 * for both means nothing crossed the threshold. One readback serves the
+	 * two directional scans.
+	 */
+	public measureEdges(renderer: THREE.WebGLRenderer): {
+		bottom: number;
+		top: number;
+	} {
+		if (this.width === 0 || this.height === 0) return { bottom: 1, top: 1 };
 		const pixels = new Uint8Array(this.width * this.height * 4);
 		renderer.readRenderTargetPixels(
 			this.target,
@@ -624,15 +634,30 @@ export class SwfStreamRenderer {
 			this.height,
 			pixels,
 		);
-		for (let row = 0; row < this.height; row++) {
+		// The target's row 0 is the bottom of the image.
+		const rowOpaque = (row: number): boolean => {
 			const start = row * this.width * 4;
 			for (let x = 0; x < this.width; x++) {
-				if (pixels[start + x * 4 + 3] > 127) {
-					return (this.height - 1 - row) / this.height;
-				}
+				if (pixels[start + x * 4 + 3] > 127) return true;
+			}
+			return false;
+		};
+		let bottom = 1;
+		for (let row = 0; row < this.height; row++) {
+			if (rowOpaque(row)) {
+				bottom = (this.height - 1 - row) / this.height;
+				break;
 			}
 		}
-		return 1;
+		if (bottom === 1) return { bottom: 1, top: 1 };
+		let top = 1;
+		for (let row = this.height - 1; row >= 0; row--) {
+			if (rowOpaque(row)) {
+				top = (this.height - 1 - row) / this.height;
+				break;
+			}
+		}
+		return { bottom, top };
 	}
 
 	/**

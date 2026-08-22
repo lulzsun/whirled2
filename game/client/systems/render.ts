@@ -165,8 +165,9 @@ export function createRenderSystem(world: World) {
 				// the whole Flash stage — a canvas with however much empty
 				// headroom the author left for a jump or a hat. Measuring the
 				// nameplate against it floats the name well above the
-				// character. The avatar reports its own height through
-				// setHotSpot, so prefer that, as a fraction of the same box.
+				// character. The avatar's setHotSpot height wins when given,
+				// with the measured artwork top as the fallback; either way
+				// a fraction of the same box.
 				const owner = NameplateComponent.owner[nameplates[x]];
 				if (hasComponent(world, SwfComponent, owner)) {
 					const fraction =

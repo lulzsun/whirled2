@@ -94,6 +94,12 @@ type Entry = {
 	stage: { width: number; height: number };
 	/** Where the feet are, as a fraction from the top of the frame. */
 	ground: number;
+	/**
+	 * Highest drawn row seen while measuring the ground, as a fraction from
+	 * the top of the frame. `1` means never measured. The nameplate's
+	 * fallback when the avatar reports no height of its own.
+	 */
+	artTop: number;
 	/** Cleared by `remove`, so a load in flight can give up promptly. */
 	alive: boolean;
 	/** This avatar's id within the room, as the SDK sees it. */
@@ -144,6 +150,7 @@ export class SwfAssetManager {
 			hotSpotY: null,
 			stage: { width: 0, height: 0 },
 			ground: 1,
+			artTop: 1,
 			alive: true,
 			entityId: String(eid),
 			location: [0.5, 0, 0.5],
@@ -297,34 +304,30 @@ export class SwfAssetManager {
 	}
 
 	/**
-	 * Where to stand the avatar, as a fraction from the top of its frame.
-	 *
-	 * Measured once at load, when the first frame with any artwork in it has
-	 * been composed.
-	 */
-	/**
 	 * Where the avatar's feet are, as a fraction from the top of its frame.
 	 *
-	 * Preferring what the avatar says over what the frame looks like. Measuring
-	 * it means scanning for the lowest sufficiently opaque row, which asks the
-	 * wrong question of a translucent avatar — Spooky Ghost never reaches any
-	 * sensible opacity threshold, so the scan finds nothing, spends its whole
-	 * timeout doing so, and then guesses. setHotSpot's y is the avatar's own
-	 * answer to the same question and costs nothing.
+	 * The SDK's own answers outrank our measurement whenever the avatar gave
+	 * one (decided 2026-08-22, superseding §15.12's ordering): setPreferredY
+	 * is a request, setHotSpot's y is the author's declared ground contact,
+	 * and the alpha scan is a guess that reads a floating avatar wrong — the
+	 * guest ghost's body bottom crosses the threshold at 0.64 of the frame
+	 * while its declared hot spot (and its shadow) sit at 0.9, so trusting
+	 * the scan stood it on its chin. The cost, accepted: an avatar that
+	 * reports its container origin as its hot spot now stands wrong; §15.12
+	 * priced that the other way, and the guest is the avatar we actually
+	 * ship. The measurement remains the answer for avatars that never call
+	 * setHotSpot at all.
 	 */
 	public getGroundOffset(eid: number): number {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return 1;
 		if (entry.preferredY !== null && entry.stage.height > 0) {
-			// A request about where to sit, so it outranks both descriptions.
 			return entry.preferredY / entry.stage.height;
 		}
-		// Measurement first, because it describes what is actually drawn.
-		// `1` means it found nothing to measure.
-		if (entry.ground < 1) return entry.ground;
 		if (entry.hotSpotY !== null && entry.stage.height > 0) {
 			return Math.min(1, entry.hotSpotY / entry.stage.height);
 		}
+		// `1` means the scan found nothing to measure.
 		return entry.ground;
 	}
 
@@ -338,19 +341,27 @@ export class SwfAssetManager {
 	 * I", and it is what Whirled positioned the name label from — kawaii
 	 * passes `avatar.character.height + 10`, padding included.
 	 *
-	 * Null when the avatar never reported one, in which case the frame is the
-	 * only thing left to measure against.
+	 * When the avatar never reported one, the measured top edge of its
+	 * artwork stands in — the height from the standing line to the highest
+	 * drawn row — so a character in a mostly-empty frame (the guest ghost
+	 * gives a hot spot but no height) still gets its nameplate just above
+	 * its head rather than at the top of the canvas. Null only when neither
+	 * answer exists.
 	 */
 	public getHeightFraction(eid: number): number | null {
 		const entry = this.entries.get(eid);
 		if (entry === undefined) return null;
-		if (entry.hotSpotHeight === null || entry.stage.height <= 0) {
-			return null;
+		if (entry.hotSpotHeight !== null && entry.stage.height > 0) {
+			// Clamped: the height is measured from the hot spot, and an
+			// avatar that reports more than its own frame would put the
+			// nameplate outside the artwork it is supposed to sit above.
+			return Math.min(1, entry.hotSpotHeight / entry.stage.height);
 		}
-		// Clamped: the height is measured from the hot spot, and an avatar
-		// that reports more than its own frame would put the nameplate
-		// outside the artwork it is supposed to sit above.
-		return Math.min(1, entry.hotSpotHeight / entry.stage.height);
+		const ground = this.getGroundOffset(eid);
+		if (entry.artTop < ground) {
+			return ground - entry.artTop;
+		}
+		return null;
 	}
 
 	public setState(eid: number, state: string) {
@@ -655,14 +666,17 @@ async function waitForGround(
 	let attempts = 0;
 	while (entry.alive && !expired()) {
 		if (stream.composedFrames > 0) {
-			ground = stream.measureBottomEdge(renderer);
-			if (ground < 1) break;
+			const edges = stream.measureEdges(renderer);
+			ground = edges.bottom;
+			if (ground < 1) {
+				entry.artTop = Math.min(entry.artTop, edges.top);
+				break;
+			}
 			// Measuring looks for the lowest row the avatar draws solidly, a
 			// question a translucent avatar has no answer to: Spooky Ghost
 			// never reaches the opacity threshold, so this would scan until
 			// the timeout and then guess. Once it has had a fair chance, let
-			// the avatar's own hot spot answer instead — but only then, since
-			// what is actually drawn beats what the avatar claims.
+			// the avatar's own hot spot answer instead.
 			if (++attempts >= GROUND_SAMPLE_FRAMES && entry.hotSpotY !== null) {
 				return 1;
 			}
@@ -673,8 +687,11 @@ async function waitForGround(
 
 	for (let i = 0; i < GROUND_SAMPLE_FRAMES && entry.alive; i++) {
 		await nextFrame();
-		const sample = stream.measureBottomEdge(renderer);
-		if (sample < 1) ground = Math.max(ground, sample);
+		const edges = stream.measureEdges(renderer);
+		if (edges.bottom < 1) {
+			ground = Math.max(ground, edges.bottom);
+			entry.artTop = Math.min(entry.artTop, edges.top);
+		}
 	}
 	return ground;
 }

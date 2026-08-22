@@ -2348,3 +2348,34 @@ the viewport, a few pixels square, and hidden by opacity alone_: never
 combination. Worth re-checking on the deployed opaque frame after any
 Chrome-driven regression report; the dev loopback frame reproduced this one
 faithfully.
+
+### 16.14 The guest stood on its chin: SDK answers now outrank the scan
+
+The guest ghost surfaced both halves of a placement question at once: its
+origin was not at its shadow, and its nameplate floated near the top of a
+mostly-empty frame.
+
+**Ground offset.** guest.swf is an SDK avatar and declares its ground
+contact — `setHotSpot` y of 180 in a 200-pixel stage, the 0.9 line where its
+shadow is drawn. But the alpha scan found the ghost's body bottom at 0.64
+(the body is opaque enough to measure even though the shadow is not), and
+§15.12's ordering let the measurement win, standing the ghost on its chin
+with the shadow pushed under the floor. §15.11 and §15.12 each priced this
+ordering against a different avatar; the guest settles it the other way.
+
+**Decided 2026-08-22: the SDK's answers outrank ours whenever the avatar
+gave one.** The order is now `setPreferredY`, then `setHotSpot`'s y, then
+the measured edge — measurement is the fallback for avatars that never
+declared, not a check on those that did. The accepted cost is §15.12's
+counterexample: an avatar that reports its container origin as its hot spot
+now stands wrong, and if one turns up in the corpus it is the avatar that
+gets special-cased, not the ordering.
+
+**Nameplate height** already preferred the SDK (`setHotSpot`'s third
+argument); the guest just never passes one, and the fallback was the whole
+frame. The fallback is now measured: the bottom-edge scan reads the top
+edge out of the same readback (`measureEdges`), and the nameplate fraction
+becomes standing line minus artwork top. For the guest that is 0.9 — its
+artwork genuinely reaches the frame top, so the honest answer barely
+differs from the frame — but an avatar authored with jump headroom gets its
+name at its head instead of at the canvas edge, with no declaration needed.
