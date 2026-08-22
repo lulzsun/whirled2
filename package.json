@@ -15,6 +15,7 @@
 		"build-ruffle": "node tools/build-ruffle.mjs",
 		"build-shim": "node tools/build-shim.mjs",
 		"build-evil-avatar": "node tools/build-evil-avatar.mjs",
+		"build-signal-probe": "node tools/build-signal-probe.mjs",
 		"build-server": "go build .",
 		"pretty": "prettier --write ."
 	},
