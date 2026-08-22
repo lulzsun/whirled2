@@ -144,6 +144,11 @@ export function createControlSystem(world: World) {
 			intersects.length > 0 &&
 			(!world.editor.enabled || !world.editor.selectedTool)
 		) {
+			// True once an intersect survives the filters below. Without it, a
+			// pointer over nothing but skipped hits (a transparent SWF pixel
+			// with no floor behind it) would leave currIntersect stale on the
+			// last real hover — and a right-click there would open the menu.
+			let matched = false;
 			// Loop through ALL intersects (front to back)
 			for (let i = 0; i < intersects.length; i++) {
 				const hit = intersects[i];
@@ -186,11 +191,13 @@ export function createControlSystem(world: World) {
 					if (!hasComponent(world, ObjectOutlineComponent, eid))
 						addComponent(world, ObjectOutlineComponent, eid);
 					pointerMesh.visible = false;
+					matched = true;
 					break;
 				}
 
 				// Handle non-player pointer logic
 				currIntersect = { point: hit.point, root };
+				matched = true;
 				pointerMesh.visible = true;
 				pointerMesh.position.set(
 					currIntersect.point.x,
@@ -198,6 +205,13 @@ export function createControlSystem(world: World) {
 					currIntersect.point.z,
 				);
 				break;
+			}
+			if (!matched) {
+				if (currIntersect) {
+					cleanupIntersect(currIntersect);
+				}
+				currIntersect = null;
+				pointerMesh.visible = false;
 			}
 		} else {
 			if (currIntersect) {
