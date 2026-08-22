@@ -185,20 +185,12 @@ public class SignalProbe extends Sprite
                 hostCall("setState_v1", "dead");
             }
             return null;
-
-        case "std:location_pixel":
-            // The SDK answers its own std: keys from its appearance cache;
-            // real avatars (LSA included) read their own location this way.
-            var bounds :Array = hostCall("getRoomBounds_v1") as Array;
-            if (_location == null || bounds == null) {
-                return null;
-            }
-            return [
-                Number(_location[0]) * Number(bounds[0]),
-                Number(_location[1]) * Number(bounds[1]),
-                Number(_location[2]) * Number(bounds[2])
-            ];
         }
+        // No std: cases on purpose: the SDK's lookupEntityProperty_v1
+        // consults only the registered provider, so a stock avatar answers
+        // null for every std: key. Behaving the same way is what makes the
+        // battery's self std: reads test the shim's routing (they must reach
+        // the room, or LSA-style self-reads come back null).
         return null;
     }
 
@@ -218,6 +210,7 @@ public class SignalProbe extends Sprite
             "probe:inDuelState");
         r.selfPixel = hostCall("getEntityProperty_v1", String(r.myId),
             "std:location_pixel");
+        r.selfName = hostCall("getEntityProperty_v1", null, "std:name");
 
         var other :String = null;
         var ids :Array = r.avatars as Array;
@@ -244,6 +237,8 @@ public class SignalProbe extends Sprite
                 "std:type");
             r.otherDims = hostCall("getEntityProperty_v1", other,
                 "std:dimensions");
+            r.otherName = hostCall("getEntityProperty_v1", other,
+                "std:name");
 
             // The kill. The other instance dies inside this call.
             r.kill = hostCall("getEntityProperty_v1", other, "probe:kill");

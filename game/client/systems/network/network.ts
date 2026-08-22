@@ -470,6 +470,9 @@ export function createNetworkSystem(world: World) {
 										eid,
 										object.file,
 										object.scale,
+										// The group is named by createPlayer;
+										// the wearer's name feeds std:name.
+										player.name.replace(/ \(Player\)$/, ""),
 									),
 								);
 							})();

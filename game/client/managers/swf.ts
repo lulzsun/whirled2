@@ -122,7 +122,11 @@ export class SwfAssetManager {
 		this.host = host;
 	}
 
-	public async add(eid: number, swfFile: string): Promise<THREE.Texture> {
+	public async add(
+		eid: number,
+		swfFile: string,
+		name = "",
+	): Promise<THREE.Texture> {
 		this.remove(eid);
 
 		const stream = new SwfStreamRenderer(this.world);
@@ -188,6 +192,12 @@ export class SwfAssetManager {
 			onStream: (event) => stream.handleEvent(event),
 			onEvent,
 		});
+
+		// The wearer's name is a fact about the room (std:name), published
+		// like location and dimensions are.
+		if (name !== "") {
+			this.host.update(entry.hostId, { name });
+		}
 
 		await this.sizeToAvatar(entry);
 		if (!entry.alive) return stream.target.texture;

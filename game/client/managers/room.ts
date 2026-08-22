@@ -37,6 +37,8 @@ export type SwfRoomEntity = {
 	/** The avatar's stage size in SWF pixels, for `std:dimensions`. */
 	width: number;
 	height: number;
+	/** The wearer's display name, for `std:name`. */
+	name: string;
 };
 
 type Occupant = SwfRoomEntity & {
@@ -71,6 +73,7 @@ export class SwfRoom {
 			orientation: 0,
 			width: 0,
 			height: 0,
+			name: "",
 			present: false,
 		});
 		this.identify(hostId, entityId);
@@ -231,6 +234,11 @@ export class SwfRoom {
 				return "avatar";
 			case "std:dimensions":
 				return [target.width, target.height];
+			case "std:name":
+				// Null, not "": avatars draw this into text fields, and a
+				// name the page never published should read as absent, not
+				// as an empty label.
+				return target.name === "" ? null : target.name;
 		}
 
 		return this.invoke(target.hostId, "whirledLookupProperty", [key]);

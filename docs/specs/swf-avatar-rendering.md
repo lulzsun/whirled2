@@ -2286,3 +2286,35 @@ which is the principle the room already stated for the other direction.
 The probe page itself was a throwaway and is deleted; the probe avatar and
 its build script are committed for the M8 network fan-out work, which will
 need the same battery run across two real clients.
+
+### 16.12 std:name, and the self-read that never left the player
+
+Two registry gaps closed after §16.11, both surfaced by reading
+`DuelingLandSeaAnimal.as` against the decompiled SDK rather than by a bug
+report.
+
+**`std:name` was unanswered**, which is where the "null" nameplates came
+from: an avatar that draws its wearer's name reads `PROP_NAME` through the
+host, nothing answered it, and `null` coerced into a text field spells
+itself. The room now answers `std:name` from a `name` the page publishes
+alongside location and dimensions (`SwfRoomEntity.name`, threaded from
+`createPlayer` through `createSwfAvatar`).
+
+**Self-reads of `std:` keys returned null for every stock avatar.** The
+shim's `getEntityProperty_v1` short-circuited any self-read to the avatar's
+own provider — but the SDK's `lookupEntityProperty_v1` consults only the
+_registered_ provider and answers no `std:` keys itself, so a stock avatar
+answers null. Real content trips on exactly this: LSA reads its own
+`PROP_LOCATION_PIXEL` and indexes the result, which is a `#1009` crash. The
+shim now routes `std:` keys to the room self-read or not; only custom keys
+keep the local shortcut. The probe was made honest at the same time — its
+provider no longer answers `std:` keys, exactly like a stock avatar — so its
+self-read checks now verify the routing rather than mask it. All 23 checks
+pass.
+
+A test gotcha for anyone re-running the probe: the `/avatar` proxy is served
+with `Cache-Control: public, max-age=3600` (fine for uploads, which are
+immutable), so a rebuilt probe needs a cache-busting query or the sandbox
+replays the hour-old one. Undefined-shaped results — keys missing entirely
+rather than null — are the tell.
+

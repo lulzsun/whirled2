@@ -99,7 +99,13 @@ export const createPlayer = async (
 			break;
 		case Avatar.SWF:
 			entity.add(
-				await createSwfAvatar(world, eid, avatarFile, initialScale),
+				await createSwfAvatar(
+					world,
+					eid,
+					avatarFile,
+					initialScale,
+					name,
+				),
 			);
 			break;
 		default:
@@ -256,8 +262,9 @@ export const createSwfAvatar = async (
 	eid: number,
 	avatarFile: string,
 	initialScale: number = 1,
+	name: string = "",
 ) => {
-	const texture = await world.swfAssetManager.add(eid, avatarFile);
+	const texture = await world.swfAssetManager.add(eid, avatarFile, name);
 
 	// Size the billboard from the SWF's stage, not from the texture. They are
 	// no longer the same thing: the render target's resolution is a quality

@@ -453,8 +453,16 @@ public class WhirledHost extends Sprite
         host["getEntityProperty_v1"] = function (
             entityId :String = null, key :String = null) :Object {
             var target :String = (entityId == null) ? _entityId : entityId;
-            // Our own properties do not need to leave the player.
-            if (target == _entityId) {
+            // Our own CUSTOM properties do not need to leave the player —
+            // but std: keys do, self-read or not. The SDK's own
+            // lookupEntityProperty_v1 consults only the avatar's registered
+            // provider and never answers std: keys itself, so shortcutting a
+            // std: self-read to the provider returns null for every stock
+            // avatar. Real content trips on exactly this: LSA reads its own
+            // PROP_LOCATION_PIXEL and indexes the result. The room is the
+            // authority on std: facts about everyone, ourselves included.
+            if (target == _entityId &&
+                (key == null || key.indexOf("std:") != 0)) {
                 return lookupProperty(key);
             }
             return hostQuery("getEntityProperty", target, key);
