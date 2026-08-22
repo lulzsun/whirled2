@@ -97,11 +97,13 @@ export class SwfRoom {
 			// Telling an avatar that has not been granted control is the same
 			// as not telling it: the SDK drops the event. Skipping it saves a
 			// message once this is talking across a boundary.
-			if (other.present) {
-				this.invoke(other.hostId, "whirledEntityEntered", [
-					occupant.entityId,
-				]);
-			}
+			if (!other.present) continue;
+			// And a not-yet-present occupant must not be announced either, or
+			// the newcomer hears of it twice: once here while it is still
+			// invisible, and again when it enters for itself.
+			this.invoke(other.hostId, "whirledEntityEntered", [
+				occupant.entityId,
+			]);
 			this.invoke(hostId, "whirledEntityEntered", [other.entityId]);
 		}
 	}
@@ -120,10 +122,14 @@ export class SwfRoom {
 		if (occupant === undefined) return;
 		Object.assign(occupant, patch);
 		if (patch.location === undefined) return;
+		// A mover that has not entered yet has never been announced, so its
+		// movement is not yet a fact about the room — the patch above still
+		// records it, and neighbours learn the position on entry.
+		if (!occupant.present) return;
 		const [x, y, z] = occupant.location;
-		for (const other of this.occupants.keys()) {
-			if (other === hostId) continue;
-			this.invoke(other, "whirledEntityMoved", [
+		for (const other of this.occupants.values()) {
+			if (other.hostId === hostId || !other.present) continue;
+			this.invoke(other.hostId, "whirledEntityMoved", [
 				occupant.entityId,
 				[x, y, z],
 			]);
