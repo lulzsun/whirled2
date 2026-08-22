@@ -2040,7 +2040,12 @@ acceptance test against that build.
     §15.4's console-driven verification could not see. §16.11.
 -   Frame cost is unchanged within noise at 5 and 20 avatars against the M4
     numbers in §14.7. **Measured, holds** — §16.10.
--   `grep -r ruffle` finds nothing loaded by the app origin.
+-   `grep -r ruffle` finds nothing loaded by the app origin. **Verified at
+    merge time** — and the check earned itself: the vite dev page still
+    carried the pre-M6 `#ruffle` container and a `<script src="/ruffle.js">`
+    that vite's publicDir happily served, executing the whole bundle on the
+    app origin for nothing. Removed; the page now has no `RufflePlayer` and
+    avatars still load through the sandbox.
 
 ### 16.5 Known unknowns
 

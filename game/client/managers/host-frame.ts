@@ -73,9 +73,9 @@ export class FrameSwfHost implements SwfHost {
 		// work: Chrome throttles requestAnimationFrame in a cross-origin iframe
 		// that intersects nothing, and Ruffle's whole tick rides on rAF. An
 		// avatar in an off-screen frame emitted 2 draw frames in 6 seconds
-		// where an in-page one emits 48 in 2. So it stays on-screen and is made
-		// invisible instead, which is what web/templates/pages/index.gohtml
-		// already does with its own #ruffle container.
+		// where an in-page one emits 48 in 2. So it stays on-screen and is
+		// made invisible instead — the same trick the old in-page pipeline's
+		// #ruffle container used, before M6 removed it.
 		//
 		// 8x8, not 1x1, and opacity is the only thing hiding it. At 1x1,
 		// Chrome's cross-origin frame throttling has a second bite: a frame
