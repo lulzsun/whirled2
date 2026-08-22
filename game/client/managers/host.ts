@@ -225,11 +225,12 @@ export class InPageSwfHost implements SwfHost {
 		);
 
 		// The shim loads the avatar itself, from the `avatar` flashvar, then
-		// scales it to fill whatever box it is given.
+		// scales it to fill whatever box it is given. The flashvars travel
+		// only through `parameters` — an upload-preview avatar arrives as a
+		// base64 data: URL, and repeating that in the query string pushes the
+		// request line past what proxies accept for any decently sized SWF.
 		await player.ruffle().load({
-			url:
-				`${this.shimUrl}` +
-				`?avatar=${encodeURIComponent(options.avatarUrl)}&hostId=${id}`,
+			url: this.shimUrl,
 			allowScriptAccess: true,
 			// The one browser-interaction API CSP cannot reach: navigateToURL
 			// out of the SWF becomes a page navigation, not a fetch. Denied
