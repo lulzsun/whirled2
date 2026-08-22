@@ -21,6 +21,7 @@ import {
 } from "../components";
 import { STATIC, UNIQUE } from "./imgui";
 import { emitObjectLeave, emitObjectTransform } from "./network";
+import { isSwfHitTransparent } from "./control";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -126,44 +127,41 @@ export function createEditorSystem(world: World) {
 			true,
 		);
 
-		if (intersects.length > 0) {
-			let i = 0;
+		// Walk the hits front to back. Anything the pointer did not really
+		// land on -- a gizmo, a see-through pixel of a SWF avatar -- is
+		// skipped so whatever is behind it can be selected instead; a pass
+		// that accepts nothing clears the selection the same way a miss does.
+		let selected = false;
+		for (let i = 0; i < intersects.length; i++) {
 			let root = intersects[i].object;
-			while (
+			if (
 				root.type.startsWith("TransformControls") ||
 				root.parent?.parent?.type.startsWith("TransformControls")
 			) {
-				i++;
-				if (i === intersects.length) break;
-				root = intersects[i].object;
+				continue;
 			}
-			do {
-				if (
-					intersects[i] === undefined ||
-					root.type.startsWith("TransformControls") ||
-					//@ts-ignore
-					root._gizmo === "TransformControlsGizmo" ||
-					transformControls.axis !== null
-				) {
-					unselectObject();
-					break;
-				}
-				if (root.parent != null && root.parent.type !== "Scene") {
-					root = root.parent;
-					continue;
-				}
+			if (
 				//@ts-ignore
-				const eid = root.eid;
-				if (eid === undefined) {
-					unselectObject();
-					break;
-				}
-				selectObject(eid);
+				root._gizmo === "TransformControlsGizmo" ||
+				transformControls.axis !== null
+			) {
 				break;
-			} while (true);
-		} else {
-			unselectObject();
+			}
+			while (root.parent != null && root.parent.type !== "Scene") {
+				root = root.parent;
+			}
+			//@ts-ignore
+			const eid = root.eid;
+			if (eid === undefined) break;
+			// A SWF avatar is a rectangle with an avatar-shaped hole in it, so
+			// the raycast hits its empty corners too. Clicking one used to
+			// select the avatar; now it falls through to whatever is behind.
+			if (isSwfHitTransparent(world, eid, intersects[i])) continue;
+			selectObject(eid);
+			selected = true;
+			break;
 		}
+		if (!selected) unselectObject();
 	});
 
 	const transformControls = new TransformControls(world.camera, canvas);

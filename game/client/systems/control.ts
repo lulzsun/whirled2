@@ -32,6 +32,35 @@ const enterLocalPlayerQuery = enterQuery(
 	defineQuery([LocalPlayerComponent, AvatarComponent]),
 );
 
+/** Alpha below which a SWF texel counts as see-through, out of 255. */
+const SWF_PICK_ALPHA = 20;
+
+/**
+ * True when a ray hit a see-through part of a SWF avatar.
+ *
+ * A SWF avatar is a rectangle with an avatar-shaped hole in it, so a raw
+ * raycast hit picks up the corners. The old pipeline copied the frame's
+ * ImageBitmap into a 2D canvas and read the alpha there. The frame now lives in
+ * a GPU render target, so this reads back the single texel instead — one pixel
+ * per pick, not a whole-frame copy.
+ *
+ * Every pick path has to ask: hover and the context menu below, and selection
+ * in ./editor, which raycasts separately. A path that forgets to lets you grab
+ * an avatar by the empty corner of its billboard.
+ */
+export function isSwfHitTransparent(
+	world: World,
+	eid: number,
+	intersect: THREE.Intersection<THREE.Object3D<THREE.Object3DEventMap>>,
+) {
+	if (eid === undefined || !hasComponent(world, SwfComponent, eid))
+		return false;
+	if (!intersect.uv) return false;
+	const stream = world.swfAssetManager.getStream(eid);
+	if (stream === undefined) return false;
+	return stream.alphaAt(world.renderer, intersect.uv) < SWF_PICK_ALPHA;
+}
+
 export function createControlSystem(world: World) {
 	const pointer = new THREE.Vector2();
 	const pointerMesh = new THREE.Group();
@@ -119,27 +148,6 @@ export function createControlSystem(world: World) {
 			}
 		};
 
-		/**
-		 * True when a ray hit a see-through part of a SWF avatar.
-		 *
-		 * A SWF avatar is a rectangle with an avatar-shaped hole in it, so a
-		 * raw raycast hit picks up the corners. The old pipeline copied the
-		 * frame's ImageBitmap into a 2D canvas and read the alpha there. The
-		 * frame now lives in a GPU render target, so this reads back the single
-		 * texel instead — one pixel per hover, not a whole-frame copy.
-		 */
-		const isHitTransparent = (
-			eid: number,
-			intersect: THREE.Intersection<
-				THREE.Object3D<THREE.Object3DEventMap>
-			>,
-		) => {
-			if (!intersect.uv) return false;
-			const stream = world.swfAssetManager.getStream(eid);
-			if (stream === undefined) return false;
-			return stream.alphaAt(world.renderer, intersect.uv) < 20;
-		};
-
 		if (
 			intersects.length > 0 &&
 			(!world.editor.enabled || !world.editor.selectedTool)
@@ -174,11 +182,7 @@ export function createControlSystem(world: World) {
 
 				// Check if hit is on a transparent pixel of the swf texture
 				// (if it is, we just want to ignore)
-				if (
-					eid !== undefined &&
-					hasComponent(world, SwfComponent, eid) &&
-					isHitTransparent(eid, hit)
-				) {
+				if (isSwfHitTransparent(world, eid, hit)) {
 					continue;
 				}
 
