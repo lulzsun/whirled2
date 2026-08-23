@@ -1,3 +1,5 @@
+export const MAX_CHAT_LENGTH = 200;
+
 export const API_URL = (() => {
 	const hostname = window.location.hostname
 		? window.location.hostname

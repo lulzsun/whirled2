@@ -1,4 +1,5 @@
 import { createRef } from "jsx-dom";
+import { MAX_CHAT_LENGTH } from "../constants";
 
 export const createToolbarContainer = () => {
 	return (
@@ -30,6 +31,7 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 					class="block w-full p-1.5 ps-10 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 					placeholder="Send a Message..."
 					required
+					maxLength={MAX_CHAT_LENGTH}
 					ref={chatInput}
 					onKeyUp={(e) => {
 						if (

@@ -29,6 +29,7 @@ import { OutlinePass as PlayerOutlinePass } from "../shaders/OutlinePass";
 
 import { ImGui, ImGui_Impl } from "imgui-js";
 import { composeSwfStreams } from "../managers/stream";
+import { destroyChatBubbleStack } from "../factory/chatbubble";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -224,6 +225,14 @@ export function createRenderSystem(world: World) {
 				const xOffset = nameplate.getBoundingClientRect().width / 2;
 				nameplate.style.top = `${nameplate.position.y}px`;
 				nameplate.style.left = `${nameplate.position.x - xOffset}px`;
+
+				// Chat bubbles ride the same anchor: the stack's translate
+				// centers it and grows it upward from just above the name.
+				const bubbles = ent?.chatBubbles;
+				if (bubbles !== undefined) {
+					bubbles.style.left = `${nameplate.position.x}px`;
+					bubbles.style.top = `${nameplate.position.y - 4}px`;
+				}
 			}
 		}
 
@@ -249,6 +258,11 @@ export function createRenderSystem(world: World) {
 				nameplate.remove();
 			} else {
 				console.warn("Unable to cleanup player nameplate", player.eid);
+			}
+
+			const bubbles = world.players.get(playerLeave[x])?.chatBubbles;
+			if (bubbles !== undefined) {
+				destroyChatBubbleStack(world, bubbles);
 			}
 
 			// The map entry is the last reference to the group and its

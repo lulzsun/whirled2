@@ -26,6 +26,11 @@ import {
 import { createDisconnectUI } from "../../ui/disconnect";
 import { createNameplate } from "../../factory/nameplate";
 import { createChatMessage } from "../../factory/chatmessage";
+import {
+	createChatBubbleStack,
+	pushChatBubble,
+} from "../../factory/chatbubble";
+import { MAX_CHAT_LENGTH } from "../../constants";
 import { createObject } from "../../factory/object";
 import * as buf from "../../proto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
@@ -342,6 +347,7 @@ export function createNetworkSystem(world: World) {
 						world.players.set(eid, {
 							player: playerEntity,
 							nameplate: nameplateEntity,
+							chatBubbles: createChatBubbleStack(world),
 						});
 						world.scene.add(playerEntity);
 					})();
@@ -412,17 +418,24 @@ export function createNetworkSystem(world: World) {
 							nickname: string;
 						},
 					);
+					// The server truncates too; this only guards against a
+					// peer that skipped it.
+					const message = event.message.slice(0, MAX_CHAT_LENGTH);
 					const chatMessageEntity = createChatMessage(
 						world,
 						player.username,
 						player.nickname,
-						event.message,
+						message,
 					);
 					addComponent(
 						world,
 						ChatMessageComponent,
 						chatMessageEntity.eid,
 					);
+					const bubbles = world.players.get(player.eid)?.chatBubbles;
+					if (bubbles !== undefined) {
+						pushChatBubble(world, bubbles, message);
+					}
 					break;
 				}
 				case "playerAnim": {

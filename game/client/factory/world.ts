@@ -4,6 +4,7 @@ import * as spine from "@esotericsoftware/spine-threejs";
 
 import { Player } from "./player";
 import { Nameplate } from "./nameplate";
+import { ChatBubbleStack } from "./chatbubble";
 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { Network } from "../systems/network";
@@ -16,7 +17,14 @@ import { SwfStreamRenderer } from "../managers/stream";
 import { Benchmark } from "../systems/benchmark";
 
 export type World = {
-	players: Map<number, { player: Player; nameplate: Nameplate }>;
+	players: Map<
+		number,
+		{
+			player: Player;
+			nameplate: Nameplate;
+			chatBubbles?: ChatBubbleStack;
+		}
+	>;
 	objects: Map<number, Object>;
 	controls: OrbitControls;
 	camera: THREE.Camera;

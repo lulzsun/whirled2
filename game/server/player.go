@@ -327,8 +327,19 @@ func onPlayerMove(peer *gecgosio.Peer, pos *buf.Position, rot *buf.Rotation) {
 	peer.Room().Emit(updatedMsg)
 }
 
+// The maximum size of any chat utterance, in characters. Mirrors
+// MAX_CHAT_LENGTH in game/client/constants.ts (the original Whirled's number).
+const maxChatLength = 200
+
 func onPlayerChat(peer *gecgosio.Peer, msg string) {
 	client := clients[peer.Id]
+
+	if msg == "" {
+		return
+	}
+	if runes := []rune(msg); len(runes) > maxChatLength {
+		msg = string(runes[:maxChatLength])
+	}
 
 	p := &buf.WhirledEvent{
 		Event: &buf.WhirledEvent_PlayerChat{
