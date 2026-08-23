@@ -144,6 +144,7 @@ func main() {
 		api.AddProfileRoutes,
 		api.AddRoomRoutes,
 		api.AddStuffRoutes,
+		api.AddShopRoutes,
 		api.AddAvatarRoutes,
 		server.AddAuthRoutes,
 		// Add more routes here
