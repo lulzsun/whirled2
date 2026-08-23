@@ -7,12 +7,21 @@ export const createToolbarContainer = () => {
 	) as HTMLElement;
 };
 
-export const createChatUI = (sender?: (msg: string) => any) => {
+export const createChatUI = (
+	sender?: (msg: string) => any,
+	onHistory?: (show: boolean) => any,
+) => {
 	const chatInput = createRef<HTMLInputElement>();
 
 	return (
 		<div class="relative w-72">
-			<div id="chatbox" class="pb-2 absolute bottom-[31px] left-0" />
+			<div
+				id="chatbox"
+				class="pb-2 absolute bottom-[31px] left-0 w-full"
+				// Keep a click on the scrollback (or its scrollbar) from
+				// blurring the chat input and closing the history.
+				onMouseDown={(e) => e.preventDefault()}
+			/>
 			<div class="relative">
 				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
 					<svg
@@ -33,6 +42,8 @@ export const createChatUI = (sender?: (msg: string) => any) => {
 					required
 					maxLength={MAX_CHAT_LENGTH}
 					ref={chatInput}
+					onFocus={() => onHistory?.(true)}
+					onBlur={() => onHistory?.(false)}
 					onKeyUp={(e) => {
 						if (
 							e.key === "Enter" &&
