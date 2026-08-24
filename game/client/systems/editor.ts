@@ -203,6 +203,7 @@ export function createEditorSystem(world: World) {
 	world.scene.add(transformControls);
 
 	let lastSelectedTool: EditorTool = null;
+	let lastEditorEnabled = false;
 	return defineSystem((world: World) => {
 		raycaster.setFromCamera(pointer, world.camera);
 
@@ -210,8 +211,20 @@ export function createEditorSystem(world: World) {
 			if (world.editor.selectedObject !== null) {
 				unselectObject();
 			}
+			// controls.enabled is only ever recomputed by the pointermove
+			// handler above, and that returns early unless the editor is on.
+			// Leaving the editor with the cursor over an ImGui panel -- or
+			// mid gizmo drag -- therefore left it false, freezing the camera
+			// with no way back short of re-entering the editor. Hand the
+			// camera over on the way out.
+			if (lastEditorEnabled) {
+				lastEditorEnabled = false;
+				transformControlsCaptureMouse = true;
+				world.controls.enabled = true;
+			}
 			return world;
 		}
+		lastEditorEnabled = true;
 
 		if (lastSelectedTool !== world.editor.selectedTool) {
 			lastSelectedTool = world.editor.selectedTool;
