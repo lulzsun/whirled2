@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 const shopPageSize = 24
@@ -38,6 +40,11 @@ type ShopListing struct {
 	Purchases int64  `db:"purchases" json:"purchases"`
 	Username  string `db:"username" json:"username"`
 	Nickname  string `db:"nickname" json:"nickname"`
+	Owned     bool   `db:"owned" json:"owned"`
+
+	// filled in Go, for the buy-button template fragment
+	Category string
+	AuthId   string
 }
 
 // shop categories mapped to their buf.Type discriminator; categories without
@@ -99,6 +106,12 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			page = 1
 		}
 
+		info, _ := e.RequestInfo()
+		authId := ""
+		if info.Auth != nil {
+			authId = info.Auth.Id
+		}
+
 		data := struct {
 			Category string
 			Sort     string
@@ -136,9 +149,7 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				}
 			}
 
-			items := []ShopListing{}
-			err = app.DB().
-				NewQuery(`
+			selectColumns := `
 				SELECT
 					l.id,
 					l.item_id,
@@ -147,43 +158,50 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 					i.name,
 					i.thumb,
 					IFNULL(u.username, '') AS username,
-					IFNULL(u.nickname, '') AS nickname
-				` + baseQuery + `
+					IFNULL(u.nickname, '') AS nickname,
+					EXISTS(
+						SELECT 1 FROM stuff s
+						WHERE s.owner_id = {:auth} AND s.stuff_id = l.item_id
+					) AS owned
+			`
+
+			items := []ShopListing{}
+			err = app.DB().
+				NewQuery(selectColumns + baseQuery + `
 				ORDER BY ` + orderBy + `
 				LIMIT {:limit} OFFSET {:offset}
 			`).
 				Bind(dbx.Params{
 					"type":   itemType,
+					"auth":   authId,
 					"limit":  shopPageSize,
 					"offset": (page - 1) * shopPageSize,
 				}).All(&items)
 			if err != nil {
 				log.Println(err)
 			} else {
+				for i := range items {
+					items[i].Category = category
+					items[i].AuthId = authId
+				}
 				data.Items = items
 			}
 
 			featured := []ShopListing{}
 			err = app.DB().
-				NewQuery(`
-				SELECT
-					l.id,
-					l.item_id,
-					l.price,
-					l.purchases,
-					i.name,
-					i.thumb,
-					IFNULL(u.username, '') AS username,
-					IFNULL(u.nickname, '') AS nickname
-				` + baseQuery + `
+				NewQuery(selectColumns + baseQuery + `
 				AND l.is_featured = TRUE
 				ORDER BY l.created DESC
 				LIMIT 4
 			`).
-				Bind(dbx.Params{"type": itemType}).All(&featured)
+				Bind(dbx.Params{"type": itemType, "auth": authId}).All(&featured)
 			if err != nil {
 				log.Println(err)
 			} else {
+				for i := range featured {
+					featured[i].Category = category
+					featured[i].AuthId = authId
+				}
 				data.Featured = featured
 			}
 		}
@@ -224,6 +242,7 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Price       int64   `db:"price" json:"price"`
 			Username    string  `db:"username" json:"username"`
 			Nickname    string  `db:"nickname" json:"nickname"`
+			Owned       bool    `db:"owned" json:"owned"`
 		}{}
 		err := app.DB().
 			NewQuery(`
@@ -235,13 +254,17 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				i.file,
 				i.scale,
 				IFNULL(u.username, '') AS username,
-				IFNULL(u.nickname, '') AS nickname
+				IFNULL(u.nickname, '') AS nickname,
+				EXISTS(
+					SELECT 1 FROM stuff s
+					WHERE s.owner_id = {:auth} AND s.stuff_id = l.item_id
+				) AS owned
 			FROM listings l
 			INNER JOIN ` + category + ` i ON i.id = l.item_id
 			LEFT JOIN users u ON u.id = l.creator_id
 			WHERE l.id = {:id} AND l.is_listed = TRUE AND l.type = {:type}
 		`).
-			Bind(dbx.Params{"id": listingId, "type": itemType}).One(&listing)
+			Bind(dbx.Params{"id": listingId, "type": itemType, "auth": authId}).One(&listing)
 		if err != nil {
 			log.Println(err)
 			e.Redirect(302, "/shop/"+category)
@@ -290,6 +313,7 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Type        string
 			Scale       float64
 			Price       int64
+			Owned       bool
 
 			CreatorUsername string
 			CreatorNickname string
@@ -315,6 +339,7 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Type:        category,
 			Scale:       listing.Scale,
 			Price:       listing.Price,
+			Owned:       listing.Owned,
 
 			CreatorUsername: listing.Username,
 			CreatorNickname: listing.Nickname,
@@ -456,7 +481,142 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return nil
 	})
+	se.Router.POST("/shop/{category}/{id}/buy", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can buy from the shop.", nil)
+		}
+		category := e.Request.PathValue("category")
+		listingId := e.Request.PathValue("id")
+		itemType, ok := shopCategories[category]
+		if !ok || itemType == 0 {
+			return apis.NewNotFoundError("Unknown category.", nil)
+		}
+		buyerId := info.Auth.Id
+
+		listing := struct {
+			ItemId    string `db:"item_id" json:"item_id"`
+			CreatorId string `db:"creator_id" json:"creator_id"`
+			Price     int64  `db:"price" json:"price"`
+			Name      string `db:"name" json:"name"`
+		}{}
+
+		// the whole purchase is one transaction; the conditional debit
+		// inside AdjustCoins is what makes concurrent buys safe (spec §6)
+		err := app.RunInTransaction(func(txApp core.App) error {
+			err := txApp.DB().
+				NewQuery(`
+				SELECT l.item_id, l.creator_id, l.price, i.name
+				FROM listings l
+				INNER JOIN ` + category + ` i ON i.id = l.item_id
+				WHERE l.id = {:id} AND l.is_listed = TRUE AND l.type = {:type}
+			`).
+				Bind(dbx.Params{"id": listingId, "type": itemType}).One(&listing)
+			if err != nil {
+				return errListingGone
+			}
+
+			if listing.Price > 0 {
+				if _, err := utils.AdjustCoins(txApp, buyerId, -listing.Price, utils.TxPurchaseSpend, listingId, "Bought "+listing.Name); err != nil {
+					return err
+				}
+				// creator income is price - fee; fee is 0 for coin sales
+				// (spec §0.2, bars will differ). an empty creator means a
+				// system item: the coins are burned
+				const fee = 0
+				if income := listing.Price - fee; listing.CreatorId != "" && income > 0 {
+					if _, err := utils.AdjustCoins(txApp, listing.CreatorId, income, utils.TxSaleIncome, listingId, "Sold "+listing.Name); err != nil {
+						return err
+					}
+				}
+			}
+
+			collection, err := txApp.FindCollectionByNameOrId("stuff")
+			if err != nil {
+				return err
+			}
+			record := core.NewRecord(collection)
+			record.Load(map[string]any{
+				"owner_id": buyerId,
+				"stuff_id": listing.ItemId,
+				"type":     itemType,
+			})
+			if err := txApp.Save(record); err != nil {
+				return err
+			}
+
+			_, err = txApp.DB().
+				NewQuery(`
+				UPDATE listings SET purchases = purchases + 1, updated = {:now}
+				WHERE id = {:id}
+			`).
+				Bind(dbx.Params{"id": listingId, "now": types.NowDateTime().String()}).Execute()
+			return err
+		})
+		if errors.Is(err, errListingGone) {
+			return apis.NewNotFoundError("This listing no longer exists.", err)
+		}
+		if errors.Is(err, utils.ErrInsufficientCoins) {
+			return apis.NewBadRequestError("You don't have enough coins for this.", err)
+		}
+		if err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		// tell the header to refresh the coin balance
+		e.Response.Header().Set("HX-Trigger", "coinsChanged")
+
+		if e.Request.URL.Query().Get("frag") == "card" {
+			data := ShopListing{
+				Id:       listingId,
+				Price:    listing.Price,
+				Owned:    true,
+				Category: category,
+				AuthId:   buyerId,
+			}
+			if err := shopTmpl.ExecuteTemplate(e.Response, "shopCardBuy", data); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
+		data := struct {
+			AuthId    string
+			Category  string
+			ListingId string
+			Price     int64
+			Owned     bool
+		}{
+			AuthId:    buyerId,
+			Category:  category,
+			ListingId: listingId,
+			Price:     listing.Price,
+			Owned:     true,
+		}
+		if err := shopListingTmpl.ExecuteTemplate(e.Response, "listingBuy", data); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.GET("/wallet/balance", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Not logged in.", nil)
+		}
+		data := struct {
+			AuthCoins int64
+		}{AuthCoins: utils.GetCoins(app, info.Auth.Id)}
+		if err := shopTmpl.ExecuteTemplate(e.Response, "coinBalance", data); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
 }
+
+var errListingGone = errors.New("listing gone")
 
 type listingRating struct {
 	AuthId    string

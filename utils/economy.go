@@ -30,12 +30,16 @@ const (
 	TxGameReward // reserved (spec §3)
 	TxTradeIn    // reserved (spec §3)
 	TxTradeOut   // reserved (spec §3)
+	TxListingFee // burned at initial listing (spec §7)
 )
 
-// Tunable faucet amounts (spec §4)
+// Tunable faucet and fee amounts (spec §4, §7)
 const (
 	SignupGrantCoins = 1000
 	DailyBonusCoins  = 100
+
+	ListingFeePercent  = 10 // of the listing price
+	ListingFeeMinCoins = 10
 )
 
 var ErrInsufficientCoins = errors.New("insufficient coins")

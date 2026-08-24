@@ -1,3 +1,47 @@
+{{ define "listingBuy" }}
+	{{ if .AuthId }}
+		<button
+			hx-post="/shop/{{ .Category }}/{{ .ListingId }}/buy"
+			hx-target="this"
+			hx-swap="outerHTML"
+			hx-disabled-elt="this"
+			hx-push-url="false"
+			class="cursor-pointer w-44 text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700 focus:outline-none dark:focus:ring-orange-800 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+		>
+			<svg
+				class="w-4 h-4 text-yellow-300"
+				aria-hidden="true"
+				xmlns="http://www.w3.org/2000/svg"
+				fill="currentColor"
+				viewBox="0 0 16 16"
+			>
+				<path
+					d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
+				/>
+			</svg>
+			{{ if .Owned }}
+				{{ if .Price }}
+					Buy again &middot; {{ .Price }} coins
+				{{ else }}
+					Get again
+				{{ end }}
+			{{ else if .Price }}
+				Buy &middot; {{ .Price }} coins
+			{{ else }}
+				Free
+			{{ end }}
+		</button>
+	{{ else }}
+		<a
+			hx-target="#page"
+			href="/login"
+			class="w-44 text-center text-white bg-orange-600 hover:bg-orange-700 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700"
+		>
+			Log in to buy
+		</a>
+	{{ end }}
+{{ end }}
+
 {{ define "listingRating" }}
 	<div id="listing-rating" class="flex flex-col gap-1">
 		<div class="flex items-center">
@@ -159,28 +203,7 @@
 					</p>
 					{{ template "listingTags" . }}
 					<div class="flex w-full justify-center pt-2">
-						<button
-							disabled
-							title="Buying is not implemented yet"
-							class="cursor-not-allowed w-40 text-white bg-orange-600 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 inline-flex items-center justify-center gap-1.5"
-						>
-							<svg
-								class="w-4 h-4 text-yellow-300"
-								aria-hidden="true"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="currentColor"
-								viewBox="0 0 16 16"
-							>
-								<path
-									d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
-								/>
-							</svg>
-							{{ if .Price }}
-								Buy &middot; {{ .Price }} coins
-							{{ else }}
-								Free
-							{{ end }}
-						</button>
+						{{ template "listingBuy" . }}
 					</div>
 				</div>
 			</div>

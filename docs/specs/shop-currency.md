@@ -1,6 +1,6 @@
 # Spec: Shop currency and purchase system
 
-Status: **reviewed — M1 in progress**
+Status: **M1–M3 landed; M4 (sell) and M5 (faucets) remain**
 Owner: @lulzsun
 Last updated: 2026-08-23
 
@@ -88,7 +88,7 @@ Supply:
 Sinks: purchases move coins buyer → creator, so purchases of user-created
 items are not a sink, only a transfer. True sinks (removal from supply):
 purchases of **admin/seed items** (creator is the system, coins are burned),
-and any future listing fee. A small economy does not need aggressive sinks on
+and the **listing fee** (§7). A small economy does not need aggressive sinks on
 day one, but seeded catalog items priced in coins give the initial supply
 somewhere to go.
 
@@ -144,7 +144,7 @@ CREATE INDEX idx_tx_user ON transactions (user_id, created);
 `type` enum (Go iota constants in `utils/economy.go`; the client never sees
 these, so they stay out of `proto/`): `Unknown`, `SignupGrant`, `DailyBonus`,
 `PurchaseSpend`, `SaleIncome`, `AdminAdjust`, `GameReward` (reserved),
-`TradeIn` (reserved), `TradeOut` (reserved).
+`TradeIn` (reserved), `TradeOut` (reserved), `ListingFee` (M4, §7).
 
 A purchase writes **two** rows: `PurchaseSpend` (buyer, negative) and
 `SaleIncome` (creator, positive), both carrying the listing id in `ref_id`.
@@ -219,15 +219,51 @@ Decisions folded in:
 -   **Free listings (price 0)** run the same flow; the ledger rows are
     skipped (zero-amount entries are noise).
 
-## 7. Selling flow
+## 7. Selling flow (upload → list)
 
-Entry point is the **stuff page**, not the shop: an item detail page
-(`stuffPreview.gohtml`) gains a "Sell in shop" control for items the viewer
-_created_ (not merely owns — you cannot resell someone else's work; this is
-what `creator_id` checks enforce).
+Settled in review 2026-08-23; ships as M4.
 
--   `POST /shop/list` `{type, item_id, price}` — creates/updates the listing,
-    server-validates creator ownership and `0 <= price <= 1,000,000`.
+The path into the shop starts where uploading already ends: **My Stuff**.
+
+1. The user uploads an item through the existing `/stuff/{category}/upload`
+   flow; it lands in their stuff, unchanged.
+2. The item's detail page (`stuffPreview.gohtml`) gains a **"List in shop"**
+   button — only for items the viewer _created_ (not merely owns — you
+   cannot resell someone else's work; `creator_id` checks enforce this).
+3. The button opens a small listing form: price, and the computed listing
+   fee shown before confirming. Submitting charges the fee and the listing
+   goes live; the button becomes "Manage listing" (reprice/delist).
+
+### Listing fee
+
+Original Whirled charged a non-refundable listing fee at initial listing,
+equal to the item's **minimum price**, which came from a per-item-type
+table keyed to the creator's self-assigned initial 1–5 star rating (per the
+Whirled Club wiki; the actual coin tables did not survive). Reconstructing
+that table needs data we don't have, so per review we use a percentage:
+
+-   **Fee = 10% of the listing price, minimum 10 coins**, charged once at
+    initial listing. Non-refundable; the coins are **burned** (ledger type
+    `ListingFee`), making listing the economy's first true sink.
+-   The 10-coin floor applies to free (price 0) listings too — listing
+    still costs something, which keeps spam listings from being free.
+-   Repricing an existing listing and delist/relist do **not** re-charge
+    the fee (the listing row persists via `is_listed`; the fee is paid for
+    the row's existence, Whirled-style).
+-   Insufficient coins to cover the fee ⇒ the listing is not created
+    (same conditional-debit guard as purchases).
+
+For reference, original Whirled also kept **60%** of every coin sale
+(creators earned 40% of list price). We deliberately do not copy that —
+creators keep 100% of coin sales per §0.2 — so the listing fee is the only
+coin cost of selling.
+
+### Routes
+
+-   `POST /shop/list` `{type, item_id, price}` — validates creator
+    ownership and `0 <= price <= 1,000,000`, charges the fee inside the
+    same transaction that creates the listing.
+-   `POST /shop/reprice` `{listingId, price}` — creator only, no fee.
 -   `POST /shop/delist` `{listingId}` — sets `is_listed = false`.
 
 Deleting the underlying avatar/furniture must delist it: extend the existing
@@ -273,8 +309,9 @@ real) between them.
 -   **M3 — Buy.** The §6 transaction, ownership checks, htmx buy states,
     balance refresh. Acceptance: two sessions racing to spend one wallet's
     last coins produce exactly one grant and no negative balance.
--   **M4 — Sell.** Creator listing/delisting from the item page, delist on
-    delete, creator income.
+-   **M4 — Sell.** The §7 upload→list flow: "List in shop" on the stuff
+    item page, listing fee, reprice/delist, delist on delete, creator
+    income.
 -   **M5 — Faucets.** Daily bonus (checked in idle-aware middleware or on
     first auth'd request of the day, guarded by `last_daily` with the same
     conditional-update trick), transaction history page.

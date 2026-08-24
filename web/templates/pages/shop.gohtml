@@ -1,3 +1,48 @@
+{{ define "shopCardBuy" }}
+	{{ if .AuthId }}
+		<button
+			hx-post="/shop/{{ .Category }}/{{ .Id }}/buy?frag=card"
+			hx-target="this"
+			hx-swap="outerHTML"
+			hx-disabled-elt="this"
+			hx-push-url="false"
+			class="hover:cursor-pointer hover:underline bg-gray-700 hover:bg-gray-600 rounded-lg py-1 px-1.5 truncate inline-flex items-center gap-1 text-white disabled:opacity-50"
+		>
+			<svg
+				class="w-3 h-3 text-yellow-300"
+				aria-hidden="true"
+				xmlns="http://www.w3.org/2000/svg"
+				fill="currentColor"
+				viewBox="0 0 16 16"
+			>
+				<path
+					d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
+				/>
+			</svg>
+			{{ if .Owned }}
+				{{ if .Price }}
+					Buy again &middot;
+					{{ .Price }}
+				{{ else }}
+					Get again
+				{{ end }}
+			{{ else if .Price }}
+				Buy &middot; {{ .Price }} coins
+			{{ else }}
+				Free
+			{{ end }}
+		</button>
+	{{ else }}
+		<a
+			hx-target="#page"
+			href="/login"
+			class="hover:underline bg-gray-700 rounded-lg py-1 px-1.5 truncate inline-flex items-center gap-1 text-white"
+		>
+			Log in to buy
+		</a>
+	{{ end }}
+{{ end }}
+
 {{ define "page" }}
 	<script>
 		if (window._openWebPanel) window._openWebPanel();
@@ -335,28 +380,7 @@
 										Admin
 									{{ end }}
 								</span>
-								<button
-									disabled
-									title="Buying is not implemented yet"
-									class="cursor-not-allowed bg-gray-700 rounded-lg py-1 px-1.5 truncate inline-flex items-center gap-1 text-white"
-								>
-									<svg
-										class="w-3 h-3 text-yellow-300"
-										aria-hidden="true"
-										xmlns="http://www.w3.org/2000/svg"
-										fill="currentColor"
-										viewBox="0 0 16 16"
-									>
-										<path
-											d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
-										/>
-									</svg>
-									{{ if $item.Price }}
-										Buy &middot; {{ $item.Price }} coins
-									{{ else }}
-										Free
-									{{ end }}
-								</button>
+								{{ template "shopCardBuy" $item }}
 							</div>
 						{{ end }}
 					</div>
