@@ -44,6 +44,9 @@ var groupsTmpl *template.Template
 var groupPostTmplFiles []string
 var groupPostTmpl *template.Template
 
+var groupManageTmplFiles []string
+var groupManageTmpl *template.Template
+
 var queryGetPostComments string
 
 // A group name is its URL slug, so it is kept to the same shape as a
@@ -107,6 +110,11 @@ func parseGroupFiles() {
 		"web/templates/components/commentBox.gohtml",
 	)...)
 	groupPostTmpl = template.Must(template.ParseFiles(groupPostTmplFiles...))
+
+	groupManageTmplFiles = append(groupManageTmplFiles, AppendToBaseTmplFiles(
+		"web/templates/pages/groupManage.gohtml",
+	)...)
+	groupManageTmpl = template.Must(template.ParseFiles(groupManageTmplFiles...))
 }
 
 func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
@@ -388,6 +396,9 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		for i := range comments {
 			comments[i].Content = escapeGroupText(comments[i].Content)
 			comments[i].Nickname = escapeGroupText(comments[i].Nickname)
+			comments[i].GroupName = group.Name
+			comments[i].CanDelete = !comments[i].IsDeleted &&
+				canDeleteGroupCommentBy(comments[i].UserId, membership.Role, authId)
 		}
 		comments = list2tree(comments, parentCommentId, htmxEnabled, threadUrl)
 
@@ -485,6 +496,266 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return e.Redirect(302, url)
 		})
 	})
+	se.Router.POST("/groups/{name}/comment/{id}/delete", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can remove a comment.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		record, err := app.FindRecordById("comments", e.Request.PathValue("id"))
+		if err != nil {
+			return apis.NewNotFoundError("That comment does not exist.", err)
+		}
+		// the comment must actually live on a post in *this* group, or a
+		// moderator of one group could remove comments in another
+		postId := record.GetString("post_id")
+		if postId == "" {
+			return apis.NewNotFoundError("That comment does not exist.", nil)
+		}
+		post, err := app.FindRecordById("group_posts", postId)
+		if err != nil || post.GetString("group_id") != group.Id {
+			return apis.NewNotFoundError("That comment does not exist.", err)
+		}
+
+		role := getGroupRole(app, group.Id, info.Auth.Id)
+		if !canDeleteGroupCommentBy(record.GetString("user_id"), role, info.Auth.Id) {
+			return apis.NewForbiddenError("You cannot remove this comment.", nil)
+		}
+		record.Set("is_deleted", true)
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		// swap only the comment's own body; its replies live in a sibling
+		// element and must survive (spec §7)
+		comment := Comment{
+			CommentId: record.Id,
+			PostId:    postId,
+			ParentId:  record.GetString("parent_id"),
+			IsDeleted: true,
+			Timestamp: record.GetString("created"),
+			ThreadUrl: "/groups/" + group.Name + "/post/" + postId,
+		}
+		comment.RelativeTime = utils.FormatRelativeTime(comment.Timestamp)
+		if err := groupPostTmpl.ExecuteTemplate(e.Response, "commentBody", comment); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.GET("/groups/{name}/manage", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		authId := ""
+		if info.Auth != nil {
+			authId = info.Auth.Id
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		role := getGroupRole(app, group.Id, authId)
+		if role < GroupRoleModerator {
+			// 404 rather than 403: the panel's existence is not interesting
+			// to somebody who cannot use it
+			return apis.NewNotFoundError("That page does not exist.", nil)
+		}
+
+		data := struct {
+			Name        string
+			DisplayName string
+			Description string
+
+			Role        int
+			IsModerator bool
+			IsAdmin     bool
+
+			Members []GroupMember
+		}{
+			Name:        group.Name,
+			DisplayName: escapeGroupText(group.DisplayName),
+			Description: escapeGroupText(group.Description),
+
+			Role:        role,
+			IsModerator: role >= GroupRoleModerator,
+			IsAdmin:     role >= GroupRoleAdmin,
+
+			Members: getGroupMembers(app, group, authId, role),
+		}
+
+		if err := groupManageTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.POST("/groups/{name}/members/{user}/role", func(e *core.RequestEvent) error {
+		group, viewerRole, targetRole, targetId, err := resolveMemberAction(e, app)
+		if err != nil {
+			return err
+		}
+		if !canSetMemberRole(viewerRole, targetRole, targetId == viewerIdOf(e)) {
+			return apis.NewForbiddenError("You cannot change this member's role.", nil)
+		}
+		role, convErr := strconv.Atoi(e.Request.FormValue("role"))
+		if convErr != nil || (role != GroupRoleMember && role != GroupRoleModerator) {
+			return apis.NewBadRequestError("A member can only be made a moderator or a plain member.", convErr)
+		}
+		if err := saveGroupMember(app, group.Id, targetId, role); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return renderGroupMemberRow(e, app, group, targetId)
+	})
+	se.Router.POST("/groups/{name}/members/{user}/remove", func(e *core.RequestEvent) error {
+		group, viewerRole, targetRole, targetId, err := resolveMemberAction(e, app)
+		if err != nil {
+			return err
+		}
+		if !canRemoveMember(viewerRole, targetRole, targetId == viewerIdOf(e)) {
+			return apis.NewForbiddenError("You cannot remove this member.", nil)
+		}
+		record, findErr := app.FindFirstRecordByFilter(
+			"group_members",
+			"group_id = {:group} && user_id = {:user}",
+			dbx.Params{"group": group.Id, "user": targetId},
+		)
+		if findErr == nil {
+			if err := app.Delete(record); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+		}
+		// the row is gone; swap it out of the table
+		return e.HTML(200, "")
+	})
+	se.Router.POST("/groups/{name}/edit", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can edit a group.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		if getGroupRole(app, group.Id, info.Auth.Id) < GroupRoleAdmin {
+			return apis.NewForbiddenError("Only the admin can edit this group.", nil)
+		}
+
+		displayName := strings.TrimSpace(e.Request.FormValue("display_name"))
+		if displayName == "" {
+			displayName = group.Name
+		}
+		if len([]rune(displayName)) > 50 {
+			return apis.NewBadRequestError("A display name can be at most 50 characters.", nil)
+		}
+		description := strings.TrimSpace(e.Request.FormValue("description"))
+		if len([]rune(description)) > 500 {
+			return apis.NewBadRequestError("A description can be at most 500 characters.", nil)
+		}
+
+		record, err := app.FindRecordById("groups", group.Id)
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		record.Set("display_name", displayName)
+		record.Set("description", description)
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		url := "/groups/" + group.Name + "/manage"
+		return utils.ProcessHXRequest(e, func() error {
+			e.Response.Header().Set("HX-Location", `{"path":"`+url+`", "target":"#page"}`)
+			return e.String(200, "Saved.")
+		}, func() error {
+			return e.Redirect(302, url)
+		})
+	})
+	se.Router.POST("/groups/{name}/delete", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can delete a group.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		if getGroupRole(app, group.Id, info.Auth.Id) < GroupRoleAdmin {
+			return apis.NewForbiddenError("Only the admin can delete this group.", nil)
+		}
+
+		record, err := app.FindRecordById("groups", group.Id)
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		// soft delete: the name stays claimed and nothing cascades, the
+		// pages simply stop serving (spec §9.3)
+		record.Set("is_deleted", true)
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		return utils.ProcessHXRequest(e, func() error {
+			e.Response.Header().Set("HX-Location", `{"path":"/groups", "target":"#page"}`)
+			return e.String(200, "Deleted.")
+		}, func() error {
+			return e.Redirect(302, "/groups")
+		})
+	})
+}
+
+func viewerIdOf(e *core.RequestEvent) string {
+	info, _ := e.RequestInfo()
+	if info.Auth == nil {
+		return ""
+	}
+	return info.Auth.Id
+}
+
+// resolveMemberAction does the lookup and auth work the two member-management
+// routes share: the group must exist, the caller must be at least a
+// moderator, and the target must actually be a member of that group.
+func resolveMemberAction(e *core.RequestEvent, app core.App) (Group, int, int, string, error) {
+	info, _ := e.RequestInfo()
+	if info.Auth == nil {
+		return Group{}, 0, 0, "", apis.NewForbiddenError("Only authorized users can manage members.", nil)
+	}
+	group, err := findGroupByName(app, e.Request.PathValue("name"))
+	if err != nil {
+		return Group{}, 0, 0, "", apis.NewNotFoundError("That group does not exist.", err)
+	}
+	viewerRole := getGroupRole(app, group.Id, info.Auth.Id)
+	if viewerRole < GroupRoleModerator {
+		return Group{}, 0, 0, "", apis.NewForbiddenError("You cannot manage this group's members.", nil)
+	}
+	targetId := e.Request.PathValue("user")
+	targetRole := getGroupRole(app, group.Id, targetId)
+	if targetRole == groupRoleNone {
+		return Group{}, 0, 0, "", apis.NewNotFoundError("That user is not a member of this group.", nil)
+	}
+	return group, viewerRole, targetRole, targetId, nil
+}
+
+// renderGroupMemberRow answers a role change with just that member's row.
+func renderGroupMemberRow(e *core.RequestEvent, app core.App, group Group, targetId string) error {
+	viewerId := viewerIdOf(e)
+	viewerRole := getGroupRole(app, group.Id, viewerId)
+	for _, m := range getGroupMembers(app, group, viewerId, viewerRole) {
+		if m.UserId == targetId {
+			if err := groupManageTmpl.ExecuteTemplate(e.Response, "memberRow", m); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
+	}
+	return e.HTML(200, "")
 }
 
 func AddGroupEventHooks(app *pocketbase.PocketBase) {
@@ -523,14 +794,46 @@ func createGroupPost(app core.App, groupId string, userId string, title string, 
 
 // canDeleteGroupPostBy is the single rule for who may remove a post, shared
 // by the route that enforces it and the template flag that offers it — so the
-// button and the check can never disagree. In M3 the author alone; M4 widens
-// this to `|| role >= GroupRoleModerator` (spec §4).
+// button and the check can never disagree: the author, or any moderator of
+// the group (spec §4).
 func canDeleteGroupPostBy(authorId string, role int, userId string) bool {
-	return userId != "" && authorId == userId
+	if userId == "" {
+		return false
+	}
+	return authorId == userId || role >= GroupRoleModerator
 }
 
 func canDeleteGroupPost(post *core.Record, role int, userId string) bool {
 	return canDeleteGroupPostBy(post.GetString("user_id"), role, userId)
+}
+
+// canDeleteGroupCommentBy mirrors the post rule: a comment can be removed by
+// whoever wrote it or by a moderator of the group it lives in (spec §4).
+func canDeleteGroupCommentBy(authorId string, role int, userId string) bool {
+	if userId == "" {
+		return false
+	}
+	return authorId == userId || role >= GroupRoleModerator
+}
+
+// canRemoveMember decides who may drop somebody's membership. Nobody may
+// touch the admin, a moderator may only act on plain members (moderators do
+// not remove each other), and nobody removes themselves here — that is what
+// Leave is for (spec §4).
+func canRemoveMember(viewerRole int, targetRole int, isSelf bool) bool {
+	if isSelf || targetRole >= GroupRoleAdmin {
+		return false
+	}
+	if viewerRole >= GroupRoleAdmin {
+		return true
+	}
+	return viewerRole >= GroupRoleModerator && targetRole < GroupRoleModerator
+}
+
+// canSetMemberRole decides who may promote or demote. Only the admin, and
+// never against the admin's own row (spec §4).
+func canSetMemberRole(viewerRole int, targetRole int, isSelf bool) bool {
+	return !isSelf && viewerRole >= GroupRoleAdmin && targetRole < GroupRoleAdmin
 }
 
 // getGroupFeed reads one page of a group's posts, newest first. Removed posts
@@ -631,6 +934,72 @@ func decorateGroupPost(post *GroupPost, group Group, authId string, role int) {
 	post.Nickname = escapeGroupText(post.Nickname)
 	post.CanDelete = !post.IsDeleted &&
 		canDeleteGroupPostBy(post.UserId, role, authId)
+}
+
+// GroupMember is one row of the manage page's member list.
+type GroupMember struct {
+	UserId   string `db:"user_id" json:"user_id"`
+	Username string `db:"username" json:"username"`
+	Nickname string `db:"nickname" json:"nickname"`
+	Role     int    `db:"role" json:"role"`
+	Joined   string `db:"created" json:"created"`
+
+	// filled in Go
+	GroupName    string
+	RelativeTime string
+	RoleName     string
+	CanPromote   bool
+	CanDemote    bool
+	CanRemove    bool
+}
+
+// getGroupMembers lists a group's members, highest role first, with the
+// controls the viewer is actually allowed to use already resolved.
+func getGroupMembers(app core.App, group Group, viewerId string, viewerRole int) []GroupMember {
+	members := []GroupMember{}
+	if err := app.DB().
+		NewQuery(`
+		SELECT
+			m.user_id,
+			m.role,
+			m.created,
+			IFNULL(u.username, '') AS username,
+			IFNULL(u.nickname, '') AS nickname
+		FROM group_members m
+		LEFT JOIN users u ON u.id = m.user_id
+		WHERE m.group_id = {:group}
+		ORDER BY m.role DESC, m.created
+	`).
+		Bind(dbx.Params{"group": group.Id}).All(&members); err != nil {
+		log.Println(err)
+		return members
+	}
+
+	for i := range members {
+		m := &members[i]
+		isSelf := m.UserId == viewerId
+		m.GroupName = group.Name
+		m.Nickname = escapeGroupText(m.Nickname)
+		m.RelativeTime = utils.FormatRelativeTime(m.Joined)
+		m.RoleName = groupRoleName(m.Role)
+		m.CanPromote = canSetMemberRole(viewerRole, m.Role, isSelf) &&
+			m.Role < GroupRoleModerator
+		m.CanDemote = canSetMemberRole(viewerRole, m.Role, isSelf) &&
+			m.Role >= GroupRoleModerator
+		m.CanRemove = canRemoveMember(viewerRole, m.Role, isSelf)
+	}
+	return members
+}
+
+func groupRoleName(role int) string {
+	switch role {
+	case GroupRoleAdmin:
+		return "Admin"
+	case GroupRoleModerator:
+		return "Moderator"
+	default:
+		return "Member"
+	}
 }
 
 // checkGroupPostCommentable is the group half of the shared comment-create

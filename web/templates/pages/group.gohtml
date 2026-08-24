@@ -127,6 +127,15 @@
 						class="flex gap-4 text-xs text-gray-500 dark:text-gray-400"
 					>
 						{{ template "groupMemberCount" .Membership }}
+						{{ if .Membership.IsModerator }}
+							<a
+								hx-target="#page"
+								href="/groups/{{ .Name }}/manage"
+								class="hover:underline font-medium text-blue-600 dark:text-blue-500"
+							>
+								Manage
+							</a>
+						{{ end }}
 						{{ if .OwnerUsername }}
 							<span>
 								Created by

@@ -1,4 +1,40 @@
-{{ define "comment" }}
+{{/* commentBody is the comment itself, without its replies. It is split out
+	so removing a comment can swap just this element: the replies live in a
+	sibling _comment_children section and have to survive.
+*/}}
+{{ define "commentBody" }}
+	{{ if .IsDeleted }}
+		<section id="_{{ .CommentId }}_comment_parent" class="flex">
+			<div class="mr-2 flex-shrink-0">
+				<div
+					class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700"
+				></div>
+			</div>
+			<div class="w-full">
+				<div class="flex items-start mb-1 gap-2">
+					<span
+						class="text-sm font-medium italic text-gray-400 dark:text-gray-500"
+					>
+						[removed]
+					</span>
+					<span
+						title="{{ .Timestamp }}"
+						class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+					>
+						{{ .RelativeTime }}
+					</span>
+				</div>
+				<p class="text-sm italic text-gray-400 dark:text-gray-600 mb-4">
+					This comment was removed.
+				</p>
+			</div>
+		</section>
+	{{ else }}
+		{{ template "commentLive" . }}
+	{{ end }}
+{{ end }}
+
+{{ define "commentLive" }}
 	<section id="_{{ .CommentId }}_comment_parent" class="flex">
 		<div class="mr-2 flex-shrink-0">
 			<img
@@ -107,6 +143,20 @@
 						Report
 					</span>
 				</label>
+				{{/* only set on group post pages; inert elsewhere */}}
+				{{ if .CanDelete }}
+					<button
+						hx-post="/groups/{{ .GroupName }}/comment/{{ .CommentId }}/delete"
+						hx-target="#_{{ .CommentId }}_comment_parent"
+						hx-swap="outerHTML"
+						hx-disabled-elt="this"
+						hx-push-url="false"
+						hx-confirm="Remove this comment?"
+						class="cursor-pointer pr-4 text-xs inline-flex items-center font-medium text-red-600 hover:underline dark:text-red-500"
+					>
+						Remove
+					</button>
+				{{ end }}
 				<div
 					id="_{{ .CommentId }}_comment_reply_box"
 					class="hidden mt-2 w-full"
@@ -116,6 +166,10 @@
 			</aside>
 		</div>
 	</section>
+{{ end }}
+
+{{ define "comment" }}
+	{{ template "commentBody" . }}
 	{{ if .DepthHideId }}
 		<section id="_{{ .CommentId }}_more_replies" class="ml-12 mb-4">
 			<form

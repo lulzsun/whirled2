@@ -40,9 +40,16 @@ type Comment struct {
 	Username string `db:"username" json:"username"`
 	Nickname string `db:"nickname" json:"nickname"`
 
+	UserId string `db:"user_id" json:"user_id"`
+
 	RelativeTime string
 	// page the comment thread lives on; "+ More replies" forms post here
 	ThreadUrl string
+
+	// only set on group post pages, where comments can be moderated;
+	// inert on profile and listing threads
+	GroupName string
+	CanDelete bool
 
 	Total       int
 	Depth       int

@@ -1,6 +1,6 @@
 # Spec: Groups page
 
-Status: **in progress (M1–M3 landed)**
+Status: **implemented (M1–M4 landed)**
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -203,6 +203,15 @@ themselves (join/leave button, role dropdowns, post-delete) must carry
 inherits from the header nav. Full-page links (`/groups`, group page, post
 page) use the standard `hx-target="#page"` + `hx-push-url` pattern.
 
+**Removing a comment swaps only the comment's body.** `comment.gohtml` is
+split into `commentBody` (the comment) and `comment` (the body plus its
+replies, which live in a sibling `_comment_children` element). The delete
+route returns `commentBody` alone and targets `#_{id}_comment_parent`;
+returning the whole `comment` template would emit a second, empty children
+element and leave the original replies orphaned beside it with duplicate ids.
+Measured: after the swap the tombstone is in place, the reply count is
+unchanged, and there is exactly one parent and one children element.
+
 **Join/leave answers with two fragments.** The control and the member count
 both change on a join, but they sit in different corners of the info card, so
 forcing them into one swap target would mean re-rendering the whole card.
@@ -269,8 +278,16 @@ comment-create hook.
     column swapped, so the tree/pagination behaviour is identical by
     construction. Removed posts stay in the feed as `[removed]` tombstones
     whose threads remain readable but closed to new comments.
--   **M4 — Moderation.** Role helper, mod delete on posts/comments, manage
-    page, promote/demote/remove, group edit/delete.
+-   **M4 — Moderation.** _Landed._ Mod delete on posts and comments, the
+    manage page, promote/demote/remove-member, group edit and delete.
+
+The permission rules live in four predicates in `api/group.go` —
+`canDeleteGroupPostBy`, `canDeleteGroupCommentBy`, `canRemoveMember`,
+`canSetMemberRole` — and each is called by both the route that enforces it and
+the template flag that offers the control, so a button can never appear
+without the matching permission behind it. They are pure functions of
+(viewer role, target, self), which is what let the whole matrix be table-tested
+at once rather than inferred from clicking.
 
 Each milestone is verifiable by running `npm run dev` and clicking through;
 role checks are additionally verified by hand-crafting requests as the wrong

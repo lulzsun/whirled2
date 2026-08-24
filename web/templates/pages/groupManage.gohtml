@@ -1,0 +1,240 @@
+{{ define "memberRow" }}
+	<tr
+		id="_{{ .UserId }}_member"
+		class="border-b border-gray-200 dark:border-gray-700"
+	>
+		<td class="py-2 pr-2">
+			{{ if .Username }}
+				<a
+					hx-target="#page"
+					href="/profile/{{ .Username }}"
+					class="font-medium text-gray-900 dark:text-white hover:underline"
+				>
+					{{ .Nickname }}
+				</a>
+				<span class="text-gray-500 dark:text-gray-400">
+					@{{ .Username }}
+				</span>
+			{{ else }}
+				<span class="italic text-gray-400 dark:text-gray-600">
+					deleted user
+				</span>
+			{{ end }}
+		</td>
+		<td class="py-2 pr-2">
+			<span
+				class="select-none py-1 px-2 text-xs font-medium rounded-lg {{ if eq .Role 2 }}
+					text-blue-800 bg-blue-100 dark:bg-blue-900
+					dark:text-blue-300
+				{{ else if eq .Role 1 }}
+					text-green-800 bg-green-100 dark:bg-green-900
+					dark:text-green-300
+				{{ else }}
+					text-gray-800 bg-gray-100 dark:bg-gray-700
+					dark:text-gray-300
+				{{ end }}"
+			>
+				{{ .RoleName }}
+			</span>
+		</td>
+		<td class="py-2 pr-2 text-gray-500 dark:text-gray-400">
+			{{ .RelativeTime }}
+		</td>
+		<td class="py-2 text-right whitespace-nowrap">
+			{{ if .CanPromote }}
+				<button
+					hx-post="/groups/{{ .GroupName }}/members/{{ .UserId }}/role"
+					hx-vals='{"role": "1"}'
+					hx-target="#_{{ .UserId }}_member"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					class="cursor-pointer pl-3 font-medium text-blue-600 hover:underline dark:text-blue-500"
+				>
+					Make moderator
+				</button>
+			{{ end }}
+			{{ if .CanDemote }}
+				<button
+					hx-post="/groups/{{ .GroupName }}/members/{{ .UserId }}/role"
+					hx-vals='{"role": "0"}'
+					hx-target="#_{{ .UserId }}_member"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					class="cursor-pointer pl-3 font-medium text-blue-600 hover:underline dark:text-blue-500"
+				>
+					Remove moderator
+				</button>
+			{{ end }}
+			{{ if .CanRemove }}
+				<button
+					hx-post="/groups/{{ .GroupName }}/members/{{ .UserId }}/remove"
+					hx-target="#_{{ .UserId }}_member"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					hx-confirm="Remove this member from the group?"
+					class="cursor-pointer pl-3 font-medium text-red-600 hover:underline dark:text-red-500"
+				>
+					Remove
+				</button>
+			{{ end }}
+		</td>
+	</tr>
+{{ end }}
+
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div
+		class="bg-gray-50 dark:bg-gray-800 h-full w-full flex flex-col items-center"
+	>
+		<div class="gap-2 flex h-full w-full max-w-7xl @7xl/web:w-3/4">
+			<div class="p-2 w-full bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+				<div class="py-2 text-xs">
+					<a
+						hx-target="#page"
+						href="/groups/{{ .Name }}"
+						class="text-gray-500 dark:text-gray-400 hover:underline"
+					>
+						&larr;
+						{{ .DisplayName }}
+					</a>
+				</div>
+				<span
+					class="select-none font-bold text-base text-gray-900 dark:text-white"
+				>
+					Manage
+					{{ .DisplayName }}
+				</span>
+
+				<div
+					class="mt-4 w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4"
+				>
+					<span
+						class="select-none text-sm font-bold text-gray-900 dark:text-white"
+					>
+						Members
+					</span>
+					<div class="mt-2 overflow-x-auto">
+						<table class="w-full text-xs text-left">
+							<thead
+								class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
+							>
+								<tr>
+									<th class="py-2 pr-2 font-medium">
+										Member
+									</th>
+									<th class="py-2 pr-2 font-medium">Role</th>
+									<th class="py-2 pr-2 font-medium">
+										Joined
+									</th>
+									<th class="py-2 font-medium text-right">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{{ range .Members }}
+									{{ template "memberRow" . }}
+								{{ end }}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				{{ if .IsAdmin }}
+					<div
+						class="mt-4 w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4"
+					>
+						<span
+							class="select-none text-sm font-bold text-gray-900 dark:text-white"
+						>
+							Group info
+						</span>
+						<form
+							hx-post="/groups/{{ .Name }}/edit"
+							hx-target="this"
+							hx-swap="none"
+							hx-push-url="false"
+							class="mt-2 flex flex-col gap-3 text-xs"
+						>
+							<div class="flex flex-col gap-1">
+								<label
+									for="edit_display_name"
+									class="font-medium text-gray-900 dark:text-white"
+								>
+									Display name
+								</label>
+								<input
+									type="text"
+									name="display_name"
+									id="edit_display_name"
+									maxlength="50"
+									value="{{ .DisplayName }}"
+									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+								/>
+							</div>
+							<div class="flex flex-col gap-1">
+								<label
+									for="edit_description"
+									class="font-medium text-gray-900 dark:text-white"
+								>
+									Description
+								</label>
+								<textarea
+									name="description"
+									id="edit_description"
+									rows="3"
+									maxlength="500"
+									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+								>
+{{ .Description }}</textarea
+								>
+							</div>
+							<div>
+								<button
+									type="submit"
+									hx-disabled-elt="this"
+									class="cursor-pointer py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50"
+								>
+									Save
+								</button>
+							</div>
+						</form>
+					</div>
+
+					<div
+						class="mt-4 mb-4 w-full rounded-lg border-2 border-red-200 dark:border-red-900 p-4"
+					>
+						<span
+							class="select-none text-sm font-bold text-red-700 dark:text-red-500"
+						>
+							Delete group
+						</span>
+						<p
+							class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+						>
+							The group stops being reachable. Its name stays
+							claimed and nothing is erased, so this can be undone
+							from the database.
+						</p>
+						<button
+							hx-post="/groups/{{ .Name }}/delete"
+							hx-target="this"
+							hx-swap="none"
+							hx-disabled-elt="this"
+							hx-push-url="false"
+							hx-confirm="Delete this group? Members will lose access to it."
+							class="mt-2 cursor-pointer py-1.5 px-3 text-xs font-medium text-white bg-red-700 rounded-lg hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-600 dark:hover:bg-red-700 disabled:opacity-50"
+						>
+							Delete group
+						</button>
+					</div>
+				{{ end }}
+			</div>
+		</div>
+	</div>
+{{ end }}
