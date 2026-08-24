@@ -813,6 +813,9 @@ func Bootstrap(app *pocketbase.PocketBase) {
 					"image/webp",
 				},
 				MaxSelect: 1,
+				Thumbs: []string{
+					"420x420",
+				},
 				MaxSize:   5000000, // 5 MB in bytes
 				Protected: false,
 			},
@@ -833,6 +836,21 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 		if err := app.Save(furnitureCollection); err != nil {
 			log.Fatalln(err)
+		}
+	}
+
+	// Furniture migration: the thumb field predates the 420x420 thumb size
+	// (avatars always declared it). Without it PocketBase silently serves
+	// the original image for ?thumb=420x420 requests, so shop/stuff cards
+	// download the full-size upload instead of a resized variant.
+	if furnitureCollection, err := app.FindCollectionByNameOrId("furniture"); err == nil {
+		if thumbField, ok := furnitureCollection.Fields.GetByName("thumb").(*core.FileField); ok {
+			if len(thumbField.Thumbs) == 0 {
+				thumbField.Thumbs = []string{"420x420"}
+				if err := app.Save(furnitureCollection); err != nil {
+					log.Fatalln(err)
+				}
+			}
 		}
 	}
 
