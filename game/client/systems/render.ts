@@ -282,6 +282,20 @@ export function createRenderSystem(world: World) {
 			if (object.entity !== undefined) {
 				// remove object entity
 				world.scene.remove(object.entity);
+				// The map entry is the last reference to the group, so leaving
+				// it behind keeps the whole thing alive for the rest of the
+				// session — and bitECS recycles entity ids, so the stale entry
+				// outlives the eid that reached it. Releasing it here means
+				// taking it out of the outline pass here too: the exit-outline
+				// block below finds departed objects through this same map and
+				// would otherwise pin it in `selectedObjects` instead, which is
+				// the worse of the two leaks.
+				const outline = objectOutlinePass.selectedObjects.indexOf(
+					object.entity,
+				);
+				if (outline !== -1)
+					objectOutlinePass.selectedObjects.splice(outline, 1);
+				world.objects.delete(object.eid);
 			} else {
 				console.warn("Unable to cleanup object entity", object.eid);
 			}
