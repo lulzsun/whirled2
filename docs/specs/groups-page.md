@@ -1,6 +1,6 @@
 # Spec: Groups page
 
-Status: **in progress (M1 landed)**
+Status: **in progress (M1–M2 landed)**
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -203,6 +203,17 @@ themselves (join/leave button, role dropdowns, post-delete) must carry
 inherits from the header nav. Full-page links (`/groups`, group page, post
 page) use the standard `hx-target="#page"` + `hx-push-url` pattern.
 
+**Join/leave answers with two fragments.** The control and the member count
+both change on a join, but they sit in different corners of the info card, so
+forcing them into one swap target would mean re-rendering the whole card.
+Instead `renderGroupMembership` writes `groupJoin` (the swap target, keyed by
+`#group-membership`) followed by `groupMemberCount` carrying
+`hx-swap-oob="true"`. The `Oob` flag exists so the copy rendered as part of
+the full page does not carry the attribute. Note htmx leaves `hx-swap-oob` on
+the swapped-in element in the live DOM; it is inert there (the attribute only
+means anything on an element in a _response_) and repeated join/leave
+round-trips were measured to swap cleanly with no duplicated elements.
+
 ## 7. Templates
 
 -   `web/templates/pages/groups.gohtml` — the list page.
@@ -231,8 +242,11 @@ fix and would need these per-field escapes removed to avoid double-escaping.
     (§5), `POST /groups`, `/groups` list page, `/groups/{name}` page rendering
     an empty feed, header tab enabled. Member count already comes from
     `group_members`, so it reads correctly once M2 adds joining.
--   **M2 — Membership.** Join/leave, member count, membership gate on
-    posting surface (UI shows post box only to members).
+-   **M2 — Membership.** _Landed._ Join/leave, live member count, and the
+    posting gate. The gate is in place as the `{{ if .Membership.IsMember }}`
+    branch that M3's post box drops into; for now it only varies the
+    empty-feed copy, since shipping an inert post control would be worse than
+    shipping none.
 -   **M3 — Posts + comments.** Create post, post page, comments wired to
     `post_id`, author self-delete.
 -   **M4 — Moderation.** Role helper, mod delete on posts/comments, manage

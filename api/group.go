@@ -190,11 +190,6 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return apis.NewNotFoundError("That group does not exist.", err)
 		}
 
-		role := groupRoleNone
-		if authId != "" {
-			role = getGroupRole(app, group.Id, authId)
-		}
-
 		owner := struct {
 			Username string `db:"username" json:"username"`
 			Nickname string `db:"nickname" json:"nickname"`
@@ -218,10 +213,7 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			OwnerUsername string
 			OwnerNickname string
 
-			Role        int
-			IsMember    bool
-			IsModerator bool
-			IsAdmin     bool
+			Membership groupMembership
 		}{
 			Id:          group.Id,
 			Name:        group.Name,
@@ -232,10 +224,7 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			OwnerUsername: owner.Username,
 			OwnerNickname: escapeGroupText(owner.Nickname),
 
-			Role:        role,
-			IsMember:    role >= GroupRoleMember,
-			IsModerator: role >= GroupRoleModerator,
-			IsAdmin:     role >= GroupRoleAdmin,
+			Membership: getGroupMembership(app, group, authId, false),
 		}
 
 		if err := groupTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
@@ -244,9 +233,137 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return nil
 	})
+	se.Router.POST("/groups/{name}/join", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can join a group.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+
+		if err := joinGroup(app, group.Id, info.Auth.Id); err != nil {
+			return err
+		}
+		return renderGroupMembership(e, app, group.Name, info.Auth.Id)
+	})
+	se.Router.POST("/groups/{name}/leave", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can leave a group.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+
+		if err := leaveGroup(app, group.Id, info.Auth.Id); err != nil {
+			return err
+		}
+		return renderGroupMembership(e, app, group.Name, info.Auth.Id)
+	})
 }
 
 func AddGroupEventHooks(app *pocketbase.PocketBase) {
+}
+
+// joinGroup adds a user to a group as a plain member. Joining twice is a
+// no-op rather than an error, and the role check is what makes it one:
+// saveGroupMember sets the role, so an unconditional re-join would silently
+// demote a moderator back to plain member.
+func joinGroup(app core.App, groupId string, userId string) error {
+	if getGroupRole(app, groupId, userId) != groupRoleNone {
+		return nil
+	}
+	if err := saveGroupMember(app, groupId, userId, GroupRoleMember); err != nil {
+		log.Println(err)
+		return apis.NewBadRequestError("Something went wrong.", err)
+	}
+	return nil
+}
+
+// leaveGroup drops a user's membership. The admin is the one member who
+// cannot walk away: a group whose admin left has nobody who can moderate it,
+// and ownership is not transferable in this milestone (spec §4). Leaving a
+// group you are not in is a no-op.
+func leaveGroup(app core.App, groupId string, userId string) error {
+	role := getGroupRole(app, groupId, userId)
+	if role == GroupRoleAdmin {
+		return apis.NewBadRequestError("The admin cannot leave their own group.", nil)
+	}
+	if role == groupRoleNone {
+		return nil
+	}
+	record, err := app.FindFirstRecordByFilter(
+		"group_members",
+		"group_id = {:group} && user_id = {:user}",
+		dbx.Params{"group": groupId, "user": userId},
+	)
+	if err != nil {
+		return nil
+	}
+	if err := app.Delete(record); err != nil {
+		log.Println(err)
+		return apis.NewBadRequestError("Something went wrong.", err)
+	}
+	return nil
+}
+
+// groupMembership drives the join/leave control and the member count. Both
+// are re-rendered after a join or leave, but they sit in different corners of
+// the group's info card, so the count travels back as an out-of-band swap
+// rather than forcing the two into one swap target.
+type groupMembership struct {
+	AuthId  string
+	Name    string
+	Members int
+
+	Role        int
+	IsMember    bool
+	IsModerator bool
+	IsAdmin     bool
+
+	// Oob is set only on the fragment response, so the copy rendered as part
+	// of the full page does not carry a stray hx-swap-oob attribute.
+	Oob bool
+}
+
+func getGroupMembership(app core.App, group Group, authId string, oob bool) groupMembership {
+	role := getGroupRole(app, group.Id, authId)
+	return groupMembership{
+		AuthId:  authId,
+		Name:    group.Name,
+		Members: group.Members,
+
+		Role:        role,
+		IsMember:    role >= GroupRoleMember,
+		IsModerator: role >= GroupRoleModerator,
+		IsAdmin:     role >= GroupRoleAdmin,
+
+		Oob: oob,
+	}
+}
+
+// renderGroupMembership answers a join or leave with the two fragments that
+// changed. The group is re-read so the member count reflects the write that
+// just happened (findGroupByName recomputes it).
+func renderGroupMembership(e *core.RequestEvent, app core.App, name string, authId string) error {
+	group, err := findGroupByName(app, name)
+	if err != nil {
+		return apis.NewNotFoundError("That group does not exist.", err)
+	}
+	data := getGroupMembership(app, group, authId, false)
+	if err := groupTmpl.ExecuteTemplate(e.Response, "groupJoin", data); err != nil {
+		log.Println(err)
+		return apis.NewBadRequestError("Something went wrong.", err)
+	}
+	data.Oob = true
+	if err := groupTmpl.ExecuteTemplate(e.Response, "groupMemberCount", data); err != nil {
+		log.Println(err)
+		return apis.NewBadRequestError("Something went wrong.", err)
+	}
+	return nil
 }
 
 // createGroup validates a proposed group and creates it along with the
@@ -314,7 +431,7 @@ func escapeGroupText(s string) string {
 
 // findGroupByName resolves a URL slug to a live (not soft-deleted) group,
 // with its member count. Names are stored lowercase (spec §5.1).
-func findGroupByName(app *pocketbase.PocketBase, name string) (Group, error) {
+func findGroupByName(app core.App, name string) (Group, error) {
 	group := Group{}
 	err := app.DB().
 		NewQuery(`
@@ -338,7 +455,7 @@ func findGroupByName(app *pocketbase.PocketBase, name string) (Group, error) {
 // getGroupRole reports a user's role in a group, or groupRoleNone if they are
 // not a member. Every role-gated route goes through this and compares against
 // the rank it requires (spec §6).
-func getGroupRole(app *pocketbase.PocketBase, groupId string, userId string) int {
+func getGroupRole(app core.App, groupId string, userId string) int {
 	if groupId == "" || userId == "" {
 		return groupRoleNone
 	}

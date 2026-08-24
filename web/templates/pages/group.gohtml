@@ -1,3 +1,87 @@
+{{ define "groupMemberCount" }}
+	<span
+		id="group-member-count"
+		{{ if .Oob }}hx-swap-oob="true"{{ end }}
+		class="inline-flex items-center gap-1"
+	>
+		<svg
+			class="w-3 h-3"
+			aria-hidden="true"
+			xmlns="http://www.w3.org/2000/svg"
+			fill="currentColor"
+			viewBox="0 0 16 16"
+		>
+			<path
+				d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"
+			/>
+		</svg>
+		{{ if eq .Members 1 }}
+			1 member
+		{{ else }}
+			{{ .Members }} members
+		{{ end }}
+	</span>
+{{ end }}
+
+{{ define "groupJoin" }}
+	<div id="group-membership" class="shrink-0 flex items-center gap-2">
+		{{ if .IsAdmin }}
+			<span
+				class="select-none py-1 px-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-lg dark:bg-blue-900 dark:text-blue-300"
+			>
+				Admin
+			</span>
+		{{ else if .IsModerator }}
+			<span
+				class="select-none py-1 px-2 text-xs font-medium text-green-800 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-300"
+			>
+				Moderator
+			</span>
+		{{ else if .IsMember }}
+			<span
+				class="select-none py-1 px-2 text-xs font-medium text-gray-800 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300"
+			>
+				Member
+			</span>
+		{{ end }}
+		{{ if .AuthId }}
+			{{ if .IsAdmin }}
+				{{/* the admin cannot leave their own group (spec §4) */}}
+			{{ else if .IsMember }}
+				<button
+					hx-post="/groups/{{ .Name }}/leave"
+					hx-target="#group-membership"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					class="cursor-pointer py-1.5 px-3 text-xs font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 disabled:opacity-50"
+				>
+					Leave
+				</button>
+			{{ else }}
+				<button
+					hx-post="/groups/{{ .Name }}/join"
+					hx-target="#group-membership"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					class="cursor-pointer py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50"
+				>
+					Join
+				</button>
+			{{ end }}
+		{{ else }}
+			<a
+				hx-target="#page"
+				href="/login"
+				class="py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+			>
+				Log in to join
+			</a>
+		{{ end }}
+	</div>
+{{ end }}
+
 {{ define "page" }}
 	<script>
 		if (window._openWebPanel) window._openWebPanel();
@@ -32,25 +116,7 @@
 								/groups/{{ .Name }}
 							</span>
 						</div>
-						{{ if .IsAdmin }}
-							<span
-								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-lg dark:bg-blue-900 dark:text-blue-300"
-							>
-								Admin
-							</span>
-						{{ else if .IsModerator }}
-							<span
-								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-green-800 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-300"
-							>
-								Moderator
-							</span>
-						{{ else if .IsMember }}
-							<span
-								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-gray-800 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300"
-							>
-								Member
-							</span>
-						{{ end }}
+						{{ template "groupJoin" .Membership }}
 					</div>
 					{{ if .Description }}
 						<p class="text-xs text-gray-500 dark:text-gray-400">
@@ -60,24 +126,7 @@
 					<div
 						class="flex gap-4 text-xs text-gray-500 dark:text-gray-400"
 					>
-						<span class="inline-flex items-center gap-1">
-							<svg
-								class="w-3 h-3"
-								aria-hidden="true"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="currentColor"
-								viewBox="0 0 16 16"
-							>
-								<path
-									d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"
-								/>
-							</svg>
-							{{ if eq .Members 1 }}
-								1 member
-							{{ else }}
-								{{ .Members }} members
-							{{ end }}
-						</span>
+						{{ template "groupMemberCount" .Membership }}
 						{{ if .OwnerUsername }}
 							<span>
 								Created by
@@ -92,6 +141,9 @@
 						{{ end }}
 					</div>
 				</div>
+				{{/* The post box lands here in M3, inside this same gate:
+					posting is for members only (spec §4).
+				*/}}
 				<div
 					class="w-full h-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center gap-1 select-none"
 				>
@@ -101,7 +153,13 @@
 						Nothing posted here yet
 					</span>
 					<span class="text-xs text-gray-400 dark:text-gray-600">
-						Check back later!
+						{{ if .Membership.IsMember }}
+							Be the first to post!
+						{{ else if .AuthId }}
+							Join this group to post.
+						{{ else }}
+							Log in and join this group to post.
+						{{ end }}
 					</span>
 				</div>
 			</div>
