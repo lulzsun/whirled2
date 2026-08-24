@@ -1,6 +1,7 @@
 import { addComponent, defineSystem } from "bitecs";
 import { World } from "../factory/world";
 import { createPlayer as _createPlayer, Avatar } from "../factory/player";
+import { createObject } from "../factory/object";
 import * as buf from "../proto";
 import { create } from "@bufbuild/protobuf";
 import { TransformComponent, NameplateComponent } from "../components";
@@ -29,6 +30,10 @@ export function createPreviewSystem(world: World) {
 	switch (type) {
 		case "avatars": {
 			createPlayer(file, "", scale, world);
+			break;
+		}
+		case "furniture": {
+			createFurniture(file, scale, world);
 			break;
 		}
 		default:
@@ -130,6 +135,19 @@ export function createPlayer(
 		});
 		world.scene.add(playerEntity);
 	})();
+}
+
+(window as any).createFurniture = createFurniture;
+export function createFurniture(
+	file: string,
+	scale: number = 1,
+	world: World = window.world,
+) {
+	const object = createObject(world, "Preview", file, scale);
+	// rest the piece on the preview floor (y -7.5), like the avatar preview
+	object.position.y = -7.49;
+	world.objects.set(object.eid, object);
+	world.scene.add(object);
 }
 
 (window as any).scalePlayer = scalePlayer;
