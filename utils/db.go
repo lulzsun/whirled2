@@ -2,6 +2,7 @@ package utils
 
 import (
 	"log"
+	buf "whirled2/utils/proto"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -374,6 +375,84 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		}
 	}
 
+	// Listings collection / table
+	// What the shop sells; points at avatars/furniture records via the
+	// buf.Type discriminator. Empty creator_id = system/seed item (purchases
+	// of those burn coins). See docs/specs/shop-currency.md §5.3
+	/* SQLITE equivalent:
+	CREATE TABLE listings (
+		id TEXT PRIMARY KEY,
+		creator_id TEXT,
+		type INTEGER NOT NULL,
+		item_id TEXT NOT NULL,
+		price INTEGER NOT NULL,
+		is_listed BOOL,
+		is_featured BOOL,
+		purchases INTEGER,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (creator_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_listing_item ON listings (type, item_id);
+	*/
+	if _, err := app.FindCollectionByNameOrId("listings"); err != nil {
+		listingsCollection := core.NewBaseCollection("listings")
+		listingsCollection.ListRule = nil
+		listingsCollection.ViewRule = nil
+		listingsCollection.CreateRule = nil
+		listingsCollection.UpdateRule = nil
+		listingsCollection.DeleteRule = nil
+		listingsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "creator_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.NumberField{
+				Name:     "type",
+				Required: true,
+				OnlyInt:  true,
+			},
+			&core.TextField{
+				Name:     "item_id",
+				Required: true,
+			},
+			&core.NumberField{
+				Name:    "price",
+				OnlyInt: true,
+				Min:     types.Pointer(0.0),
+			},
+			&core.BoolField{
+				Name: "is_listed",
+			},
+			&core.BoolField{
+				Name: "is_featured",
+			},
+			&core.NumberField{
+				Name:    "purchases",
+				OnlyInt: true,
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		listingsCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_listing_item ON listings (type, item_id)",
+		}
+
+		if err := app.Save(listingsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
 	// Avatars collection / table
 	/* SQLITE equivalent:
 	CREATE TABLE furniture (
@@ -673,6 +752,50 @@ func Bootstrap(app *pocketbase.PocketBase) {
 			log.Fatalln(err)
 		}
 	}
+
+	// Seed shop listings for the default (system) avatars and furniture.
+	// Purchases of these burn coins since there is no creator to credit.
+	ensureListing := func(collectionName string, itemName string, itemType int, price int, featured bool) {
+		item, err := app.FindFirstRecordByFilter(
+			collectionName,
+			"name = {:name} && creator_id = ''",
+			dbx.Params{"name": itemName},
+		)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		_, err = app.FindFirstRecordByFilter(
+			"listings",
+			"type = {:type} && item_id = {:item}",
+			dbx.Params{"type": itemType, "item": item.Id},
+		)
+		if err == nil {
+			return
+		}
+		collection, err := app.FindCollectionByNameOrId("listings")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		listing := core.NewRecord(collection)
+		listing.Load(map[string]any{
+			"type":        itemType,
+			"item_id":     item.Id,
+			"price":       price,
+			"is_listed":   true,
+			"is_featured": featured,
+			"purchases":   0,
+		})
+		if err := app.Save(listing); err != nil {
+			log.Println(err)
+		}
+	}
+	ensureListing("avatars", "Tofu", int(buf.Type_Avatar), 0, false)
+	ensureListing("avatars", "Robot", int(buf.Type_Avatar), 500, true)
+	ensureListing("avatars", "Fox", int(buf.Type_Avatar), 800, false)
+	ensureListing("furniture", "Chair", int(buf.Type_Furniture), 250, false)
+	ensureListing("furniture", "Sofa", int(buf.Type_Furniture), 400, true)
 
 	// Backfill wallets (with signup grant) for users created before the
 	// economy existed
