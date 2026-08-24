@@ -20,6 +20,7 @@ import (
 
 const shopPageSize = 24
 const shopMaxTagsPerListing = 24
+const shopMaxListingPrice = 1000000
 
 var shopTmplFiles []string
 var shopTmpl *template.Template
@@ -600,6 +601,112 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return nil
 	})
+	se.Router.POST("/shop/list", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can sell in the shop.", nil)
+		}
+		category := e.Request.FormValue("category")
+		itemId := e.Request.FormValue("item_id")
+		itemType, ok := shopCategories[category]
+		if !ok || itemType == 0 {
+			return apis.NewNotFoundError("Unknown category.", nil)
+		}
+		price, err := strconv.ParseInt(e.Request.FormValue("price"), 10, 64)
+		if err != nil || price < 0 || price > shopMaxListingPrice {
+			return apis.NewBadRequestError("The price must be between 0 and 1,000,000 coins.", err)
+		}
+
+		// only the item's creator can sell it; owning a purchased copy is
+		// not selling rights (spec §7)
+		item, err := app.FindRecordById(category, itemId)
+		if err != nil {
+			return apis.NewNotFoundError("This item no longer exists.", err)
+		}
+		if item.GetString("creator_id") != info.Auth.Id {
+			return apis.NewForbiddenError("Only the creator of an item can sell it.", nil)
+		}
+		if _, err := app.FindFirstRecordByFilter(
+			"listings",
+			"type = {:type} && item_id = {:item}",
+			dbx.Params{"type": itemType, "item": itemId},
+		); err == nil {
+			return apis.NewBadRequestError("This item is already listed.", nil)
+		}
+
+		fee := utils.ListingFee(price)
+		err = app.RunInTransaction(func(txApp core.App) error {
+			collection, err := txApp.FindCollectionByNameOrId("listings")
+			if err != nil {
+				return err
+			}
+			record := core.NewRecord(collection)
+			record.Load(map[string]any{
+				"creator_id": info.Auth.Id,
+				"type":       itemType,
+				"item_id":    itemId,
+				"price":      price,
+				"is_listed":  true,
+				"purchases":  0,
+			})
+			if err := txApp.Save(record); err != nil {
+				return err
+			}
+			_, err = utils.AdjustCoins(txApp, info.Auth.Id, -fee, utils.TxListingFee, record.Id, "Listed "+item.GetString("name"))
+			return err
+		})
+		if errors.Is(err, utils.ErrInsufficientCoins) {
+			return apis.NewBadRequestError(fmt.Sprintf("You need %d coins for the listing fee.", fee), err)
+		}
+		if err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		e.Response.Header().Set("HX-Trigger", "coinsChanged")
+		return renderStuffListing(e, app, category, itemId)
+	})
+	se.Router.POST("/shop/reprice", func(e *core.RequestEvent) error {
+		listing, category, err := findOwnListing(e, app)
+		if err != nil {
+			return err
+		}
+		price, perr := strconv.ParseInt(e.Request.FormValue("price"), 10, 64)
+		if perr != nil || price < 0 || price > shopMaxListingPrice {
+			return apis.NewBadRequestError("The price must be between 0 and 1,000,000 coins.", perr)
+		}
+		listing.Set("price", price)
+		if err := app.Save(listing); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return renderStuffListing(e, app, category, listing.GetString("item_id"))
+	})
+	se.Router.POST("/shop/delist", func(e *core.RequestEvent) error {
+		listing, category, err := findOwnListing(e, app)
+		if err != nil {
+			return err
+		}
+		listing.Set("is_listed", false)
+		if err := app.Save(listing); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return renderStuffListing(e, app, category, listing.GetString("item_id"))
+	})
+	se.Router.POST("/shop/relist", func(e *core.RequestEvent) error {
+		listing, category, err := findOwnListing(e, app)
+		if err != nil {
+			return err
+		}
+		// relisting an existing row never re-charges the fee (spec §7)
+		listing.Set("is_listed", true)
+		if err := app.Save(listing); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return renderStuffListing(e, app, category, listing.GetString("item_id"))
+	})
 	se.Router.GET("/wallet/balance", func(e *core.RequestEvent) error {
 		info, _ := e.RequestInfo()
 		if info.Auth == nil {
@@ -617,6 +724,90 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 }
 
 var errListingGone = errors.New("listing gone")
+
+// StuffListing drives the "Shop listing" panel on a stuff item's detail
+// page (stuffPreview.gohtml); only ever rendered for the item's creator
+type StuffListing struct {
+	Category string
+	ItemId   string
+
+	HasListing bool
+	ListingId  string
+	Price      int64
+	IsListed   bool
+	Purchases  int64
+	// "/shop/delist" when listed, "/shop/relist" when not; precomputed so
+	// the template keeps the hx-post attribute free of stray whitespace
+	ToggleAction string
+
+	FeePercent int
+	FeeMin     int
+	InitialFee int64
+}
+
+func getStuffListing(app *pocketbase.PocketBase, category string, itemId string) StuffListing {
+	data := StuffListing{
+		Category:   category,
+		ItemId:     itemId,
+		FeePercent: utils.ListingFeePercent,
+		FeeMin:     utils.ListingFeeMinCoins,
+		InitialFee: utils.ListingFee(100), // matches the form's default price
+	}
+	itemType := shopCategories[category]
+	listing, err := app.FindFirstRecordByFilter(
+		"listings",
+		"type = {:type} && item_id = {:item}",
+		dbx.Params{"type": itemType, "item": itemId},
+	)
+	if err == nil {
+		data.HasListing = true
+		data.ListingId = listing.Id
+		data.Price = int64(listing.GetInt("price"))
+		data.IsListed = listing.GetBool("is_listed")
+		data.Purchases = int64(listing.GetInt("purchases"))
+		data.ToggleAction = "/shop/relist"
+		if data.IsListed {
+			data.ToggleAction = "/shop/delist"
+		}
+	}
+	return data
+}
+
+// findOwnListing resolves the listing_id form value to a listing owned by
+// the authed user, for the reprice/delist/relist routes. Returns the
+// listing's category alongside so the fragment can be re-rendered.
+func findOwnListing(e *core.RequestEvent, app *pocketbase.PocketBase) (*core.Record, string, error) {
+	info, _ := e.RequestInfo()
+	if info.Auth == nil {
+		return nil, "", apis.NewForbiddenError("Only authorized users can manage listings.", nil)
+	}
+	listing, err := app.FindRecordById("listings", e.Request.FormValue("listing_id"))
+	if err != nil {
+		return nil, "", apis.NewNotFoundError("This listing no longer exists.", err)
+	}
+	if listing.GetString("creator_id") != info.Auth.Id {
+		return nil, "", apis.NewForbiddenError("Only the creator of a listing can manage it.", nil)
+	}
+	category := ""
+	for name, itemType := range shopCategories {
+		if itemType != 0 && itemType == listing.GetInt("type") {
+			category = name
+			break
+		}
+	}
+	if category == "" {
+		return nil, "", apis.NewBadRequestError("Something went wrong.", nil)
+	}
+	return listing, category, nil
+}
+
+func renderStuffListing(e *core.RequestEvent, app *pocketbase.PocketBase, category string, itemId string) error {
+	if err := previewTmpl.ExecuteTemplate(e.Response, "stuffListing", getStuffListing(app, category, itemId)); err != nil {
+		log.Println(err)
+		return apis.NewBadRequestError("Something went wrong.", err)
+	}
+	return nil
+}
 
 type listingRating struct {
 	AuthId    string

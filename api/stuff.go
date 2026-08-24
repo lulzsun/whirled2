@@ -210,6 +210,9 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			File        string
 			Type        string
 			Scale       float64
+
+			IsCreator bool
+			Listing   StuffListing
 		}{Type: category}
 
 		dbObject := struct {
@@ -222,22 +225,24 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			File        string  `db:"file" json:"file"`
 			Scale       float64 `db:"scale" json:"scale"`
 
-			Username string `db:"username" json:"Username"`
-			Nickname string `db:"nickname" json:"Nickname"`
+			CreatorId string `db:"creator_id" json:"creator_id"`
+			Username  string `db:"username" json:"Username"`
+			Nickname  string `db:"nickname" json:"Nickname"`
 		}{}
 
 		switch category {
 		case "avatars":
 			err := app.DB().
 				NewQuery(`
-				SELECT 
-					s.id, 
-					s.type, 
-					s.stuff_id, 
+				SELECT
+					s.id,
+					s.type,
+					s.stuff_id,
 					a.name,
 					a.description,
 					a.file,
 					a.scale,
+					IFNULL(a.creator_id, '') AS creator_id,
 					IFNULL(u.username, '') AS username,
 					IFNULL(u.nickname, '') AS nickname
 				FROM stuff s
@@ -267,6 +272,12 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 				data.Description = dbObject.Description
 				data.File = "/api/files/avatars/" + dbObject.AvatarId + "/" + dbObject.File
 				data.Scale = dbObject.Scale
+				// selling is creator-only: the check is against the item
+				// record's creator_id, never stuff ownership (spec §7)
+				data.IsCreator = dbObject.CreatorId != "" && dbObject.CreatorId == userId
+				if data.IsCreator {
+					data.Listing = getStuffListing(app, category, dbObject.AvatarId)
+				}
 			}
 		default:
 			e.Redirect(302, "/stuff/avatars")
@@ -296,7 +307,9 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 	})
 	app.OnRecordAfterDeleteSuccess("stuff").BindFunc(func(e *core.RecordEvent) error {
 		collection := ""
-		switch e.Record.Get("type") {
+		// GetInt, not Get: the raw value is a float64, which can never
+		// equal a buf.Type constant in a switch
+		switch buf.Type(e.Record.GetInt("type")) {
 		case buf.Type_Avatar:
 			collection = "avatars"
 		case buf.Type_Furniture:
@@ -320,6 +333,20 @@ func AddStuffEventHooks(app *pocketbase.PocketBase) {
 		err = app.Delete(record)
 		if err != nil {
 			return err
+		}
+		// the source item is gone, so its shop listing must go too (spec §7)
+		listing, err := app.FindFirstRecordByFilter(
+			"listings",
+			"type = {:type} && item_id = {:item}",
+			dbx.Params{
+				"type": e.Record.GetInt("type"),
+				"item": e.Record.Get("stuff_id"),
+			},
+		)
+		if err == nil {
+			if err := app.Delete(listing); err != nil {
+				log.Println(err)
+			}
 		}
 		return e.Next()
 	})

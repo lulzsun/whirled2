@@ -44,6 +44,15 @@ const (
 
 var ErrInsufficientCoins = errors.New("insufficient coins")
 
+// ListingFee is the non-refundable fee burned at initial listing (spec §7)
+func ListingFee(price int64) int64 {
+	fee := price * ListingFeePercent / 100
+	if fee < ListingFeeMinCoins {
+		fee = ListingFeeMinCoins
+	}
+	return fee
+}
+
 // AdjustCoins applies a signed coin delta to a user's wallet and appends the
 // matching ledger row, atomically. The debit guard lives inside the UPDATE
 // (`coins + amount >= 0`) so concurrent spends can never drive a balance

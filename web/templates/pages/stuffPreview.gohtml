@@ -1,3 +1,117 @@
+{{ define "stuffListing" }}
+	<div
+		id="stuff-listing"
+		class="mt-6 pt-3 border-t border-gray-200 dark:border-gray-600 flex flex-col gap-2 text-sm"
+	>
+		<span class="font-bold text-gray-900 dark:text-white">
+			Shop listing
+		</span>
+		{{ if .HasListing }}
+			<p>
+				{{ if .IsListed }}
+					Listed for
+					<span class="font-medium">{{ .Price }} coins</span>
+					&middot; {{ .Purchases }} sold
+				{{ else }}
+					Not currently listed &middot; {{ .Purchases }} sold
+				{{ end }}
+			</p>
+			<div class="flex flex-wrap items-center gap-2">
+				<form
+					hx-post="/shop/reprice"
+					hx-target="#stuff-listing"
+					hx-swap="outerHTML"
+					hx-push-url="false"
+					class="flex items-center gap-2"
+				>
+					<input
+						type="hidden"
+						name="listing_id"
+						value="{{ .ListingId }}"
+					/>
+					<input
+						type="number"
+						name="price"
+						value="{{ .Price }}"
+						min="0"
+						max="1000000"
+						class="w-28 p-1.5 text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+					/>
+					<button
+						type="submit"
+						class="cursor-pointer text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg px-3 py-1.5 dark:bg-blue-600 dark:hover:bg-blue-700"
+					>
+						Update price
+					</button>
+				</form>
+				<form
+					hx-post="{{ .ToggleAction }}"
+					hx-target="#stuff-listing"
+					hx-swap="outerHTML"
+					hx-push-url="false"
+				>
+					<input
+						type="hidden"
+						name="listing_id"
+						value="{{ .ListingId }}"
+					/>
+					<button
+						type="submit"
+						class="cursor-pointer text-xs font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700"
+					>
+						{{ if .IsListed }}
+							Delist
+						{{ else }}
+							Relist
+						{{ end }}
+					</button>
+				</form>
+			</div>
+			<p class="text-xs text-gray-500 dark:text-gray-400">
+				Repricing and relisting are free; the listing fee was paid when
+				the item was first listed.
+			</p>
+		{{ else }}
+			<form
+				hx-post="/shop/list"
+				hx-target="#stuff-listing"
+				hx-swap="outerHTML"
+				hx-push-url="false"
+				class="flex flex-col gap-2"
+			>
+				<input type="hidden" name="category" value="{{ .Category }}" />
+				<input type="hidden" name="item_id" value="{{ .ItemId }}" />
+				<label class="flex items-center gap-2">
+					Price
+					<input
+						type="number"
+						name="price"
+						value="100"
+						min="0"
+						max="1000000"
+						oninput="document.getElementById('listing-fee').textContent =
+							Math.max({{ .FeeMin }}, Math.floor((parseInt(this.value) || 0) * {{ .FeePercent }} / 100))"
+						class="w-28 p-1.5 text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+					/>
+					coins
+				</label>
+				<p class="text-xs text-gray-500 dark:text-gray-400">
+					Listing fee:
+					<span id="listing-fee">{{ .InitialFee }}</span>
+					coins ({{ .FeePercent }}% of the price, minimum
+					{{ .FeeMin }}; non-refundable)
+				</p>
+				<button
+					type="submit"
+					class="cursor-pointer w-32 text-xs font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700"
+				>
+					List in shop
+				</button>
+			</form>
+		{{ end }}
+	</div>
+{{ end }}
+
 {{ define "page" }}
 	<div
 		class="flex w-full max-w-7xl @7xl/web:w-2/3 gap-4 p-4 @max-2xl/web:flex-col"
@@ -147,6 +261,9 @@
 						</button>
 					</form>
 				</div>
+				{{ if .IsCreator }}
+					{{ template "stuffListing" .Listing }}
+				{{ end }}
 			</div>
 		</div>
 	</div>
