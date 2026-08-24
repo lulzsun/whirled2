@@ -115,6 +115,18 @@ export function createEditorSystem(world: World) {
 			return;
 		}
 		if (!(event.button === 0 && world.editor.enabled)) return;
+		// ImGui draws its panels onto this same canvas, so a click on one
+		// still arrives here as a plain canvas pointerdown. Without this the
+		// raycast below runs *behind* the panel and reselects whatever is
+		// under it -- the floor, wherever a panel overlaps it. Pressing
+		// "Remove from room" therefore swapped the selection out from under
+		// itself on the press, and on the release the button acted on the
+		// floor, which has no network id, and silently did nothing. Which
+		// piece you could delete depended on where the panel happened to sit.
+		// unselectObject() has carried this guard all along; selecting never
+		// did, so the click only ever went one way: it took a selection, it
+		// could not keep one.
+		if (ImGui.bind !== undefined && ImGui.GetIO().WantCaptureMouse) return;
 		const intersects = raycaster.intersectObjects(
 			world.scene.children.filter((x) => {
 				//@ts-ignore: only make certain objects interactive
