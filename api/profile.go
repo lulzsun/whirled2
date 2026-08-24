@@ -31,6 +31,7 @@ type Comment struct {
 	CommentId string `db:"id" json:"id"`
 	ProfileId string `db:"profile_id" json:"profile_id"`
 	ListingId string `db:"listing_id" json:"listing_id"`
+	PostId    string `db:"post_id" json:"post_id"`
 	ParentId  string `db:"parent_id" json:"parent_id"`
 	Content   string `db:"content" json:"content"`
 	Timestamp string `db:"created" json:"created"`
@@ -217,15 +218,28 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 		}
 		e.Record.Set("user_id", info.Auth.Id)
 
-		// a comment belongs to exactly one thread host: a profile or a listing
+		// a comment belongs to exactly one thread host: a profile, a shop
+		// listing, or a group post
 		profileId := e.Record.GetString("profile_id")
 		listingId := e.Record.GetString("listing_id")
-		if (profileId == "") == (listingId == "") {
-			return apis.NewBadRequestError("A comment needs a profile or a listing to belong to.", nil)
+		postId := e.Record.GetString("post_id")
+		hosts := 0
+		for _, host := range []string{profileId, listingId, postId} {
+			if host != "" {
+				hosts++
+			}
+		}
+		if hosts != 1 {
+			return apis.NewBadRequestError("A comment needs exactly one profile, listing, or post to belong to.", nil)
 		}
 		if listingId != "" {
 			if _, err := app.FindRecordById("listings", listingId); err != nil {
 				return apis.NewBadRequestError("This listing no longer exists.", err)
+			}
+		}
+		if postId != "" {
+			if err := checkGroupPostCommentable(app, postId, info.Auth.Id); err != nil {
+				return err
 			}
 		}
 
@@ -246,6 +260,20 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 			}
 			username, nickname := user.GetString("username"), user.GetString("nickname")
 
+			content := e.Record.GetString("content")
+			if postId != "" {
+				// group post pages escape comment content on read, so the
+				// fragment answering a new comment has to escape it too or
+				// the author briefly sees their own markup rendered. Scoped
+				// to group comments deliberately: profiles and listings
+				// render comment bodies raw on page load today, and making
+				// only their fragments escape would just move the
+				// inconsistency around. See the escaping note in
+				// docs/specs/groups-page.md §7.
+				content = escapeGroupText(content)
+				nickname = escapeGroupText(nickname)
+			}
+
 			data := struct {
 				Comments []Comment
 			}{
@@ -254,8 +282,9 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 						CommentId:    e.Record.Id,
 						ProfileId:    e.Record.GetString("profile_id"),
 						ListingId:    e.Record.GetString("listing_id"),
+						PostId:       postId,
 						ParentId:     e.Record.GetString("parent_id"),
-						Content:      e.Record.GetString("content"),
+						Content:      content,
 						Timestamp:    e.Record.GetString("created"),
 						IsDeleted:    e.Record.GetBool("is_deleted"),
 						RelativeTime: utils.FormatRelativeTime(e.Record.GetString("created")),

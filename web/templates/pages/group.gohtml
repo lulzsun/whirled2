@@ -141,27 +141,136 @@
 						{{ end }}
 					</div>
 				</div>
-				{{/* The post box lands here in M3, inside this same gate:
-					posting is for members only (spec §4).
-				*/}}
-				<div
-					class="w-full h-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center gap-1 select-none"
-				>
-					<span
-						class="text-sm font-bold text-gray-400 dark:text-gray-500"
+				{{/* posting is for members only (spec §4) */}}
+				{{ if .Membership.IsMember }}
+					<input
+						type="checkbox"
+						id="_create_post"
+						autocomplete="off"
+						class="hidden absolute"
+					/>
+					<style>
+						#_create_post:checked ~ #_create_post_box {
+							display: block;
+						}
+						#_create_post:checked ~ #_create_post_open {
+							display: none;
+						}
+					</style>
+					<label
+						id="_create_post_open"
+						for="_create_post"
+						class="mb-4 cursor-pointer select-none block w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-3 text-xs text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
 					>
-						Nothing posted here yet
-					</span>
-					<span class="text-xs text-gray-400 dark:text-gray-600">
-						{{ if .Membership.IsMember }}
-							Be the first to post!
-						{{ else if .AuthId }}
-							Join this group to post.
-						{{ else }}
-							Log in and join this group to post.
+						Start a post in {{ .DisplayName }}...
+					</label>
+					<div
+						id="_create_post_box"
+						class="hidden mb-4 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700"
+					>
+						<form
+							hx-post="/groups/{{ .Name }}/posts"
+							hx-target="this"
+							hx-swap="none"
+							hx-push-url="false"
+							class="flex flex-col gap-3 text-xs"
+						>
+							<input
+								type="text"
+								name="title"
+								required
+								maxlength="120"
+								placeholder="Title"
+								class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							/>
+							<textarea
+								name="content"
+								rows="5"
+								maxlength="5000"
+								placeholder="Text (optional)"
+								class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							></textarea>
+							<div class="flex gap-2">
+								<button
+									type="submit"
+									hx-disabled-elt="this"
+									class="cursor-pointer py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50"
+								>
+									Post
+								</button>
+								<label
+									for="_create_post"
+									class="cursor-pointer select-none py-1.5 px-3 text-xs font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+								>
+									Cancel
+								</label>
+							</div>
+						</form>
+					</div>
+				{{ end }}
+				{{ if .Posts }}
+					<div class="flex flex-col gap-2">
+						{{ range $post := .Posts }}
+							{{ template "postCard" $post }}
 						{{ end }}
-					</span>
-				</div>
+					</div>
+				{{ else }}
+					<div
+						class="w-full h-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center gap-1 select-none"
+					>
+						<span
+							class="text-sm font-bold text-gray-400 dark:text-gray-500"
+						>
+							Nothing posted here yet
+						</span>
+						<span class="text-xs text-gray-400 dark:text-gray-600">
+							{{ if .Membership.IsMember }}
+								Be the first to post!
+							{{ else if .AuthId }}
+								Join this group to post.
+							{{ else }}
+								Log in and join this group to post.
+							{{ end }}
+						</span>
+					</div>
+				{{ end }}
+				{{ if .Pages }}
+					<div class="flex justify-center py-4">
+						<nav aria-label="Group feed page navigation">
+							<ul
+								class="flex items-center -space-x-px h-8 text-sm select-none"
+							>
+								{{ range $p := .Pages }}
+									<li>
+										{{ if eq $p $.Page }}
+											<span
+												class="z-10 flex items-center justify-center px-3 h-8 leading-tight text-blue-600 border border-blue-300 bg-blue-50 dark:border-gray-700 dark:bg-gray-700 dark:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</span>
+										{{ else }}
+											<a
+												hx-target="#page"
+												href="/groups/{{ $.Name }}?page={{ $p }}"
+												class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</a>
+										{{ end }}
+									</li>
+								{{ end }}
+							</ul>
+						</nav>
+					</div>
+				{{ end }}
 			</div>
 		</div>
 	</div>

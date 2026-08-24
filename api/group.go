@@ -30,12 +30,21 @@ const (
 const groupRoleNone = -1
 
 const groupPageSize = 24
+const groupFeedPageSize = 20
+
+const groupPostMaxTitle = 120
+const groupPostMaxContent = 5000
 
 var groupTmplFiles []string
 var groupTmpl *template.Template
 
 var groupsTmplFiles []string
 var groupsTmpl *template.Template
+
+var groupPostTmplFiles []string
+var groupPostTmpl *template.Template
+
+var queryGetPostComments string
 
 // A group name is its URL slug, so it is kept to the same shape as a
 // username. Stored lowercase, which is what makes the unique index
@@ -57,8 +66,27 @@ type Group struct {
 	Members     int    `db:"members" json:"members"`
 }
 
+// GroupPost is one row of a group's feed and the body of a post page.
+type GroupPost struct {
+	Id        string `db:"id" json:"id"`
+	UserId    string `db:"user_id" json:"user_id"`
+	Title     string `db:"title" json:"title"`
+	Content   string `db:"content" json:"content"`
+	IsDeleted bool   `db:"is_deleted" json:"is_deleted"`
+	Timestamp string `db:"created" json:"created"`
+	Username  string `db:"username" json:"username"`
+	Nickname  string `db:"nickname" json:"nickname"`
+	Comments  int    `db:"comments" json:"comments"`
+
+	// filled in Go, for the feed card and the post page
+	GroupName    string
+	RelativeTime string
+	CanDelete    bool
+}
+
 func init() {
 	parseGroupFiles()
+	queryGetPostComments = utils.ReadSqlQuery("sql/group/getPostComments.sql")
 }
 
 func parseGroupFiles() {
@@ -69,8 +97,16 @@ func parseGroupFiles() {
 
 	groupTmplFiles = append(groupTmplFiles, AppendToBaseTmplFiles(
 		"web/templates/pages/group.gohtml",
+		"web/templates/components/postCard.gohtml",
 	)...)
 	groupTmpl = template.Must(template.ParseFiles(groupTmplFiles...))
+
+	groupPostTmplFiles = append(groupPostTmplFiles, AppendToBaseTmplFiles(
+		"web/templates/pages/groupPost.gohtml",
+		"web/templates/components/comment.gohtml",
+		"web/templates/components/commentBox.gohtml",
+	)...)
+	groupPostTmpl = template.Must(template.ParseFiles(groupPostTmplFiles...))
 }
 
 func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
@@ -200,6 +236,13 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			log.Println(err)
 		}
 
+		page, _ := strconv.Atoi(e.Request.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		membership := getGroupMembership(app, group, authId, false)
+		posts, pages := getGroupFeed(app, group, authId, membership.Role, page)
+
 		// fields are flattened rather than embedded: AppendToBaseData merges
 		// through utils.StructToMap, which keys by field name and does not
 		// promote an embedded struct's fields
@@ -214,6 +257,10 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			OwnerNickname string
 
 			Membership groupMembership
+
+			Posts []GroupPost
+			Page  int
+			Pages []int
 		}{
 			Id:          group.Id,
 			Name:        group.Name,
@@ -224,7 +271,11 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			OwnerUsername: owner.Username,
 			OwnerNickname: escapeGroupText(owner.Nickname),
 
-			Membership: getGroupMembership(app, group, authId, false),
+			Membership: membership,
+
+			Posts: posts,
+			Page:  page,
+			Pages: pages,
 		}
 
 		if err := groupTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
@@ -263,9 +314,345 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return renderGroupMembership(e, app, group.Name, info.Auth.Id)
 	})
+	se.Router.POST("/groups/{name}/posts", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can post.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		if getGroupRole(app, group.Id, info.Auth.Id) < GroupRoleMember {
+			return apis.NewForbiddenError("Only members of this group can post in it.", nil)
+		}
+
+		postId, err := createGroupPost(
+			app,
+			group.Id,
+			info.Auth.Id,
+			e.Request.FormValue("title"),
+			e.Request.FormValue("content"),
+		)
+		if err != nil {
+			return err
+		}
+
+		url := "/groups/" + group.Name + "/post/" + postId
+		return utils.ProcessHXRequest(e, func() error {
+			e.Response.Header().Set("HX-Location", `{"path":"`+url+`", "target":"#page"}`)
+			return e.String(200, "Posted!")
+		}, func() error {
+			return e.Redirect(302, url)
+		})
+	})
+	se.Router.GET("/groups/{name}/post/{id}", func(e *core.RequestEvent) error {
+		htmxEnabled := false
+		utils.ProcessHXRequest(e, func() error {
+			htmxEnabled = true
+			return nil
+		}, func() error { return nil })
+
+		info, _ := e.RequestInfo()
+		authId := ""
+		if info.Auth != nil {
+			authId = info.Auth.Id
+		}
+
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		postId := e.Request.PathValue("id")
+		membership := getGroupMembership(app, group, authId, false)
+		post, err := getGroupPost(app, group, postId, authId, membership.Role)
+		if err != nil {
+			return apis.NewNotFoundError("That post does not exist.", err)
+		}
+
+		threadUrl := "/groups/" + group.Name + "/post/" + postId
+		parentCommentId := e.Request.URL.Query().Get("viewReplies")
+		commentOffset, _ := strconv.Atoi(e.Request.URL.Query().Get("replyOffset"))
+
+		comments := []Comment{}
+		if err := app.DB().
+			NewQuery(queryGetPostComments).
+			Bind(dbx.Params{
+				"post_id":        postId,
+				"parent_id":      parentCommentId,
+				"comment_offset": commentOffset,
+			}).All(&comments); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		for i := range comments {
+			comments[i].Content = escapeGroupText(comments[i].Content)
+			comments[i].Nickname = escapeGroupText(comments[i].Nickname)
+		}
+		comments = list2tree(comments, parentCommentId, htmxEnabled, threadUrl)
+
+		if htmxEnabled && parentCommentId != "" {
+			// expanding replies; send just the comment fragments
+			if err := commentTmpl.ExecuteTemplate(e.Response, "base", struct{ Comments []Comment }{comments}); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
+
+		data := struct {
+			Name        string
+			DisplayName string
+
+			Post GroupPost
+
+			Membership groupMembership
+
+			// commentBox reads these; PostId is what makes the box post to
+			// this thread rather than a profile or a listing
+			ProfileId string
+			ListingId string
+			PostId    string
+			CommentId string
+
+			Comments  []Comment
+			ThreadUrl string
+		}{
+			Name:        group.Name,
+			DisplayName: escapeGroupText(group.DisplayName),
+
+			Post: post,
+
+			Membership: membership,
+
+			PostId: postId,
+
+			Comments:  comments,
+			ThreadUrl: threadUrl,
+		}
+
+		if err := groupPostTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.POST("/groups/{name}/post/{id}/delete", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can remove a post.", nil)
+		}
+		group, err := findGroupByName(app, e.Request.PathValue("name"))
+		if err != nil {
+			return apis.NewNotFoundError("That group does not exist.", err)
+		}
+		postId := e.Request.PathValue("id")
+		record, err := app.FindRecordById("group_posts", postId)
+		if err != nil || record.GetString("group_id") != group.Id {
+			return apis.NewNotFoundError("That post does not exist.", err)
+		}
+
+		role := getGroupRole(app, group.Id, info.Auth.Id)
+		if !canDeleteGroupPost(record, role, info.Auth.Id) {
+			return apis.NewForbiddenError("You cannot remove this post.", nil)
+		}
+		record.Set("is_deleted", true)
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		// the post survives as a tombstone so its comment thread stays
+		// addressable (spec §5.3). From the feed we swap the one card in
+		// place; from the post page there is nothing to swap into, so the
+		// page re-renders itself.
+		if e.Request.URL.Query().Get("frag") == "card" {
+			post, err := getGroupPost(app, group, postId, info.Auth.Id, role)
+			if err != nil {
+				return apis.NewNotFoundError("That post does not exist.", err)
+			}
+			if err := groupTmpl.ExecuteTemplate(e.Response, "postCard", post); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
+		url := "/groups/" + group.Name + "/post/" + postId
+		return utils.ProcessHXRequest(e, func() error {
+			e.Response.Header().Set("HX-Location", `{"path":"`+url+`", "target":"#page"}`)
+			return e.String(200, "Removed.")
+		}, func() error {
+			return e.Redirect(302, url)
+		})
+	})
 }
 
 func AddGroupEventHooks(app *pocketbase.PocketBase) {
+}
+
+// createGroupPost validates and stores a post, returning its id. Membership
+// is checked by the caller, which is the only place that knows the group.
+func createGroupPost(app core.App, groupId string, userId string, title string, content string) (string, error) {
+	title = strings.TrimSpace(title)
+	if title == "" || len([]rune(title)) > groupPostMaxTitle {
+		return "", apis.NewBadRequestError("A post title is 1-120 characters.", nil)
+	}
+	content = strings.TrimSpace(content)
+	if len([]rune(content)) > groupPostMaxContent {
+		return "", apis.NewBadRequestError("A post can be at most 5,000 characters.", nil)
+	}
+
+	collection, err := app.FindCollectionByNameOrId("group_posts")
+	if err != nil {
+		return "", apis.NewBadRequestError("Something went wrong.", err)
+	}
+	record := core.NewRecord(collection)
+	record.Load(map[string]any{
+		"group_id":   groupId,
+		"user_id":    userId,
+		"title":      title,
+		"content":    content,
+		"is_deleted": false,
+	})
+	if err := app.Save(record); err != nil {
+		log.Println(err)
+		return "", apis.NewBadRequestError("Something went wrong.", err)
+	}
+	return record.Id, nil
+}
+
+// canDeleteGroupPostBy is the single rule for who may remove a post, shared
+// by the route that enforces it and the template flag that offers it — so the
+// button and the check can never disagree. In M3 the author alone; M4 widens
+// this to `|| role >= GroupRoleModerator` (spec §4).
+func canDeleteGroupPostBy(authorId string, role int, userId string) bool {
+	return userId != "" && authorId == userId
+}
+
+func canDeleteGroupPost(post *core.Record, role int, userId string) bool {
+	return canDeleteGroupPostBy(post.GetString("user_id"), role, userId)
+}
+
+// getGroupFeed reads one page of a group's posts, newest first. Removed posts
+// stay in the feed as tombstones rather than vanishing, so a thread under a
+// removed post is still reachable (spec §5.3).
+func getGroupFeed(app core.App, group Group, authId string, role int, page int) ([]GroupPost, []int) {
+	posts := []GroupPost{}
+	pages := []int{}
+
+	var total int
+	if err := app.DB().
+		NewQuery(`SELECT COUNT(*) FROM group_posts WHERE group_id = {:group}`).
+		Bind(dbx.Params{"group": group.Id}).Row(&total); err != nil {
+		log.Println(err)
+		return posts, pages
+	}
+	totalPages := (total + groupFeedPageSize - 1) / groupFeedPageSize
+	if totalPages > 1 {
+		if page > totalPages {
+			page = totalPages
+		}
+		for i := 1; i <= totalPages; i++ {
+			pages = append(pages, i)
+		}
+	}
+
+	if err := app.DB().
+		NewQuery(`
+		SELECT
+			p.id,
+			p.user_id,
+			p.title,
+			p.content,
+			p.is_deleted,
+			p.created,
+			IFNULL(u.username, '') AS username,
+			IFNULL(u.nickname, '') AS nickname,
+			(
+				SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id
+			) AS comments
+		FROM group_posts p
+		LEFT JOIN users u ON u.id = p.user_id
+		WHERE p.group_id = {:group}
+		ORDER BY p.created DESC
+		LIMIT {:limit} OFFSET {:offset}
+	`).
+		Bind(dbx.Params{
+			"group":  group.Id,
+			"limit":  groupFeedPageSize,
+			"offset": (page - 1) * groupFeedPageSize,
+		}).All(&posts); err != nil {
+		log.Println(err)
+		return posts, pages
+	}
+
+	for i := range posts {
+		decorateGroupPost(&posts[i], group, authId, role)
+	}
+	return posts, pages
+}
+
+// getGroupPost reads a single post, confirming it belongs to the group.
+func getGroupPost(app core.App, group Group, postId string, authId string, role int) (GroupPost, error) {
+	post := GroupPost{}
+	err := app.DB().
+		NewQuery(`
+		SELECT
+			p.id,
+			p.user_id,
+			p.title,
+			p.content,
+			p.is_deleted,
+			p.created,
+			IFNULL(u.username, '') AS username,
+			IFNULL(u.nickname, '') AS nickname,
+			(
+				SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id
+			) AS comments
+		FROM group_posts p
+		LEFT JOIN users u ON u.id = p.user_id
+		WHERE p.id = {:id} AND p.group_id = {:group}
+	`).
+		Bind(dbx.Params{"id": postId, "group": group.Id}).One(&post)
+	if err != nil {
+		return post, err
+	}
+	decorateGroupPost(&post, group, authId, role)
+	return post, nil
+}
+
+// decorateGroupPost fills the view-only fields and escapes everything the
+// author controls (see the escaping note in the spec).
+func decorateGroupPost(post *GroupPost, group Group, authId string, role int) {
+	post.GroupName = group.Name
+	post.RelativeTime = utils.FormatRelativeTime(post.Timestamp)
+	post.Title = escapeGroupText(post.Title)
+	post.Content = escapeGroupText(post.Content)
+	post.Nickname = escapeGroupText(post.Nickname)
+	post.CanDelete = !post.IsDeleted &&
+		canDeleteGroupPostBy(post.UserId, role, authId)
+}
+
+// checkGroupPostCommentable is the group half of the shared comment-create
+// hook in profile.go: commenting on a group post requires the post to exist,
+// to not have been removed, and the commenter to be a member (spec §4).
+func checkGroupPostCommentable(app core.App, postId string, userId string) error {
+	post, err := app.FindRecordById("group_posts", postId)
+	if err != nil {
+		return apis.NewBadRequestError("This post no longer exists.", err)
+	}
+	if post.GetBool("is_deleted") {
+		return apis.NewBadRequestError("This post has been removed.", nil)
+	}
+	groupId := post.GetString("group_id")
+	group, err := app.FindRecordById("groups", groupId)
+	if err != nil || group.GetBool("is_deleted") {
+		return apis.NewBadRequestError("This group no longer exists.", err)
+	}
+	if getGroupRole(app, groupId, userId) < GroupRoleMember {
+		return apis.NewForbiddenError("Only members of this group can comment on its posts.", nil)
+	}
+	return nil
 }
 
 // joinGroup adds a user to a group as a plain member. Joining twice is a

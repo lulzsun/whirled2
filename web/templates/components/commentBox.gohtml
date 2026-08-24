@@ -4,7 +4,9 @@
 		method="post"
 		hx-on::after-request="this.reset()"
 	>
-		{{ if .ListingId }}
+		{{ if .PostId }}
+			<input type="hidden" name="post_id" value="{{ .PostId }}" />
+		{{ else if .ListingId }}
 			<input type="hidden" name="listing_id" value="{{ .ListingId }}" />
 		{{ else }}
 			<input type="hidden" name="profile_id" value="{{ .ProfileId }}" />
@@ -79,6 +81,8 @@
 				{{ if .CommentId }}
 					hx-target="#_{{ .CommentId }}_comment_children"
 					hx-swap="afterbegin"
+				{{ else if .PostId }}
+					hx-target="#_post_comments" hx-swap="afterbegin"
 				{{ else if .ListingId }}
 					hx-target="#_listing_comments" hx-swap="beforebegin"
 				{{ else }}

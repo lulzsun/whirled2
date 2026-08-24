@@ -1,6 +1,6 @@
 # Spec: Groups page
 
-Status: **in progress (M1–M2 landed)**
+Status: **in progress (M1–M3 landed)**
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -231,10 +231,26 @@ round-trips were measured to swap cleanly with no duplicated elements.
 `html/template` (see `AppendToBaseTmplFiles` in [base.go](../../api/base.go)),
 so nothing the templates interpolate is contextually escaped. Group display
 names and descriptions are free text, so `api/group.go` escapes them in Go
-before they reach the template. This is a local fix for a repo-wide property —
-existing user content (comment bodies, item names, nicknames) is rendered
-unescaped the same way, and a global move to `html/template` would be the real
-fix and would need these per-field escapes removed to avoid double-escaping.
+before they reach the template. The same applies to post titles, post bodies,
+and the comment bodies rendered on a post page — and, because the shared
+comment-create hook answers with an HTML fragment, to that fragment too when
+its host is a group post (`api/profile.go`). Without that last one an author
+would briefly see their own markup rendered before the next page load escaped
+it.
+
+This is a local fix for a repo-wide property. Existing user content elsewhere
+(profile and listing comment bodies, item names, nicknames) is still rendered
+unescaped, which is why the fragment escaping is scoped to group comments
+rather than applied to the shared hook wholesale: escaping every fragment
+while page loads still render raw would only move the inconsistency around. A
+global move to `html/template` is the real fix, and it would need these
+per-field escapes removed to avoid double-escaping.
+
+One inherited wart worth knowing: `comment.gohtml` renders its reply box for
+everyone, including logged-out visitors, so a non-member sees a reply control
+that the server will reject. That predates groups and is shared with the
+profile and listing pages; the gate itself is enforced server-side in the
+comment-create hook.
 
 ## 8. Milestones
 
@@ -247,8 +263,12 @@ fix and would need these per-field escapes removed to avoid double-escaping.
     branch that M3's post box drops into; for now it only varies the
     empty-feed copy, since shipping an inert post control would be worse than
     shipping none.
--   **M3 — Posts + comments.** Create post, post page, comments wired to
-    `post_id`, author self-delete.
+-   **M3 — Posts + comments.** _Landed._ Create post, feed, post page,
+    comments wired to `post_id`, author self-delete. The post-comments query
+    (`sql/group/getPostComments.sql`) is the listing query with the host
+    column swapped, so the tree/pagination behaviour is identical by
+    construction. Removed posts stay in the feed as `[removed]` tombstones
+    whose threads remain readable but closed to new comments.
 -   **M4 — Moderation.** Role helper, mod delete on posts/comments, manage
     page, promote/demote/remove, group edit/delete.
 

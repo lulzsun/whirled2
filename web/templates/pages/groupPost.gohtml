@@ -1,0 +1,122 @@
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div
+		class="bg-gray-50 dark:bg-gray-800 h-full w-full flex flex-col items-center"
+	>
+		<div class="gap-2 flex h-full w-full max-w-7xl @7xl/web:w-3/4">
+			<div class="p-2 w-full bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+				<div class="py-2 text-xs">
+					<a
+						hx-target="#page"
+						href="/groups/{{ .Name }}"
+						class="text-gray-500 dark:text-gray-400 hover:underline"
+					>
+						&larr;
+						{{ .DisplayName }}
+					</a>
+				</div>
+				<article
+					class="mb-4 w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-2"
+				>
+					{{ if .Post.IsDeleted }}
+						<span
+							class="select-none font-bold text-base italic text-gray-400 dark:text-gray-500"
+						>
+							[removed]
+						</span>
+						<span class="text-xs text-gray-400 dark:text-gray-600">
+							This post was removed by its author or a moderator.
+						</span>
+					{{ else }}
+						<h1
+							class="font-bold text-base text-gray-900 dark:text-white"
+						>
+							{{ .Post.Title }}
+						</h1>
+						{{ if .Post.Content }}
+							<p
+								class="whitespace-pre-line text-sm text-gray-500 dark:text-gray-400"
+							>
+								{{ .Post.Content }}
+							</p>
+						{{ end }}
+					{{ end }}
+					<div
+						class="flex gap-3 items-center text-xs text-gray-500 dark:text-gray-400"
+					>
+						{{ if .Post.Username }}
+							<span>
+								by
+								<a
+									hx-target="#page"
+									href="/profile/{{ .Post.Username }}"
+									class="hover:underline"
+								>
+									{{ .Post.Nickname }}
+								</a>
+							</span>
+						{{ end }}
+						<span title="{{ .Post.Timestamp }}">
+							{{ .Post.RelativeTime }}
+						</span>
+						{{ if .Post.CanDelete }}
+							<button
+								hx-post="/groups/{{ .Name }}/post/{{ .Post.Id }}/delete"
+								hx-target="this"
+								hx-swap="none"
+								hx-disabled-elt="this"
+								hx-push-url="false"
+								hx-confirm="Remove this post?"
+								class="cursor-pointer hover:underline text-red-600 dark:text-red-500"
+							>
+								Remove
+							</button>
+						{{ end }}
+					</div>
+				</article>
+				<div class="w-full text-sm">
+					<span
+						class="select-none font-bold text-base text-gray-900 dark:text-white"
+					>
+						Comments
+					</span>
+					{{ if .Post.IsDeleted }}
+						<p
+							class="py-2 text-xs italic text-gray-400 dark:text-gray-600"
+						>
+							This post is closed to new comments.
+						</p>
+					{{ else if .Membership.IsMember }}
+						<section class="py-2">
+							{{ template "commentBox" . }}
+						</section>
+					{{ else }}
+						<p
+							class="py-2 text-xs italic text-gray-500 dark:text-gray-400"
+						>
+							{{ if .AuthId }}
+								Join this group to comment.
+							{{ else }}
+								<a
+									href="/login"
+									hx-target="#page"
+									class="underline"
+								>
+									Log in
+								</a>
+								and join this group to comment.
+							{{ end }}
+						</p>
+					{{ end }}
+					<section id="_post_comments">
+						{{ range .Comments }}
+							{{ template "comment" . }}
+						{{ end }}
+					</section>
+				</div>
+			</div>
+		</div>
+	</div>
+{{ end }}

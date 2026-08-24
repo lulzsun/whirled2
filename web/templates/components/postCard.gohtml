@@ -1,0 +1,73 @@
+{{ define "postCard" }}
+	<article
+		id="_{{ .Id }}_post"
+		class="w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-1"
+	>
+		{{ if .IsDeleted }}
+			<span
+				class="select-none text-sm font-bold italic text-gray-400 dark:text-gray-500"
+			>
+				[removed]
+			</span>
+			<span class="text-xs text-gray-400 dark:text-gray-600">
+				This post was removed. Its comments are still readable.
+			</span>
+		{{ else }}
+			<a
+				hx-target="#page"
+				href="/groups/{{ .GroupName }}/post/{{ .Id }}"
+				class="text-sm font-bold text-gray-900 dark:text-white hover:underline"
+			>
+				{{ .Title }}
+			</a>
+			{{ if .Content }}
+				<p
+					class="line-clamp-3 whitespace-pre-line text-xs text-gray-500 dark:text-gray-400"
+				>
+					{{ .Content }}
+				</p>
+			{{ end }}
+		{{ end }}
+		<div
+			class="flex gap-3 items-center text-xs text-gray-500 dark:text-gray-400"
+		>
+			{{ if .Username }}
+				<span>
+					by
+					<a
+						hx-target="#page"
+						href="/profile/{{ .Username }}"
+						class="hover:underline"
+					>
+						{{ .Nickname }}
+					</a>
+				</span>
+			{{ end }}
+			<span title="{{ .Timestamp }}">{{ .RelativeTime }}</span>
+			<a
+				hx-target="#page"
+				href="/groups/{{ .GroupName }}/post/{{ .Id }}"
+				class="hover:underline"
+			>
+				{{ if eq .Comments 1 }}
+					1 comment
+				{{ else }}
+					{{ .Comments }} comments
+				{{ end }}
+			</a>
+			{{ if .CanDelete }}
+				<button
+					hx-post="/groups/{{ .GroupName }}/post/{{ .Id }}/delete?frag=card"
+					hx-target="#_{{ .Id }}_post"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+					hx-push-url="false"
+					hx-confirm="Remove this post?"
+					class="cursor-pointer hover:underline text-red-600 dark:text-red-500"
+				>
+					Remove
+				</button>
+			{{ end }}
+		</div>
+	</article>
+{{ end }}
