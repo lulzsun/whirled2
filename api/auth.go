@@ -199,6 +199,12 @@ func AddAuthEventHooks(app *pocketbase.PocketBase) {
 			log.Println(err)
 			return err
 		}
+
+		// Creating new wallet (applies the signup coin grant)
+		if _, err := utils.EnsureWallet(app, e.Record.Id); err != nil {
+			log.Println(err)
+			return err
+		}
 		return nil
 	})
 

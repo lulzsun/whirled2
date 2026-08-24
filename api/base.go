@@ -32,10 +32,12 @@ func init() {
 func AppendToBaseData(e *core.RequestEvent, data any) any {
 	info, _ := e.RequestInfo()
 	authId, authUsername, authNickname := "", "", ""
+	var authCoins int64
 	if info.Auth != nil {
 		authId = info.Auth.Id
 		authUsername = info.Auth.GetString("username")
 		authNickname = info.Auth.GetString("nickname")
+		authCoins = utils.GetCoins(e.App, authId)
 	}
 
 	baseData := struct {
@@ -44,12 +46,14 @@ func AppendToBaseData(e *core.RequestEvent, data any) any {
 		AuthId       string
 		AuthUsername string
 		AuthNickname string
+		AuthCoins    int64
 	}{
 		GameVersion: os.Getenv("VERSION"),
 
 		AuthId:       authId,
 		AuthUsername: authUsername,
 		AuthNickname: authNickname,
+		AuthCoins:    authCoins,
 	}
 
 	if data == nil {

@@ -249,6 +249,131 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		}
 	}
 
+	// Wallets collection / table
+	// One per user; coin balance is a cache of the transactions ledger.
+	// See docs/specs/shop-currency.md §5.1
+	/* SQLITE equivalent:
+	CREATE TABLE wallets (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		coins INTEGER NOT NULL,
+		last_daily DATE,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_wallet_user ON wallets (user_id);
+	*/
+	if _, err := app.FindCollectionByNameOrId("wallets"); err != nil {
+		walletsCollection := core.NewBaseCollection("wallets")
+		walletsCollection.ListRule = nil
+		walletsCollection.ViewRule = types.Pointer("user_id = @request.auth.id")
+		walletsCollection.CreateRule = nil
+		walletsCollection.UpdateRule = nil
+		walletsCollection.DeleteRule = nil
+		walletsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.NumberField{
+				Name:    "coins",
+				OnlyInt: true,
+				Min:     types.Pointer(0.0),
+			},
+			&core.DateField{
+				Name: "last_daily",
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		walletsCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_wallet_user ON wallets (user_id)",
+		}
+
+		if err := app.Save(walletsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Transactions collection / table
+	// Append-only coin ledger; rows are never updated or deleted. user_id is
+	// deliberately not a relation so history survives account deletion.
+	// See docs/specs/shop-currency.md §5.2
+	/* SQLITE equivalent:
+	CREATE TABLE transactions (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		amount INTEGER NOT NULL,
+		balance INTEGER NOT NULL,
+		currency INTEGER NOT NULL,
+		type INTEGER NOT NULL,
+		ref_id TEXT,
+		note TEXT,
+		created DATE NOT NULL
+	);
+	CREATE INDEX idx_tx_user ON transactions (user_id, created);
+	*/
+	if _, err := app.FindCollectionByNameOrId("transactions"); err != nil {
+		transactionsCollection := core.NewBaseCollection("transactions")
+		transactionsCollection.ListRule = nil
+		transactionsCollection.ViewRule = nil
+		transactionsCollection.CreateRule = nil
+		transactionsCollection.UpdateRule = nil
+		transactionsCollection.DeleteRule = nil
+		transactionsCollection.Fields.Add(
+			&core.TextField{
+				Name:     "user_id",
+				Required: true,
+			},
+			&core.NumberField{
+				Name:     "amount",
+				Required: true,
+				OnlyInt:  true,
+			},
+			&core.NumberField{
+				Name:    "balance",
+				OnlyInt: true,
+			},
+			&core.NumberField{
+				Name:    "currency",
+				OnlyInt: true,
+			},
+			&core.NumberField{
+				Name:     "type",
+				Required: true,
+				OnlyInt:  true,
+			},
+			&core.TextField{
+				Name: "ref_id",
+			},
+			&core.TextField{
+				Name: "note",
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+		)
+		transactionsCollection.Indexes = types.JSONArray[string]{
+			"CREATE INDEX idx_tx_user ON transactions (user_id, created)",
+		}
+
+		if err := app.Save(transactionsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
 	// Avatars collection / table
 	/* SQLITE equivalent:
 	CREATE TABLE furniture (
@@ -546,6 +671,28 @@ func Bootstrap(app *pocketbase.PocketBase) {
 
 		if err := app.Save(record); err != nil {
 			log.Fatalln(err)
+		}
+	}
+
+	// Backfill wallets (with signup grant) for users created before the
+	// economy existed
+	usersWithoutWallets := []struct {
+		Id string `db:"id"`
+	}{}
+	err = app.DB().
+		NewQuery(`
+		SELECT u.id
+		FROM users u
+		LEFT JOIN wallets w ON w.user_id = u.id
+		WHERE w.id IS NULL
+	`).All(&usersWithoutWallets)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for _, user := range usersWithoutWallets {
+		if _, err := EnsureWallet(app, user.Id); err != nil {
+			log.Println(err)
 		}
 	}
 }
