@@ -140,6 +140,8 @@ export const createWorld = (isPreview: boolean = false): World => {
 		//@ts-ignore
 		gridHelper.ignoreIntersect = true;
 		gridHelper.position.y = -7.49;
+		(gridHelper.material as THREE.Material).depthWrite = false;
+		gridHelper.renderOrder = 1;
 		//creating a cube
 		const geometry = new THREE.BoxGeometry(20, 15, 20);
 		var materials = [
@@ -177,6 +179,7 @@ export const createWorld = (isPreview: boolean = false): World => {
 			new THREE.MeshBasicMaterial({
 				color: 0x995a01,
 				side: THREE.DoubleSide,
+				depthWrite: false,
 			}),
 		);
 		planeMesh.position.z = 0;
