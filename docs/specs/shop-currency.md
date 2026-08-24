@@ -228,11 +228,20 @@ The path into the shop starts where uploading already ends: **My Stuff**.
 1. The user uploads an item through the existing `/stuff/{category}/upload`
    flow; it lands in their stuff, unchanged.
 2. The item's detail page (`stuffPreview.gohtml`) gains a **"List in shop"**
-   button — only for items the viewer _created_ (not merely owns — you
-   cannot resell someone else's work; `creator_id` checks enforce this).
+   button — only for items the viewer _created_.
 3. The button opens a small listing form: price, and the computed listing
    fee shown before confirming. Submitting charges the fee and the listing
    goes live; the button becomes "Manage listing" (reprice/delist).
+
+**Only the creator can sell (settled in review, 2026-08-23).** A purchased
+copy cannot be listed: owning a `stuff` row is not selling rights, and
+there is no resale/secondary market (§3). The check is against the _item
+record's_ `creator_id` (`avatars`/`furniture`), never against `stuff`
+ownership — a buyer's copy points at the same item record, whose
+`creator_id` is someone else, so `POST /shop/list` rejects it server-side
+and the stuff page never shows them the button. This also means the "List
+in shop" button and the server check must key off the same thing: item
+`creator_id == viewer`.
 
 ### Listing fee
 
