@@ -136,7 +136,7 @@
 							<img
 								class="w-10 h-10 rounded-full"
 								src="/static/assets/profile_picture.png"
-								alt="{{ .Username }}'s profile picture"
+								alt="{{ .CreatorUsername }}'s profile picture"
 							/>
 						</a>
 						<div>
@@ -149,7 +149,7 @@
 								<a
 									hx-target="#page"
 									hx-push-url="true"
-									href="/profile/{{ .Username }}"
+									href="/profile/{{ .CreatorUsername }}"
 									class="hover:underline"
 								>
 									@{{ .CreatorUsername }}
@@ -229,13 +229,28 @@
 				</div>
 				<p class="mb-8 text-base">{{ .Description }}</p>
 				<div class="flex w-full justify-evenly gap-4">
+					<!--
+						The handler is a bare call, not the IIFE this used to
+						wrap: prettier reflows a long attribute and had split
+						`return false` across a line, where ASI turns it into
+						`return;`. type="button" is what actually keeps the
+						click inert.
+					-->
 					<button
-						onclick="(function(){
-								window.game.wearAvatar('{{ .StuffId }}');
-								return false; })();return false;"
+						type="button"
+						{{ if eq .Type "furniture" }}
+							onclick="window.game.addStuff('{{ .StuffId }}',
+							'{{ .ItemType }}')"
+						{{ else }}
+							onclick="window.game.wearAvatar('{{ .StuffId }}')"
+						{{ end }}
 						class="w-32 text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 dark:hover:bg-orange-700 focus:outline-none dark:focus:ring-orange-800"
 					>
-						Wear Avatar
+						{{ if eq .Type "furniture" }}
+							Add to room
+						{{ else }}
+							Wear Avatar
+						{{ end }}
 					</button>
 					<form
 						action="/api/collections/stuff/records/{{ .StuffId }}"

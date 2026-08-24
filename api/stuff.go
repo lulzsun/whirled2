@@ -21,6 +21,13 @@ var previewTmpl *template.Template
 var uploadTmplFiles []string
 var uploadTmpl *template.Template
 
+// the item table each stuff category joins against. A category missing here
+// has no item records yet, so it has nothing to show.
+var stuffItemTables = map[string]string{
+	"avatars":   "avatars",
+	"furniture": "furniture",
+}
+
 type Category int64
 
 const (
@@ -199,6 +206,14 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return nil
 		}
 
+		// the item table this category lives in; anything else has no item
+		// records yet, so there is nothing to preview
+		itemTable, ok := stuffItemTables[category]
+		if !ok {
+			e.Redirect(302, "/stuff/avatars")
+			return nil
+		}
+
 		data := struct {
 			Id              string
 			StuffId         string
@@ -209,6 +224,7 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Description string
 			File        string
 			Type        string
+			ItemType    int
 			Scale       float64
 
 			IsCreator bool
@@ -216,9 +232,9 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}{Type: category}
 
 		dbObject := struct {
-			Id       string `db:"id" json:"id"`
-			Type     int    `db:"type" json:"type"`
-			AvatarId string `db:"stuff_id" json:"stuff_id"`
+			Id     string `db:"id" json:"id"`
+			Type   int    `db:"type" json:"type"`
+			ItemId string `db:"stuff_id" json:"stuff_id"`
 
 			Name        string  `db:"name" json:"name"`
 			Description string  `db:"description" json:"description"`
@@ -230,58 +246,54 @@ func AddStuffRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Nickname  string `db:"nickname" json:"Nickname"`
 		}{}
 
-		switch category {
-		case "avatars":
-			err := app.DB().
-				NewQuery(`
+		// itemTable comes from the allowlist above, never from the request
+		err := app.DB().
+			NewQuery(`
 				SELECT
 					s.id,
 					s.type,
 					s.stuff_id,
-					a.name,
-					a.description,
-					a.file,
-					a.scale,
-					IFNULL(a.creator_id, '') AS creator_id,
+					i.name,
+					i.description,
+					i.file,
+					i.scale,
+					IFNULL(i.creator_id, '') AS creator_id,
 					IFNULL(u.username, '') AS username,
 					IFNULL(u.nickname, '') AS nickname
 				FROM stuff s
-				INNER JOIN avatars a ON a.id = s.stuff_id
-				LEFT JOIN users u ON u.id = a.creator_id
+				INNER JOIN ` + itemTable + ` i ON i.id = s.stuff_id
+				LEFT JOIN users u ON u.id = i.creator_id
 				WHERE s.owner_id = {:owner_id} AND s.id = {:id}
 			`).
-				Bind(dbx.Params{
-					"owner_id": userId,
-					"id":       stuffId,
-				}).One(&dbObject)
+			Bind(dbx.Params{
+				"owner_id": userId,
+				"id":       stuffId,
+			}).One(&dbObject)
 
-			if err != nil {
-				// if there is an error here, it is possible that the avatar associated
-				// with this stuff_id is deleted.
-				// TODO: clean up stuff or have a message about avatar no longer existing
-				log.Println(err)
-			} else {
-				data.StuffId = dbObject.Id
-				data.CreatorUsername = dbObject.Username
-				data.CreatorNickname = dbObject.Nickname
-				if dbObject.Username == "" {
-					data.CreatorUsername = "Admin"
-					data.CreatorNickname = "Admin"
-				}
-				data.Name = dbObject.Name
-				data.Description = dbObject.Description
-				data.File = "/api/files/avatars/" + dbObject.AvatarId + "/" + dbObject.File
-				data.Scale = dbObject.Scale
-				// selling is creator-only: the check is against the item
-				// record's creator_id, never stuff ownership (spec §7)
-				data.IsCreator = dbObject.CreatorId != "" && dbObject.CreatorId == userId
-				if data.IsCreator {
-					data.Listing = getStuffListing(app, category, dbObject.AvatarId)
-				}
+		if err != nil {
+			// if there is an error here, it is possible that the item associated
+			// with this stuff_id is deleted.
+			// TODO: clean up stuff or have a message about item no longer existing
+			log.Println(err)
+		} else {
+			data.StuffId = dbObject.Id
+			data.ItemType = dbObject.Type
+			data.CreatorUsername = dbObject.Username
+			data.CreatorNickname = dbObject.Nickname
+			if dbObject.Username == "" {
+				data.CreatorUsername = "Admin"
+				data.CreatorNickname = "Admin"
 			}
-		default:
-			e.Redirect(302, "/stuff/avatars")
-			return nil
+			data.Name = dbObject.Name
+			data.Description = dbObject.Description
+			data.File = "/api/files/" + itemTable + "/" + dbObject.ItemId + "/" + dbObject.File
+			data.Scale = dbObject.Scale
+			// selling is creator-only: the check is against the item
+			// record's creator_id, never stuff ownership (spec §7)
+			data.IsCreator = dbObject.CreatorId != "" && dbObject.CreatorId == userId
+			if data.IsCreator {
+				data.Listing = getStuffListing(app, category, dbObject.ItemId)
+			}
 		}
 
 		if err := previewTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
