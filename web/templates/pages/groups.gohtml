@@ -1,0 +1,260 @@
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div
+		class="bg-gray-50 dark:bg-gray-800 h-full w-full flex flex-col items-center"
+	>
+		<div class="gap-2 flex h-full w-full max-w-7xl @7xl/web:w-3/4">
+			<div class="p-2 w-full bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+				{{ if .AuthId }}
+					<!-- the toggle lives here, ahead of both the button that
+					labels it and the panel it reveals, because the reveal is a
+					CSS sibling selector -->
+					<input
+						type="checkbox"
+						id="_create_group"
+						autocomplete="off"
+						class="hidden absolute"
+					/>
+				{{ end }}
+				<div
+					class="flex place-content-between place-items-center space-x-2 py-2"
+				>
+					<span class="select-none font-bold text-base">Groups</span>
+					<div class="max-w-lg flex gap-2 items-center">
+						<form
+							method="get"
+							action="/groups"
+							hx-target="#page"
+							class="flex"
+						>
+							<select
+								name="sort"
+								onchange="this.form.requestSubmit()"
+								class="shrink-0 cursor-pointer py-1.5 px-2 text-xs font-medium text-gray-900 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-700 dark:text-white dark:border-gray-600"
+							>
+								<option
+									value="new"
+									{{ if eq .Sort "new" }}selected{{ end }}
+								>
+									Sort by new
+								</option>
+								<option
+									value="members"
+									{{ if eq .Sort "members" }}selected{{ end }}
+								>
+									Most members
+								</option>
+							</select>
+						</form>
+						{{ if .AuthId }}
+							<label
+								for="_create_group"
+								class="cursor-pointer select-none py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+							>
+								Create group
+							</label>
+						{{ end }}
+					</div>
+				</div>
+				{{ if .AuthId }}
+					<style>
+						#_create_group:checked ~ #_create_group_box {
+							display: block;
+						}
+					</style>
+					<div
+						id="_create_group_box"
+						class="hidden mb-4 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700"
+					>
+						<form
+							hx-post="/groups"
+							hx-target="this"
+							hx-swap="none"
+							hx-push-url="false"
+							class="flex flex-col gap-3 text-xs"
+						>
+							<div class="flex flex-col gap-1">
+								<label
+									for="group_name"
+									class="font-medium text-gray-900 dark:text-white"
+								>
+									Group name
+								</label>
+								<input
+									type="text"
+									name="name"
+									id="group_name"
+									required
+									minlength="3"
+									maxlength="30"
+									pattern="[A-Za-z0-9_]+"
+									placeholder="cool_cats"
+									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+								/>
+								<span class="text-gray-500 dark:text-gray-400">
+									3-30 characters: letters, numbers, and
+									underscores. This is the group's address and
+									cannot be changed.
+								</span>
+							</div>
+							<div class="flex flex-col gap-1">
+								<label
+									for="group_display_name"
+									class="font-medium text-gray-900 dark:text-white"
+								>
+									Display name
+								</label>
+								<input
+									type="text"
+									name="display_name"
+									id="group_display_name"
+									maxlength="50"
+									placeholder="Cool Cats"
+									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+								/>
+							</div>
+							<div class="flex flex-col gap-1">
+								<label
+									for="group_description"
+									class="font-medium text-gray-900 dark:text-white"
+								>
+									Description
+								</label>
+								<textarea
+									name="description"
+									id="group_description"
+									rows="3"
+									maxlength="500"
+									placeholder="What is this group about?"
+									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+								></textarea>
+							</div>
+							<div class="flex gap-2">
+								<button
+									type="submit"
+									hx-disabled-elt="this"
+									class="cursor-pointer py-1.5 px-3 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50"
+								>
+									Create
+								</button>
+								<label
+									for="_create_group"
+									class="cursor-pointer select-none py-1.5 px-3 text-xs font-medium text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+								>
+									Cancel
+								</label>
+							</div>
+						</form>
+					</div>
+				{{ end }}
+				{{ if .Groups }}
+					<div
+						class="text-xs grid grid-cols-3 @max-3xl/web:grid-cols-1 @max-5xl/web:grid-cols-2 gap-4"
+					>
+						{{ range $group := .Groups }}
+							<div
+								class="flex flex-col p-4 gap-2 border-2 border-gray-200 rounded-lg dark:border-gray-700"
+							>
+								<a
+									hx-target="#page"
+									href="/groups/{{ $group.Name }}"
+									class="font-bold text-sm truncate hover:underline"
+								>
+									{{ $group.DisplayName }}
+								</a>
+								<span
+									class="truncate text-gray-500 dark:text-gray-400"
+								>
+									/groups/{{ $group.Name }}
+								</span>
+								{{ if $group.Description }}
+									<p
+										class="line-clamp-3 text-gray-500 dark:text-gray-400"
+									>
+										{{ $group.Description }}
+									</p>
+								{{ end }}
+								<span
+									class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"
+								>
+									<svg
+										class="w-3 h-3"
+										aria-hidden="true"
+										xmlns="http://www.w3.org/2000/svg"
+										fill="currentColor"
+										viewBox="0 0 16 16"
+									>
+										<path
+											d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"
+										/>
+									</svg>
+									{{ if eq $group.Members 1 }}
+										1 member
+									{{ else }}
+										{{ $group.Members }} members
+									{{ end }}
+								</span>
+							</div>
+						{{ end }}
+					</div>
+				{{ else }}
+					<div
+						class="w-full h-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center gap-1 select-none"
+					>
+						<span
+							class="text-sm font-bold text-gray-400 dark:text-gray-500"
+						>
+							No groups yet
+						</span>
+						<span class="text-xs text-gray-400 dark:text-gray-600">
+							{{ if .AuthId }}
+								Create the first one!
+							{{ else }}
+								Log in to create the first one!
+							{{ end }}
+						</span>
+					</div>
+				{{ end }}
+				{{ if .Pages }}
+					<div class="flex justify-center py-4">
+						<nav aria-label="Groups page navigation">
+							<ul
+								class="flex items-center -space-x-px h-8 text-sm select-none"
+							>
+								{{ range $p := .Pages }}
+									<li>
+										{{ if eq $p $.Page }}
+											<span
+												class="z-10 flex items-center justify-center px-3 h-8 leading-tight text-blue-600 border border-blue-300 bg-blue-50 dark:border-gray-700 dark:bg-gray-700 dark:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</span>
+										{{ else }}
+											<a
+												hx-target="#page"
+												href="/groups?sort={{ $.Sort }}&page={{ $p }}"
+												class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</a>
+										{{ end }}
+									</li>
+								{{ end }}
+							</ul>
+						</nav>
+					</div>
+				{{ end }}
+			</div>
+		</div>
+	</div>
+{{ end }}

@@ -1,0 +1,110 @@
+{{ define "page" }}
+	<script>
+		if (window._openWebPanel) window._openWebPanel();
+	</script>
+	<div
+		class="bg-gray-50 dark:bg-gray-800 h-full w-full flex flex-col items-center"
+	>
+		<div class="gap-2 flex h-full w-full max-w-7xl @7xl/web:w-3/4">
+			<div class="p-2 w-full bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+				<div class="py-2 text-xs">
+					<a
+						hx-target="#page"
+						href="/groups"
+						class="text-gray-500 dark:text-gray-400 hover:underline"
+					>
+						&larr; All groups
+					</a>
+				</div>
+				<div
+					class="mb-4 w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-2"
+				>
+					<div class="flex place-content-between gap-2">
+						<div class="flex flex-col gap-1 min-w-0">
+							<span
+								class="font-bold text-base truncate text-gray-900 dark:text-white"
+							>
+								{{ .DisplayName }}
+							</span>
+							<span
+								class="text-xs text-gray-500 dark:text-gray-400 truncate"
+							>
+								/groups/{{ .Name }}
+							</span>
+						</div>
+						{{ if .IsAdmin }}
+							<span
+								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-lg dark:bg-blue-900 dark:text-blue-300"
+							>
+								Admin
+							</span>
+						{{ else if .IsModerator }}
+							<span
+								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-green-800 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-300"
+							>
+								Moderator
+							</span>
+						{{ else if .IsMember }}
+							<span
+								class="shrink-0 self-start select-none py-1 px-2 text-xs font-medium text-gray-800 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300"
+							>
+								Member
+							</span>
+						{{ end }}
+					</div>
+					{{ if .Description }}
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							{{ .Description }}
+						</p>
+					{{ end }}
+					<div
+						class="flex gap-4 text-xs text-gray-500 dark:text-gray-400"
+					>
+						<span class="inline-flex items-center gap-1">
+							<svg
+								class="w-3 h-3"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"
+								/>
+							</svg>
+							{{ if eq .Members 1 }}
+								1 member
+							{{ else }}
+								{{ .Members }} members
+							{{ end }}
+						</span>
+						{{ if .OwnerUsername }}
+							<span>
+								Created by
+								<a
+									hx-target="#page"
+									href="/profile/{{ .OwnerUsername }}"
+									class="hover:underline"
+								>
+									{{ .OwnerNickname }}
+								</a>
+							</span>
+						{{ end }}
+					</div>
+				</div>
+				<div
+					class="w-full h-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center gap-1 select-none"
+				>
+					<span
+						class="text-sm font-bold text-gray-400 dark:text-gray-500"
+					>
+						Nothing posted here yet
+					</span>
+					<span class="text-xs text-gray-400 dark:text-gray-600">
+						Check back later!
+					</span>
+				</div>
+			</div>
+		</div>
+	</div>
+{{ end }}

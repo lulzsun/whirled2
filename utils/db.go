@@ -586,6 +586,238 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		}
 	}
 
+	// Groups collection / table
+	// A group is a small subreddit: a name, an owner (its admin), and a feed.
+	// `name` is the URL slug and is stored lowercase, which is what makes the
+	// unique index case-insensitive. See docs/specs/groups-page.md §5.1
+	/* SQLITE equivalent:
+	CREATE TABLE groups (
+		id TEXT PRIMARY KEY,
+		owner_id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		display_name TEXT NOT NULL,
+		description TEXT,
+		privacy INTEGER NOT NULL,
+		is_deleted BOOL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (owner_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_group_name ON groups (name);
+	*/
+	groupsCollection, err := app.FindCollectionByNameOrId("groups")
+	if err != nil {
+		groupsCollection = core.NewBaseCollection("groups")
+		groupsCollection.ListRule = nil
+		groupsCollection.ViewRule = nil
+		groupsCollection.CreateRule = nil
+		groupsCollection.UpdateRule = nil
+		groupsCollection.DeleteRule = nil
+		groupsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "owner_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "name",
+				Required: true,
+				Min:      3,
+				Max:      30,
+			},
+			&core.TextField{
+				Name:     "display_name",
+				Required: true,
+				Min:      1,
+				Max:      50,
+			},
+			&core.TextField{
+				Name:     "description",
+				Required: false,
+				Max:      500,
+			},
+			&core.NumberField{
+				Name:    "privacy",
+				OnlyInt: true,
+				Min:     types.Pointer(0.0),
+			},
+			&core.BoolField{
+				Name: "is_deleted",
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		groupsCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_group_name ON groups (name)",
+		}
+
+		if err := app.Save(groupsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Group members collection / table
+	// One row per user per group carrying their role; the ordering of the
+	// role enum is the permission check ("at least moderator" is role >= 1).
+	// See docs/specs/groups-page.md §4, §5.2
+	/* SQLITE equivalent:
+	CREATE TABLE group_members (
+		id TEXT PRIMARY KEY,
+		group_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		role INTEGER NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (group_id) REFERENCES groups (id)
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_group_member ON group_members (group_id, user_id);
+	*/
+	if _, err := app.FindCollectionByNameOrId("group_members"); err != nil {
+		membersCollection := core.NewBaseCollection("group_members")
+		membersCollection.ListRule = nil
+		membersCollection.ViewRule = nil
+		membersCollection.CreateRule = nil
+		membersCollection.UpdateRule = nil
+		membersCollection.DeleteRule = nil
+		membersCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "group_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  groupsCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.NumberField{
+				Name:    "role",
+				OnlyInt: true,
+				Min:     types.Pointer(0.0),
+				Max:     types.Pointer(2.0),
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		membersCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_group_member ON group_members (group_id, user_id)",
+		}
+
+		if err := app.Save(membersCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Group posts collection / table
+	// Soft-deleted so a removed post keeps its comment thread addressable
+	// (Reddit's [removed] behavior). See docs/specs/groups-page.md §5.3
+	/* SQLITE equivalent:
+	CREATE TABLE group_posts (
+		id TEXT PRIMARY KEY,
+		group_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		content TEXT,
+		is_deleted BOOL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (group_id) REFERENCES groups (id)
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE INDEX idx_group_posts ON group_posts (group_id, created);
+	*/
+	if _, err := app.FindCollectionByNameOrId("group_posts"); err != nil {
+		postsCollection := core.NewBaseCollection("group_posts")
+		postsCollection.ListRule = nil
+		postsCollection.ViewRule = nil
+		postsCollection.CreateRule = nil
+		postsCollection.UpdateRule = nil
+		postsCollection.DeleteRule = nil
+		postsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "group_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  groupsCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      false,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: false,
+			},
+			&core.TextField{
+				Name:     "title",
+				Required: true,
+				Min:      1,
+				Max:      120,
+			},
+			&core.TextField{
+				Name:     "content",
+				Required: false,
+				Max:      5000,
+			},
+			&core.BoolField{
+				Name: "is_deleted",
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		postsCollection.Indexes = types.JSONArray[string]{
+			"CREATE INDEX idx_group_posts ON group_posts (group_id, created)",
+		}
+
+		if err := app.Save(postsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Comments migration: group posts are a third thread host alongside
+	// profiles and shop listings. See docs/specs/groups-page.md §5.4
+	if commentsCollection, err := app.FindCollectionByNameOrId("comments"); err == nil {
+		if commentsCollection.Fields.GetByName("post_id") == nil {
+			commentsCollection.Fields.Add(
+				&core.TextField{
+					Name:     "post_id",
+					Required: false,
+				},
+			)
+			if err := app.Save(commentsCollection); err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+
 	// Avatars collection / table
 	/* SQLITE equivalent:
 	CREATE TABLE furniture (

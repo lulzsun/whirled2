@@ -145,6 +145,7 @@ func main() {
 		api.AddRoomRoutes,
 		api.AddStuffRoutes,
 		api.AddShopRoutes,
+		api.AddGroupRoutes,
 		api.AddWalletRoutes,
 		api.AddAvatarRoutes,
 		server.AddAuthRoutes,
@@ -155,6 +156,7 @@ func main() {
 		api.AddProfileEventHooks,
 		api.AddRoomEventHooks,
 		api.AddStuffEventHooks,
+		api.AddGroupEventHooks,
 		// Add more event hooks here
 		api.AddBaseEventHooks, // keep last
 	}

@@ -1,6 +1,6 @@
 # Spec: Groups page
 
-Status: **draft**
+Status: **in progress (M1 landed)**
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -216,11 +216,21 @@ page) use the standard `hx-target="#page"` + `hx-push-url` pattern.
 -   Enable the header "Groups" tab (remove `cursor-not-allowed`, add
     `href="/groups"`).
 
+**Escaping.** Pages here are parsed with `text/template`, not
+`html/template` (see `AppendToBaseTmplFiles` in [base.go](../../api/base.go)),
+so nothing the templates interpolate is contextually escaped. Group display
+names and descriptions are free text, so `api/group.go` escapes them in Go
+before they reach the template. This is a local fix for a repo-wide property —
+existing user content (comment bodies, item names, nicknames) is rendered
+unescaped the same way, and a global move to `html/template` would be the real
+fix and would need these per-field escapes removed to avoid double-escaping.
+
 ## 8. Milestones
 
--   **M1 — Schema + create/browse.** Collections and migration (§5),
-    `POST /groups`, `/groups` list page, `/groups/{name}` page rendering an
-    empty feed, header tab enabled.
+-   **M1 — Schema + create/browse.** _Landed._ Collections and migration
+    (§5), `POST /groups`, `/groups` list page, `/groups/{name}` page rendering
+    an empty feed, header tab enabled. Member count already comes from
+    `group_members`, so it reads correctly once M2 adds joining.
 -   **M2 — Membership.** Join/leave, member count, membership gate on
     posting surface (UI shows post box only to members).
 -   **M3 — Posts + comments.** Create post, post page, comments wired to
