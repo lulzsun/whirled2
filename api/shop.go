@@ -1,9 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"log"
+	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
+	"whirled2/utils"
 	buf "whirled2/utils/proto"
 
 	"github.com/pocketbase/dbx"
@@ -13,9 +17,17 @@ import (
 )
 
 const shopPageSize = 24
+const shopMaxTagsPerListing = 24
 
 var shopTmplFiles []string
 var shopTmpl *template.Template
+
+var shopListingTmplFiles []string
+var shopListingTmpl *template.Template
+
+var queryGetListingComments string
+
+var shopTagPattern = regexp.MustCompile(`^[a-z0-9-]{2,24}$`)
 
 type ShopListing struct {
 	Id        string `db:"id" json:"id"`
@@ -45,6 +57,7 @@ var shopSorts = map[string]string{
 
 func init() {
 	parseShopFiles()
+	queryGetListingComments = utils.ReadSqlQuery("sql/shop/getListingComments.sql")
 }
 
 func parseShopFiles() {
@@ -52,6 +65,14 @@ func parseShopFiles() {
 		"web/templates/pages/shop.gohtml",
 	)...)
 	shopTmpl = template.Must(template.ParseFiles(shopTmplFiles...))
+
+	shopListingTmplFiles = append(append(shopListingTmplFiles, AppendToBaseTmplFiles(
+		"web/templates/pages/shopListing.gohtml",
+	)...),
+		"web/templates/components/comment.gohtml",
+		"web/templates/components/commentBox.gohtml",
+	)
+	shopListingTmpl = template.Must(template.ParseFiles(shopListingTmplFiles...))
 }
 
 func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
@@ -173,4 +194,333 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return nil
 	})
+	se.Router.GET("/shop/{category}/{id}", func(e *core.RequestEvent) error {
+		htmxEnabled := false
+		utils.ProcessHXRequest(e, func() error {
+			htmxEnabled = true
+			return nil
+		}, func() error { return nil })
+
+		category := e.Request.PathValue("category")
+		listingId := e.Request.PathValue("id")
+		itemType, ok := shopCategories[category]
+		if !ok || itemType == 0 {
+			e.Redirect(302, "/shop/avatars")
+			return nil
+		}
+
+		info, _ := e.RequestInfo()
+		authId := ""
+		if info.Auth != nil {
+			authId = info.Auth.Id
+		}
+
+		listing := struct {
+			ItemId      string  `db:"item_id" json:"item_id"`
+			Name        string  `db:"name" json:"name"`
+			Description string  `db:"description" json:"description"`
+			File        string  `db:"file" json:"file"`
+			Scale       float64 `db:"scale" json:"scale"`
+			Price       int64   `db:"price" json:"price"`
+			Username    string  `db:"username" json:"username"`
+			Nickname    string  `db:"nickname" json:"nickname"`
+		}{}
+		err := app.DB().
+			NewQuery(`
+			SELECT
+				l.item_id,
+				l.price,
+				i.name,
+				i.description,
+				i.file,
+				i.scale,
+				IFNULL(u.username, '') AS username,
+				IFNULL(u.nickname, '') AS nickname
+			FROM listings l
+			INNER JOIN ` + category + ` i ON i.id = l.item_id
+			LEFT JOIN users u ON u.id = l.creator_id
+			WHERE l.id = {:id} AND l.is_listed = TRUE AND l.type = {:type}
+		`).
+			Bind(dbx.Params{"id": listingId, "type": itemType}).One(&listing)
+		if err != nil {
+			log.Println(err)
+			e.Redirect(302, "/shop/"+category)
+			return nil
+		}
+		if listing.Nickname == "" {
+			listing.Nickname = "Admin"
+		}
+
+		threadUrl := "/shop/" + category + "/" + listingId
+		parentCommentId := e.Request.URL.Query().Get("viewReplies")
+		commentOffset, _ := strconv.Atoi(e.Request.URL.Query().Get("replyOffset"))
+
+		comments := []Comment{}
+		err = app.DB().
+			NewQuery(queryGetListingComments).
+			Bind(dbx.Params{
+				"listing_id":     listingId,
+				"parent_id":      parentCommentId,
+				"comment_offset": commentOffset,
+			}).All(&comments)
+		if err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		comments = list2tree(comments, parentCommentId, htmxEnabled, threadUrl)
+
+		if htmxEnabled && parentCommentId != "" {
+			// user is expanding replies; send just the comment fragments
+			data := struct{ Comments []Comment }{Comments: comments}
+			if err := commentTmpl.ExecuteTemplate(e.Response, "base", data); err != nil {
+				log.Println(err)
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			return nil
+		}
+
+		rating := getListingRating(app, category, listingId, authId)
+		data := struct {
+			ListingId string
+			Category  string
+
+			Name        string
+			Description string
+			File        string
+			Type        string
+			Scale       float64
+			Price       int64
+
+			CreatorUsername string
+			CreatorNickname string
+
+			AvgRating   string
+			AvgRounded  int
+			RatingCount int
+			UserRating  int
+			Stars       []int
+
+			Tags []string
+
+			CommentId string
+			Comments  []Comment
+			ThreadUrl string
+		}{
+			ListingId: listingId,
+			Category:  category,
+
+			Name:        listing.Name,
+			Description: listing.Description,
+			File:        "/api/files/" + category + "/" + listing.ItemId + "/" + listing.File,
+			Type:        category,
+			Scale:       listing.Scale,
+			Price:       listing.Price,
+
+			CreatorUsername: listing.Username,
+			CreatorNickname: listing.Nickname,
+
+			AvgRating:   rating.AvgRating,
+			AvgRounded:  rating.AvgRounded,
+			RatingCount: rating.RatingCount,
+			UserRating:  rating.UserRating,
+			Stars:       rating.Stars,
+
+			Tags: getListingTags(app, listingId),
+
+			Comments:  comments,
+			ThreadUrl: threadUrl,
+		}
+
+		if err := shopListingTmpl.ExecuteTemplate(e.Response, e.Get("name").(string), AppendToBaseData(e, data)); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.POST("/shop/{category}/{id}/rate", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can rate a listing.", nil)
+		}
+		category := e.Request.PathValue("category")
+		listingId := e.Request.PathValue("id")
+		if _, ok := shopCategories[category]; !ok {
+			return apis.NewNotFoundError("Unknown category.", nil)
+		}
+
+		stars, err := strconv.Atoi(e.Request.FormValue("stars"))
+		if err != nil || stars < 1 || stars > 5 {
+			return apis.NewBadRequestError("A rating must be between 1 and 5 stars.", err)
+		}
+
+		if _, err := app.FindFirstRecordByFilter(
+			"listings",
+			"id = {:id} && is_listed = TRUE",
+			dbx.Params{"id": listingId},
+		); err != nil {
+			return apis.NewNotFoundError("This listing no longer exists.", err)
+		}
+
+		record, err := app.FindFirstRecordByFilter(
+			"ratings",
+			"user_id = {:user} && listing_id = {:listing}",
+			dbx.Params{"user": info.Auth.Id, "listing": listingId},
+		)
+		if err != nil {
+			collection, err := app.FindCollectionByNameOrId("ratings")
+			if err != nil {
+				return apis.NewBadRequestError("Something went wrong.", err)
+			}
+			record = core.NewRecord(collection)
+			record.Load(map[string]any{
+				"user_id":    info.Auth.Id,
+				"listing_id": listingId,
+			})
+		}
+		record.Set("stars", stars)
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		rating := getListingRating(app, category, listingId, info.Auth.Id)
+		if err := shopListingTmpl.ExecuteTemplate(e.Response, "listingRating", rating); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+	se.Router.POST("/shop/{category}/{id}/tags", func(e *core.RequestEvent) error {
+		info, _ := e.RequestInfo()
+		if info.Auth == nil {
+			return apis.NewForbiddenError("Only authorized users can tag a listing.", nil)
+		}
+		category := e.Request.PathValue("category")
+		listingId := e.Request.PathValue("id")
+		if _, ok := shopCategories[category]; !ok {
+			return apis.NewNotFoundError("Unknown category.", nil)
+		}
+
+		tag := strings.ToLower(strings.TrimSpace(e.Request.FormValue("tag")))
+		if !shopTagPattern.MatchString(tag) {
+			return apis.NewBadRequestError("Tags are 2-24 characters: lowercase letters, numbers, and dashes.", nil)
+		}
+
+		if _, err := app.FindFirstRecordByFilter(
+			"listings",
+			"id = {:id} && is_listed = TRUE",
+			dbx.Params{"id": listingId},
+		); err != nil {
+			return apis.NewNotFoundError("This listing no longer exists.", err)
+		}
+
+		existing := getListingTags(app, listingId)
+		if len(existing) >= shopMaxTagsPerListing {
+			return apis.NewBadRequestError("This listing has enough tags already.", nil)
+		}
+		for _, t := range existing {
+			if t == tag {
+				return apis.NewBadRequestError("This listing already has that tag.", nil)
+			}
+		}
+
+		collection, err := app.FindCollectionByNameOrId("listing_tags")
+		if err != nil {
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		record := core.NewRecord(collection)
+		record.Load(map[string]any{
+			"user_id":    info.Auth.Id,
+			"listing_id": listingId,
+			"tag":        tag,
+		})
+		if err := app.Save(record); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+
+		data := struct {
+			AuthId    string
+			Category  string
+			ListingId string
+			Tags      []string
+		}{
+			AuthId:    info.Auth.Id,
+			Category:  category,
+			ListingId: listingId,
+			Tags:      getListingTags(app, listingId),
+		}
+		if err := shopListingTmpl.ExecuteTemplate(e.Response, "listingTags", data); err != nil {
+			log.Println(err)
+			return apis.NewBadRequestError("Something went wrong.", err)
+		}
+		return nil
+	})
+}
+
+type listingRating struct {
+	AuthId    string
+	Category  string
+	ListingId string
+
+	AvgRating   string
+	AvgRounded  int
+	RatingCount int
+	UserRating  int
+	Stars       []int
+}
+
+func getListingRating(app *pocketbase.PocketBase, category string, listingId string, authId string) listingRating {
+	rating := listingRating{
+		AuthId:    authId,
+		Category:  category,
+		ListingId: listingId,
+		Stars:     []int{1, 2, 3, 4, 5},
+	}
+
+	agg := struct {
+		Avg   float64 `db:"avg" json:"avg"`
+		Count int     `db:"count" json:"count"`
+	}{}
+	err := app.DB().
+		NewQuery(`
+		SELECT IFNULL(AVG(stars), 0) AS avg, COUNT(*) AS count
+		FROM ratings WHERE listing_id = {:listing}
+	`).
+		Bind(dbx.Params{"listing": listingId}).One(&agg)
+	if err != nil {
+		log.Println(err)
+	}
+	rating.AvgRating = fmt.Sprintf("%.1f", agg.Avg)
+	rating.AvgRounded = int(agg.Avg + 0.5)
+	rating.RatingCount = agg.Count
+
+	if authId != "" {
+		var stars int
+		err := app.DB().
+			NewQuery(`
+			SELECT stars FROM ratings
+			WHERE listing_id = {:listing} AND user_id = {:user}
+		`).
+			Bind(dbx.Params{"listing": listingId, "user": authId}).Row(&stars)
+		if err == nil {
+			rating.UserRating = stars
+		}
+	}
+	return rating
+}
+
+func getListingTags(app *pocketbase.PocketBase, listingId string) []string {
+	tags := []string{}
+	err := app.DB().
+		NewQuery(`
+		SELECT tag FROM listing_tags
+		WHERE listing_id = {:listing}
+		ORDER BY created, id
+	`).
+		Bind(dbx.Params{"listing": listingId}).Column(&tags)
+	if err != nil {
+		log.Println(err)
+	}
+	return tags
 }

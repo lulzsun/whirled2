@@ -4,7 +4,11 @@
 		method="post"
 		hx-on::after-request="this.reset()"
 	>
-		<input type="hidden" name="profile_id" value="{{ .ProfileId }}" />
+		{{ if .ListingId }}
+			<input type="hidden" name="listing_id" value="{{ .ListingId }}" />
+		{{ else }}
+			<input type="hidden" name="profile_id" value="{{ .ProfileId }}" />
+		{{ end }}
 		<input type="hidden" name="parent_id" value="{{ .CommentId }}" />
 		<label for="chat" class="sr-only">Your message</label>
 		<div
@@ -75,6 +79,8 @@
 				{{ if .CommentId }}
 					hx-target="#_{{ .CommentId }}_comment_children"
 					hx-swap="afterbegin"
+				{{ else if .ListingId }}
+					hx-target="#_listing_comments" hx-swap="beforebegin"
 				{{ else }}
 					hx-target="#_profile_comments" hx-swap="beforebegin"
 				{{ end }}

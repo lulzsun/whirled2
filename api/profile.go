@@ -30,6 +30,7 @@ type Profile struct {
 type Comment struct {
 	CommentId string `db:"id" json:"id"`
 	ProfileId string `db:"profile_id" json:"profile_id"`
+	ListingId string `db:"listing_id" json:"listing_id"`
 	ParentId  string `db:"parent_id" json:"parent_id"`
 	Content   string `db:"content" json:"content"`
 	Timestamp string `db:"created" json:"created"`
@@ -39,6 +40,8 @@ type Comment struct {
 	Nickname string `db:"nickname" json:"nickname"`
 
 	RelativeTime string
+	// page the comment thread lives on; "+ More replies" forms post here
+	ThreadUrl string
 
 	Total       int
 	Depth       int
@@ -138,7 +141,7 @@ func AddProfileRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
 
-		comments = list2tree(comments, parentCommentId, htmxEnabled)
+		comments = list2tree(comments, parentCommentId, htmxEnabled, "/profile/"+username)
 		commentPageLength := make([]int, 0)
 		if len(comments) > 0 {
 			// each page has a max of 4 parent comments, divide total by 4 and round up
@@ -214,6 +217,18 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 		}
 		e.Record.Set("user_id", info.Auth.Id)
 
+		// a comment belongs to exactly one thread host: a profile or a listing
+		profileId := e.Record.GetString("profile_id")
+		listingId := e.Record.GetString("listing_id")
+		if (profileId == "") == (listingId == "") {
+			return apis.NewBadRequestError("A comment needs a profile or a listing to belong to.", nil)
+		}
+		if listingId != "" {
+			if _, err := app.FindRecordById("listings", listingId); err != nil {
+				return apis.NewBadRequestError("This listing no longer exists.", err)
+			}
+		}
+
 		// we manually save the record here, do not call e.next()
 		// or else record json will append to our json
 		if err := app.Save(e.Record); err != nil {
@@ -238,6 +253,7 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 					{
 						CommentId:    e.Record.Id,
 						ProfileId:    e.Record.GetString("profile_id"),
+						ListingId:    e.Record.GetString("listing_id"),
 						ParentId:     e.Record.GetString("parent_id"),
 						Content:      e.Record.GetString("content"),
 						Timestamp:    e.Record.GetString("created"),
@@ -265,7 +281,7 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 	})
 }
 
-func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool) []Comment {
+func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool, threadUrl string) []Comment {
 	// log.Printf("%# v", pretty.Formatter(flatComments))
 	commentMap := make(map[string]*Comment)
 
@@ -273,6 +289,7 @@ func list2tree(flatComments []Comment, parentCommentId string, isHTMX bool) []Co
 	for i := range flatComments {
 		// also format the time to be relative
 		flatComments[i].RelativeTime = utils.FormatRelativeTime(flatComments[i].Timestamp)
+		flatComments[i].ThreadUrl = threadUrl
 		commentMap[flatComments[i].CommentId] = &flatComments[i]
 	}
 

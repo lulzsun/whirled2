@@ -143,6 +143,26 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		}
 	}
 
+	// Comments migration: a comment belongs to exactly one thread host — a
+	// profile OR a shop listing. Adds the optional listing_id column and
+	// relaxes profile_id to optional. See docs/specs/shop-listing-page.md §5.1
+	if commentsCollection, err := app.FindCollectionByNameOrId("comments"); err == nil {
+		if commentsCollection.Fields.GetByName("listing_id") == nil {
+			commentsCollection.Fields.Add(
+				&core.TextField{
+					Name:     "listing_id",
+					Required: false,
+				},
+			)
+			if profileField, ok := commentsCollection.Fields.GetByName("profile_id").(*core.RelationField); ok {
+				profileField.Required = false
+			}
+			if err := app.Save(commentsCollection); err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+
 	// Rooms collection / table
 	/* SQLITE equivalent:
 	CREATE TABLE rooms (
@@ -449,6 +469,119 @@ func Bootstrap(app *pocketbase.PocketBase) {
 		}
 
 		if err := app.Save(listingsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Ratings collection / table
+	// One 1-5 star rating per user per listing; averages are computed on
+	// read. See docs/specs/shop-listing-page.md §5.2
+	/* SQLITE equivalent:
+	CREATE TABLE ratings (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		listing_id TEXT NOT NULL,
+		stars INTEGER NOT NULL,
+		created DATE NOT NULL,
+		updated DATE NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_rating_user_listing ON ratings (user_id, listing_id);
+	*/
+	if _, err := app.FindCollectionByNameOrId("ratings"); err != nil {
+		ratingsCollection := core.NewBaseCollection("ratings")
+		ratingsCollection.ListRule = nil
+		ratingsCollection.ViewRule = nil
+		ratingsCollection.CreateRule = nil
+		ratingsCollection.UpdateRule = nil
+		ratingsCollection.DeleteRule = nil
+		ratingsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "listing_id",
+				Required: true,
+			},
+			&core.NumberField{
+				Name:     "stars",
+				Required: true,
+				OnlyInt:  true,
+				Min:      types.Pointer(1.0),
+				Max:      types.Pointer(5.0),
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+			&core.AutodateField{
+				Name:     "updated",
+				OnCreate: true,
+				OnUpdate: true,
+			},
+		)
+		ratingsCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_rating_user_listing ON ratings (user_id, listing_id)",
+		}
+
+		if err := app.Save(ratingsCollection); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	// Listing tags collection / table
+	// Whirled-style folksonomy: tags are shared by the listing, the row
+	// remembers who added each. See docs/specs/shop-listing-page.md §5.3
+	/* SQLITE equivalent:
+	CREATE TABLE listing_tags (
+		id TEXT PRIMARY KEY,
+		listing_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		tag TEXT NOT NULL,
+		created DATE NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);
+	CREATE UNIQUE INDEX idx_tag_listing ON listing_tags (listing_id, tag);
+	*/
+	if _, err := app.FindCollectionByNameOrId("listing_tags"); err != nil {
+		tagsCollection := core.NewBaseCollection("listing_tags")
+		tagsCollection.ListRule = nil
+		tagsCollection.ViewRule = nil
+		tagsCollection.CreateRule = nil
+		tagsCollection.UpdateRule = nil
+		tagsCollection.DeleteRule = nil
+		tagsCollection.Fields.Add(
+			&core.RelationField{
+				Name:          "user_id",
+				Required:      true,
+				MaxSelect:     1,
+				CollectionId:  usersCollection.Id,
+				CascadeDelete: true,
+			},
+			&core.TextField{
+				Name:     "listing_id",
+				Required: true,
+			},
+			&core.TextField{
+				Name:     "tag",
+				Required: true,
+				Min:      2,
+				Max:      24,
+			},
+			&core.AutodateField{
+				Name:     "created",
+				OnCreate: true,
+			},
+		)
+		tagsCollection.Indexes = types.JSONArray[string]{
+			"CREATE UNIQUE INDEX idx_tag_listing ON listing_tags (listing_id, tag)",
+		}
+
+		if err := app.Save(tagsCollection); err != nil {
 			log.Fatalln(err)
 		}
 	}

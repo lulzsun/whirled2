@@ -1,0 +1,214 @@
+{{ define "listingRating" }}
+	<div id="listing-rating" class="flex flex-col gap-1">
+		<div class="flex items-center">
+			{{ range $s := .Stars }}
+				<svg
+					class="w-4 h-4 me-1 {{ if le $s $.AvgRounded }}
+						text-yellow-300
+					{{ else }}
+						text-gray-300 dark:text-gray-500
+					{{ end }}"
+					aria-hidden="true"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="currentColor"
+					viewBox="0 0 22 20"
+				>
+					<path
+						d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+					/>
+				</svg>
+			{{ end }}
+			<span class="ms-1 text-sm text-gray-500 dark:text-gray-400">
+				{{ if .RatingCount }}
+					{{ .AvgRating }} ({{ .RatingCount }})
+				{{ else }}
+					No ratings yet
+				{{ end }}
+			</span>
+		</div>
+		{{ if .AuthId }}
+			<div class="flex items-center">
+				<span class="text-xs text-gray-500 dark:text-gray-400 me-2">
+					Your rating:
+				</span>
+				{{ range $s := .Stars }}
+					<button
+						hx-post="/shop/{{ $.Category }}/{{ $.ListingId }}/rate"
+						hx-vals='{"stars": "{{ $s }}"}'
+						hx-target="#listing-rating"
+						hx-swap="outerHTML"
+						hx-push-url="false"
+						title="Rate {{ $s }} of 5"
+						class="cursor-pointer"
+					>
+						<svg
+							class="w-4 h-4 me-1 {{ if le $s $.UserRating }}
+								text-yellow-300
+							{{ else }}
+								text-gray-300 dark:text-gray-500
+							{{ end }} hover:text-yellow-200"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 22 20"
+						>
+							<path
+								d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+							/>
+						</svg>
+					</button>
+				{{ end }}
+			</div>
+		{{ end }}
+	</div>
+{{ end }}
+
+{{ define "listingTags" }}
+	<div id="listing-tags" class="flex flex-wrap gap-1.5 items-center">
+		{{ range .Tags }}
+			<span
+				class="select-none px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+			>
+				#{{ . }}
+			</span>
+		{{ else }}
+			<span class="text-xs italic text-gray-500 dark:text-gray-400">
+				No tags yet
+			</span>
+		{{ end }}
+		{{ if .AuthId }}
+			<form
+				hx-post="/shop/{{ .Category }}/{{ .ListingId }}/tags"
+				hx-target="#listing-tags"
+				hx-swap="outerHTML"
+				hx-push-url="false"
+				class="inline-flex"
+			>
+				<input
+					name="tag"
+					maxlength="24"
+					placeholder="+ add tag"
+					autocomplete="off"
+					onkeydown="if (event.key === 'Enter') {
+						event.preventDefault();
+						this.form.requestSubmit();
+					}"
+					class="w-24 px-2 py-0.5 text-xs rounded-full border border-dashed border-gray-300 bg-transparent text-gray-600 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500"
+				/>
+			</form>
+		{{ end }}
+	</div>
+{{ end }}
+
+{{ define "page" }}
+	<div class="flex flex-col w-full max-w-7xl @7xl/web:w-2/3 gap-4 p-4">
+		<div class="flex w-full gap-4 @max-2xl/web:flex-col">
+			<div class="w-3/5 @max-2xl/web:w-full">
+				<div
+					class="w-full flex justify-center bg-white font-bold dark:bg-gray-800 rounded-t-lg"
+				>
+					{{ .Name }}
+				</div>
+				<div class="h-100">
+					{{ template "preview" . }}
+				</div>
+			</div>
+			<div
+				class="inline-block w-2/5 @max-2xl/web:w-full text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
+			>
+				<div class="p-3 flex flex-col gap-3">
+					<div class="flex place-content-between">
+						<div class="flex flex-row gap-2">
+							<a href="#" class="shrink-0">
+								<img
+									class="w-10 h-10 rounded-full"
+									src="/static/assets/profile_picture.png"
+									alt="{{ .CreatorUsername }}'s profile picture"
+								/>
+							</a>
+							<div>
+								<p
+									class="text-base font-semibold leading-none text-gray-900 dark:text-white"
+								>
+									{{ .CreatorNickname }}
+								</p>
+								<p class="text-sm font-normal">
+									{{ if .CreatorUsername }}
+										<a
+											hx-target="#page"
+											hx-push-url="true"
+											href="/profile/{{ .CreatorUsername }}"
+											class="hover:underline"
+										>
+											@{{ .CreatorUsername }}
+										</a>
+									{{ else }}
+										@Admin
+									{{ end }}
+								</p>
+							</div>
+						</div>
+						{{ template "listingRating" . }}
+					</div>
+					<p class="text-base">
+						{{ if .Description }}
+							{{ .Description }}
+						{{ else }}
+							<span class="italic">No description.</span>
+						{{ end }}
+					</p>
+					{{ template "listingTags" . }}
+					<div class="flex w-full justify-center pt-2">
+						<button
+							disabled
+							title="Buying is not implemented yet"
+							class="cursor-not-allowed w-40 text-white bg-orange-600 font-medium rounded-lg text-base px-3 py-1.5 dark:bg-orange-600 inline-flex items-center justify-center gap-1.5"
+						>
+							<svg
+								class="w-4 h-4 text-yellow-300"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
+								/>
+							</svg>
+							{{ if .Price }}
+								Buy &middot; {{ .Price }} coins
+							{{ else }}
+								Free
+							{{ end }}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="w-full text-sm">
+			<span
+				class="select-none font-bold text-base text-gray-900 dark:text-white"
+			>
+				Comments
+			</span>
+			{{ if .AuthId }}
+				<section class="py-2">
+					{{ template "commentBox" . }}
+				</section>
+			{{ end }}
+			<section id="_listing_comments">
+				{{ range .Comments }}
+					{{ template "comment" . }}
+				{{ else }}
+					<span
+						class="flex justify-center pt-4 italic text-gray-500 dark:text-gray-400"
+					>
+						This listing has no comments...
+						<span class="not-italic pr-1">😢</span>
+						Be the first to change that!
+					</span>
+				{{ end }}
+			</section>
+		</div>
+	</div>
+{{ end }}
