@@ -293,7 +293,28 @@ Each milestone is verifiable by running `npm run dev` and clicking through;
 role checks are additionally verified by hand-crafting requests as the wrong
 user (there is no test suite).
 
-## 9. Open questions
+## 9. Creation fee
+
+Founding a group costs **15,000 coins**, burned rather than paid to anyone —
+the same shape as the shop's listing fee, and by some distance the economy's
+largest sink (`GroupCreationCoins` in `utils/economy.go`, ledger type
+`TxGroupCreation`).
+
+The charge happens **inside the same transaction** that writes the group and
+its admin membership. That ordering is the point: a founder who cannot afford
+the fee must not end up owning a group they never paid for. Measured at the
+boundary — with 14,999 coins the create is rejected, the balance is untouched,
+and no group row survives; with exactly 15,000 it succeeds and the balance
+lands on zero. The debit guard inside `AdjustCoins`' `UPDATE` is what makes
+two concurrent creates safe.
+
+Worth knowing when tuning: against the current faucets (1,000 signup, 100
+daily) a new account cannot reach 15,000 for roughly 140 days of daily
+bonuses alone, so in practice founding a group means earning from selling
+items. That is a deliberate scarcity choice, not an oversight, but it is the
+number to revisit first if groups feel too rare.
+
+## 10. Open questions
 
 1.  Should group names be renameable? (Currently no — the slug is the URL
     identity. Display name is editable.)

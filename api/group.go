@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -139,7 +141,16 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Page   int
 			Pages  []int
 			Groups []Group
-		}{Sort: sort, Page: page, Groups: []Group{}}
+
+			CreationCost  string
+			CanAffordCost bool
+		}{
+			Sort: sort, Page: page, Groups: []Group{},
+			CreationCost: formatCoins(utils.GroupCreationCoins),
+		}
+		if info, _ := e.RequestInfo(); info.Auth != nil {
+			data.CanAffordCost = utils.GetCoins(app, info.Auth.Id) >= utils.GroupCreationCoins
+		}
 
 		var total int
 		err := app.DB().
@@ -214,6 +225,9 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err != nil {
 			return err
 		}
+
+		// tell the header to refresh the coin balance
+		e.Response.Header().Set("HX-Trigger", "coinsChanged")
 
 		return utils.ProcessHXRequest(e, func() error {
 			e.Response.Header().Set("HX-Location", `{"path":"/groups/`+name+`", "target":"#page"}`)
@@ -1168,13 +1182,45 @@ func createGroup(app core.App, ownerId string, name string, displayName string, 
 		if err := txApp.Save(group); err != nil {
 			return err
 		}
-		return saveGroupMember(txApp, group.Id, ownerId, GroupRoleAdmin)
+		if err := saveGroupMember(txApp, group.Id, ownerId, GroupRoleAdmin); err != nil {
+			return err
+		}
+		// the fee is inside the transaction, so a founder who cannot afford
+		// it does not end up owning a group they never paid for. The debit
+		// guard lives in AdjustCoins' UPDATE, which is what makes two
+		// concurrent creates safe.
+		_, err = utils.AdjustCoins(
+			txApp, ownerId, -int64(utils.GroupCreationCoins),
+			utils.TxGroupCreation, group.Id, "Founded "+displayName,
+		)
+		return err
 	})
+	if errors.Is(err, utils.ErrInsufficientCoins) {
+		return "", apis.NewBadRequestError(fmt.Sprintf(
+			"Founding a group costs %s coins.", formatCoins(utils.GroupCreationCoins)), err)
+	}
 	if err != nil {
 		log.Println(err)
 		return "", apis.NewBadRequestError("Something went wrong.", err)
 	}
 	return name, nil
+}
+
+// formatCoins renders an amount with thousands separators, for messages and
+// the create form's price tag.
+func formatCoins(n int64) string {
+	s := strconv.FormatInt(n, 10)
+	if len(s) <= 3 {
+		return s
+	}
+	var out []byte
+	for i, c := range []byte(s) {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			out = append(out, ',')
+		}
+		out = append(out, c)
+	}
+	return string(out)
 }
 
 // escapeGroupText makes user-supplied text safe to interpolate into a page.

@@ -131,6 +131,32 @@
 									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 								></textarea>
 							</div>
+							<div
+								class="flex items-center gap-1 text-gray-500 dark:text-gray-400"
+							>
+								<svg
+									class="w-3.5 h-3.5 text-yellow-400"
+									aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="currentColor"
+									viewBox="0 0 16 16"
+								>
+									<path
+										d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
+									/>
+								</svg>
+								Founding a group costs
+								<span class="font-medium">
+									{{ .CreationCost }} coins
+								</span>
+								{{ if not .CanAffordCost }}
+									<span
+										class="text-red-600 dark:text-red-500"
+									>
+										&middot; you don't have enough yet
+									</span>
+								{{ end }}
+							</div>
 							<div class="flex gap-2">
 								<button
 									type="submit"

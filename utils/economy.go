@@ -28,10 +28,11 @@ const (
 	TxPurchaseSpend
 	TxSaleIncome
 	TxAdminAdjust
-	TxGameReward // reserved (spec §3)
-	TxTradeIn    // reserved (spec §3)
-	TxTradeOut   // reserved (spec §3)
-	TxListingFee // burned at initial listing (spec §7)
+	TxGameReward    // reserved (spec §3)
+	TxTradeIn       // reserved (spec §3)
+	TxTradeOut      // reserved (spec §3)
+	TxListingFee    // burned at initial listing (spec §7)
+	TxGroupCreation // burned when a group is founded (groups spec §9)
 )
 
 // Tunable faucet and fee amounts (spec §4, §7)
@@ -41,6 +42,11 @@ const (
 
 	ListingFeePercent  = 10 // of the listing price
 	ListingFeeMinCoins = 10
+
+	// Founding a group is the largest sink in the economy: it is meant to be
+	// saved up for, not bought on a whim, so groups stay scarce enough to
+	// mean something. Burned, not paid to anyone (groups spec §9).
+	GroupCreationCoins = 15000
 )
 
 var ErrInsufficientCoins = errors.New("insufficient coins")
