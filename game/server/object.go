@@ -136,12 +136,18 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 	roomId := peer.Rooms()[0]
 
 	// making sure this object or player exists
+	//
+	// Both of these bail without a word, which is why a removal that the
+	// server drops looks to the player exactly like a dead button. Say which
+	// one it was.
 	if isPlayer {
 		if _, ok := usernameToPeerId[id]; !ok {
+			log.Printf("Refusing to remove player '%s' from room '%s': no such player", id, roomId)
 			return
 		}
 	} else {
 		if _, ok := objects[roomId][id]; !ok {
+			log.Printf("Refusing to remove object '%s' from room '%s': the server has no object under that id", id, roomId)
 			return
 		}
 	}
@@ -161,6 +167,7 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 
 	if err != nil {
 		// user does not own this room, so do nothing
+		log.Printf("Refusing to remove '%s' from room '%s': '%s' does not own it", id, roomId, client.Username)
 		return
 	}
 

@@ -358,7 +358,20 @@ function renderInspector(world: World) {
 			} else {
 				id = world.network.getObject(eid)?.id ?? null;
 			}
-			if (id === null) return;
+			// Anything the network never registered -- the room's own floor,
+			// say -- has no id to remove by. Bailing silently here is
+			// indistinguishable from a dead button, so say which it was; the
+			// matching server-side rejections log too.
+			if (id === null) {
+				console.warn(
+					"Cannot remove entity",
+					eid,
+					`(${object.name}): it is not a networked ` +
+						(isPlayer ? "player" : "object"),
+				);
+				return;
+			}
+			console.debug("Removing from room", { eid, id, isPlayer });
 			emitObjectLeave(world, id, isPlayer);
 		}
 		ImGui.NewLine();
