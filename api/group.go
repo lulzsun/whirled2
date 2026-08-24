@@ -3,11 +3,11 @@ package api
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
 	"whirled2/utils"
 
 	"github.com/pocketbase/dbx"
@@ -196,10 +196,6 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		if err != nil {
 			log.Println(err)
 		} else {
-			for i := range groups {
-				groups[i].DisplayName = escapeGroupText(groups[i].DisplayName)
-				groups[i].Description = escapeGroupText(groups[i].Description)
-			}
 			data.Groups = groups
 		}
 
@@ -286,12 +282,12 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}{
 			Id:          group.Id,
 			Name:        group.Name,
-			DisplayName: escapeGroupText(group.DisplayName),
-			Description: escapeGroupText(group.Description),
+			DisplayName: group.DisplayName,
+			Description: group.Description,
 			Members:     group.Members,
 
 			OwnerUsername: owner.Username,
-			OwnerNickname: escapeGroupText(owner.Nickname),
+			OwnerNickname: owner.Nickname,
 
 			Membership: membership,
 
@@ -408,8 +404,6 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			return apis.NewBadRequestError("Something went wrong.", err)
 		}
 		for i := range comments {
-			comments[i].Content = escapeGroupText(comments[i].Content)
-			comments[i].Nickname = escapeGroupText(comments[i].Nickname)
 			comments[i].GroupName = group.Name
 			comments[i].CanDelete = !comments[i].IsDeleted &&
 				canDeleteGroupCommentBy(comments[i].UserId, membership.Role, authId)
@@ -444,7 +438,7 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			ThreadUrl string
 		}{
 			Name:        group.Name,
-			DisplayName: escapeGroupText(group.DisplayName),
+			DisplayName: group.DisplayName,
 
 			Post: post,
 
@@ -590,8 +584,8 @@ func AddGroupRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 			Members []GroupMember
 		}{
 			Name:        group.Name,
-			DisplayName: escapeGroupText(group.DisplayName),
-			Description: escapeGroupText(group.Description),
+			DisplayName: group.DisplayName,
+			Description: group.Description,
 
 			Role:        role,
 			IsModerator: role >= GroupRoleModerator,
@@ -943,9 +937,6 @@ func getGroupPost(app core.App, group Group, postId string, authId string, role 
 func decorateGroupPost(post *GroupPost, group Group, authId string, role int) {
 	post.GroupName = group.Name
 	post.RelativeTime = utils.FormatRelativeTime(post.Timestamp)
-	post.Title = escapeGroupText(post.Title)
-	post.Content = escapeGroupText(post.Content)
-	post.Nickname = escapeGroupText(post.Nickname)
 	post.CanDelete = !post.IsDeleted &&
 		canDeleteGroupPostBy(post.UserId, role, authId)
 }
@@ -993,7 +984,6 @@ func getGroupMembers(app core.App, group Group, viewerId string, viewerRole int)
 		m := &members[i]
 		isSelf := m.UserId == viewerId
 		m.GroupName = group.Name
-		m.Nickname = escapeGroupText(m.Nickname)
 		m.RelativeTime = utils.FormatRelativeTime(m.Joined)
 		m.RoleName = groupRoleName(m.Role)
 		m.CanPromote = canSetMemberRole(viewerRole, m.Role, isSelf) &&
@@ -1221,14 +1211,6 @@ func formatCoins(n int64) string {
 		out = append(out, c)
 	}
 	return string(out)
-}
-
-// escapeGroupText makes user-supplied text safe to interpolate into a page.
-// The page templates are parsed with text/template (see api/base.go), which
-// does no contextual escaping of its own, so it has to happen here. Drop this
-// if the app ever moves to html/template, or values will double-escape.
-func escapeGroupText(s string) string {
-	return template.HTMLEscapeString(s)
 }
 
 // findGroupByName resolves a URL slug to a live (not soft-deleted) group,

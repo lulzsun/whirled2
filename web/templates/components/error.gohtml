@@ -36,8 +36,8 @@
 			onclick="document.getElementById('error-alert').innerHTML = '';"
 			hx-target="#page"
 			hx-push-url="true"
-			{{ if .Redirect }}
-				{{ .Redirect }}
+			{{ if .RedirectUrl }}
+				href="{{ .RedirectUrl }}"
 			{{ end }}
 		>
 			<span class="sr-only">Dismiss</span>

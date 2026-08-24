@@ -3,11 +3,11 @@ package api
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
 	"whirled2/utils"
 	buf "whirled2/utils/proto"
 

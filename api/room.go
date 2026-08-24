@@ -1,8 +1,8 @@
 package api
 
 import (
+	"html/template"
 	"log"
-	"text/template"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"

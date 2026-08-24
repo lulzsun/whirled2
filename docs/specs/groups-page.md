@@ -236,24 +236,12 @@ round-trips were measured to swap cleanly with no duplicated elements.
 -   Enable the header "Groups" tab (remove `cursor-not-allowed`, add
     `href="/groups"`).
 
-**Escaping.** Pages here are parsed with `text/template`, not
-`html/template` (see `AppendToBaseTmplFiles` in [base.go](../../api/base.go)),
-so nothing the templates interpolate is contextually escaped. Group display
-names and descriptions are free text, so `api/group.go` escapes them in Go
-before they reach the template. The same applies to post titles, post bodies,
-and the comment bodies rendered on a post page — and, because the shared
-comment-create hook answers with an HTML fragment, to that fragment too when
-its host is a group post (`api/profile.go`). Without that last one an author
-would briefly see their own markup rendered before the next page load escaped
-it.
-
-This is a local fix for a repo-wide property. Existing user content elsewhere
-(profile and listing comment bodies, item names, nicknames) is still rendered
-unescaped, which is why the fragment escaping is scoped to group comments
-rather than applied to the shared hook wholesale: escaping every fragment
-while page loads still render raw would only move the inconsistency around. A
-global move to `html/template` is the real fix, and it would need these
-per-field escapes removed to avoid double-escaping.
+**Escaping** is now handled by `html/template` for the whole app — see
+[docs/specs/html-template-escaping.md](html-template-escaping.md). Groups
+originally carried its own per-field `escapeGroupText` calls because the app
+rendered through `text/template`, which escapes nothing; those have been
+removed, since escaping the same value twice shows users `&amp;lt;` where they
+typed `<`. Nothing in this package should escape by hand any more.
 
 One inherited wart worth knowing: `comment.gohtml` renders its reply box for
 everyone, including logged-out visitors, so a non-member sees a reply control

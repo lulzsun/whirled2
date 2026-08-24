@@ -2,11 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
-	"text/template"
 	"time"
 	"unicode/utf8"
 	"whirled2/utils"

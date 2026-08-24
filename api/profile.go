@@ -2,10 +2,10 @@ package api
 
 import (
 	"bytes"
+	"html/template"
 	"log"
 	"math"
 	"strconv"
-	"text/template"
 	"whirled2/utils"
 
 	"github.com/pocketbase/dbx"
@@ -267,20 +267,6 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 			}
 			username, nickname := user.GetString("username"), user.GetString("nickname")
 
-			content := e.Record.GetString("content")
-			if postId != "" {
-				// group post pages escape comment content on read, so the
-				// fragment answering a new comment has to escape it too or
-				// the author briefly sees their own markup rendered. Scoped
-				// to group comments deliberately: profiles and listings
-				// render comment bodies raw on page load today, and making
-				// only their fragments escape would just move the
-				// inconsistency around. See the escaping note in
-				// docs/specs/groups-page.md §7.
-				content = escapeGroupText(content)
-				nickname = escapeGroupText(nickname)
-			}
-
 			data := struct {
 				Comments []Comment
 			}{
@@ -291,7 +277,7 @@ func AddProfileEventHooks(app *pocketbase.PocketBase) {
 						ListingId:    e.Record.GetString("listing_id"),
 						PostId:       postId,
 						ParentId:     e.Record.GetString("parent_id"),
-						Content:      content,
+						Content:      e.Record.GetString("content"),
 						Timestamp:    e.Record.GetString("created"),
 						IsDeleted:    e.Record.GetBool("is_deleted"),
 						RelativeTime: utils.FormatRelativeTime(e.Record.GetString("created")),

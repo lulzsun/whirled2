@@ -184,15 +184,16 @@
 								>
 									Description
 								</label>
-								<textarea
-									name="description"
-									id="edit_description"
-									rows="3"
-									maxlength="500"
-									class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-								>
-{{ .Description }}</textarea
-								>
+								{{/* Kept on one line, and kept that way. Prettier
+									otherwise splits the close across lines as
+									"</textarea" + newline + ">", which
+									html/template's RCDATA scanner does not accept
+									as closing the element. The enclosing admin
+									conditional then ends inside textarea context
+									and the whole page refuses to render.
+								*/}}
+								<!-- prettier-ignore -->
+								<textarea name="description" id="edit_description" rows="3" maxlength="500" class="block p-2 w-full text-xs text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">{{ .Description }}</textarea>
 							</div>
 							<div>
 								<button

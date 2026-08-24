@@ -1,8 +1,8 @@
 package api
 
 import (
+	"html/template"
 	"log"
-	"text/template"
 	"whirled2/utils"
 	buf "whirled2/utils/proto"
 

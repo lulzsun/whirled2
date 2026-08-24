@@ -1,10 +1,10 @@
 package api
 
 import (
+	"html/template"
 	"log"
 	"strconv"
 	"strings"
-	"text/template"
 	"whirled2/utils"
 
 	"github.com/pocketbase/dbx"

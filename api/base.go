@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"html/template"
 	"io"
 	"log"
 	"maps"
@@ -9,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"text/template"
 	"whirled2/utils"
 
 	"github.com/pocketbase/pocketbase"
@@ -208,7 +208,11 @@ func ErrorMiddleware(e *core.RequestEvent) error {
 		}
 		return e.HTML(202, page.String())
 	}, func() error {
-		formatErr["Redirect"] = "href='" + e.Request.Referer() + "'"
+		// the URL only — the template builds the attribute. Handing a
+		// template a pre-built `href='...'` string is what html/template
+		// refuses to compile, and rightly: it cannot escape what it cannot
+		// see the shape of.
+		formatErr["RedirectUrl"] = e.Request.Referer()
 		if err := CreateError(false).ExecuteTemplate(&page, "base", formatErr); err != nil {
 			return nil
 		}
