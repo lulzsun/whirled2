@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -142,6 +143,65 @@ func EnsureWallet(app core.App, userId string) (bool, error) {
 		return err
 	})
 	return err == nil, err
+}
+
+// GrantDailyBonus credits the daily login bonus once per UTC day (spec §9).
+// Like the purchase debit, the day guard lives inside the conditional UPDATE
+// so concurrent first-requests-of-the-day grant exactly once. Reports whether
+// this call granted the bonus.
+func GrantDailyBonus(app core.App, userId string) (bool, error) {
+	todayStart := time.Now().UTC().Format("2006-01-02") + " 00:00:00.000Z"
+
+	// cheap read first so the common case (already granted today) never
+	// takes SQLite's write lock
+	var lastDaily string
+	err := app.DB().
+		NewQuery(`SELECT IFNULL(last_daily, '') FROM wallets WHERE user_id = {:user}`).
+		Bind(dbx.Params{"user": userId}).Row(&lastDaily)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// no wallet (e.g. a superuser session) — nothing to credit
+			return false, nil
+		}
+		return false, err
+	}
+	if lastDaily >= todayStart {
+		return false, nil
+	}
+
+	granted := false
+	err = app.RunInTransaction(func(txApp core.App) error {
+		res, err := txApp.DB().
+			NewQuery(`
+				UPDATE wallets
+				SET last_daily = {:now}, updated = {:now}
+				WHERE user_id = {:user}
+					AND (last_daily IS NULL OR last_daily < {:todayStart})
+			`).
+			Bind(dbx.Params{
+				"user":       userId,
+				"now":        types.NowDateTime().String(),
+				"todayStart": todayStart,
+			}).Execute()
+		if err != nil {
+			return err
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 0 {
+			// raced: a concurrent request granted today's bonus first
+			return nil
+		}
+		granted = true
+		_, err = AdjustCoins(txApp, userId, DailyBonusCoins, TxDailyBonus, "", "Daily login bonus")
+		return err
+	})
+	if err != nil {
+		return false, err
+	}
+	return granted, nil
 }
 
 // GetCoins returns the user's coin balance, or 0 when no wallet exists.

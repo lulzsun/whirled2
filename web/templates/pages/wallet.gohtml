@@ -1,0 +1,134 @@
+{{ define "page" }}
+	<div class="flex w-full max-w-3xl flex-col gap-4 p-4">
+		<div
+			class="w-full text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600"
+		>
+			<div class="p-4">
+				<div class="flex items-center justify-between mb-4">
+					<span
+						class="text-base font-bold text-gray-900 dark:text-white"
+					>
+						Transaction history
+					</span>
+					<div
+						title="Current balance"
+						class="select-none flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400"
+					>
+						<svg
+							class="w-4 h-4 text-yellow-400"
+							aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="currentColor"
+							viewBox="0 0 16 16"
+						>
+							<path
+								d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"
+							/>
+						</svg>
+						{{ .AuthCoins }}
+					</div>
+				</div>
+				{{ if .Items }}
+					<div class="overflow-x-auto">
+						<table class="w-full text-left text-sm">
+							<thead
+								class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+							>
+								<tr>
+									<th scope="col" class="px-3 py-2">When</th>
+									<th scope="col" class="px-3 py-2">Type</th>
+									<th scope="col" class="px-3 py-2">Note</th>
+									<th
+										scope="col"
+										class="px-3 py-2 text-right"
+									>
+										Amount
+									</th>
+									<th
+										scope="col"
+										class="px-3 py-2 text-right"
+									>
+										Balance
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{{ range .Items }}
+									<tr
+										class="border-b border-gray-200 dark:border-gray-700"
+									>
+										<td class="px-3 py-2 whitespace-nowrap">
+											{{ .Created }}
+										</td>
+										<td class="px-3 py-2 whitespace-nowrap">
+											{{ .TypeLabel }}
+										</td>
+										<td class="px-3 py-2">{{ .Note }}</td>
+										<td
+											class="px-3 py-2 text-right font-medium whitespace-nowrap {{ if gt .Amount 0 }}
+												text-green-600
+												dark:text-green-400
+											{{ else }}
+												text-red-600 dark:text-red-400
+											{{ end }}"
+										>
+											{{ .AmountLabel }}
+										</td>
+										<td class="px-3 py-2 text-right">
+											{{ .Balance }}
+										</td>
+									</tr>
+								{{ end }}
+							</tbody>
+						</table>
+					</div>
+				{{ else }}
+					<div class="flex flex-col items-center justify-center py-8">
+						<span
+							class="text-sm font-bold text-gray-400 dark:text-gray-500"
+						>
+							No transactions yet
+						</span>
+					</div>
+				{{ end }}
+				{{ if .Pages }}
+					<div class="flex justify-center pt-4">
+						<nav aria-label="Transaction page navigation">
+							<ul
+								class="flex items-center -space-x-px h-8 text-sm select-none"
+							>
+								{{ range $p := .Pages }}
+									<li>
+										{{ if eq $p $.Page }}
+											<span
+												class="z-10 flex items-center justify-center px-3 h-8 leading-tight text-blue-600 border border-blue-300 bg-blue-50 dark:border-gray-700 dark:bg-gray-700 dark:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</span>
+										{{ else }}
+											<a
+												hx-target="#page"
+												href="/wallet?page={{ $p }}"
+												class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white {{ if eq $p 1 }}
+													rounded-l-lg
+												{{ end }} {{ if eq $p (len $.Pages) }}
+													rounded-r-lg
+												{{ end }}"
+											>
+												{{ $p }}
+											</a>
+										{{ end }}
+									</li>
+								{{ end }}
+							</ul>
+						</nav>
+					</div>
+				{{ end }}
+			</div>
+		</div>
+	</div>
+{{ end }}

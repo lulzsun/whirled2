@@ -707,20 +707,6 @@ func AddShopRoutes(se *core.ServeEvent, app *pocketbase.PocketBase) {
 		}
 		return renderStuffListing(e, app, category, listing.GetString("item_id"))
 	})
-	se.Router.GET("/wallet/balance", func(e *core.RequestEvent) error {
-		info, _ := e.RequestInfo()
-		if info.Auth == nil {
-			return apis.NewForbiddenError("Not logged in.", nil)
-		}
-		data := struct {
-			AuthCoins int64
-		}{AuthCoins: utils.GetCoins(app, info.Auth.Id)}
-		if err := shopTmpl.ExecuteTemplate(e.Response, "coinBalance", data); err != nil {
-			log.Println(err)
-			return apis.NewBadRequestError("Something went wrong.", err)
-		}
-		return nil
-	})
 }
 
 var errListingGone = errors.New("listing gone")

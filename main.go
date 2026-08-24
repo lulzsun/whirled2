@@ -145,6 +145,7 @@ func main() {
 		api.AddRoomRoutes,
 		api.AddStuffRoutes,
 		api.AddShopRoutes,
+		api.AddWalletRoutes,
 		api.AddAvatarRoutes,
 		server.AddAuthRoutes,
 		// Add more routes here
@@ -193,6 +194,7 @@ func main() {
 			utils.IdleMiddleware,
 			api.ErrorMiddleware,
 			api.BaseMiddleware,
+			api.DailyBonusMiddleware,
 		)
 		for _, AddRoutes := range routes {
 			AddRoutes(se, app)

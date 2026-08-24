@@ -1,8 +1,8 @@
 # Spec: Shop currency and purchase system
 
-Status: **M1–M4 landed; M5 (faucets) remains**
+Status: **implemented (M1–M5 landed)**
 Owner: @lulzsun
-Last updated: 2026-08-23
+Last updated: 2026-08-24
 
 ## 0. Decisions
 
