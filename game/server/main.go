@@ -104,6 +104,8 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 				onObjectLeave(peer, e.ObjectLeave.Id, e.ObjectLeave.IsPlayer)
 			case *buf.WhirledEvent_ObjectTransform:
 				onObjectTransform(peer, e.ObjectTransform)
+			case *buf.WhirledEvent_ObjectPartUpdate:
+				onPartUpdate(peer, e.ObjectPartUpdate)
 			default:
 				log.Printf("Unknown event type '%s", e)
 			}

@@ -23,6 +23,7 @@ import {
 import { STATIC, UNIQUE } from "./imgui";
 import { emitObjectLeave, emitObjectTransform } from "./network";
 import { isSwfHitTransparent } from "./control";
+import { syncPartMeshScale } from "../factory/primitive";
 import {
 	GRID_INCREMENTS,
 	ROTATION_SNAP_DEGREES,
@@ -34,13 +35,16 @@ import {
 } from "./snap";
 import {
 	Snapshot,
+	partPropsCommand,
 	removeObjectCommand,
 	removePartCommand,
 	snapshotTransform,
 	transformCommand,
 	transformsDiffer,
 } from "./history";
-import { Type } from "../proto";
+import { Part, PartSchema, Shape, Type } from "../proto";
+import { create } from "@bufbuild/protobuf";
+import { PART_MATERIALS } from "../managers/materials";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -205,6 +209,10 @@ export function createEditorSystem(world: World) {
 			// the raycast hits its empty corners too. Clicking one used to
 			// select the avatar; now it falls through to whatever is behind.
 			if (isSwfHitTransparent(world, eid, intersects[i])) continue;
+			// A locked part is scenery: it is what you build a floor out of
+			// so that clicking the floor stops selecting the floor. Skipped
+			// rather than ignored, so whatever stands on it can be picked.
+			if (world.primitives.get(eid)?.locked) continue;
 			selectObject(eid);
 			selected = true;
 			break;
@@ -368,6 +376,28 @@ export function createEditorSystem(world: World) {
 		// snap itself can move the part after the last throttled emit, and
 		// that final rounded position is the one everyone has to agree on.
 		emitSelectedTransform();
+
+		// A textured part's pattern is measured in world units, so a resize
+		// has to rebuild its UVs -- once, here at the end of the drag, not
+		// on every frame of it.
+		{
+			const eid = world.editor.selectedObject ?? -1;
+			const entity =
+				eid === -1
+					? undefined
+					: world.scene.getObjectByProperty("eid", eid);
+			if (entity !== undefined) {
+				syncPartMeshScale(
+					entity,
+					world.primitives.get(eid),
+					new THREE.Vector3(
+						TransformComponent.scale.x[eid],
+						TransformComponent.scale.y[eid],
+						TransformComponent.scale.z[eid],
+					),
+				);
+			}
+		}
 
 		// Recorded independently of the emit above: a drag whose last frame
 		// happened to land on the throttle boundary has nothing left to
@@ -588,6 +618,7 @@ function renderInspector(world: World) {
 			}
 		}
 		ImGui.NewLine();
+		renderPartSection(world, eid);
 		if (
 			ImGui.CollapsingHeader(
 				"Transform Component",
@@ -665,6 +696,143 @@ function renderInspector(world: World) {
 		}
 	}
 }
+
+/**
+ * The part-specific half of the inspector: what a part is made of, rather
+ * than where it is.
+ *
+ * Absent entirely for furniture, which has no description to edit -- its
+ * appearance comes from a file someone uploaded.
+ *
+ * Every control writes through a command so it can be undone, and each edit
+ * is one command: the "before" is captured when a control is first touched
+ * and the pair is pushed when it settles, so dragging a slider is one undo
+ * step and not fifty.
+ */
+function renderPartSection(world: World, eid: number) {
+	const part = world.primitives.get(eid);
+	if (part === undefined) return;
+	const id = world.network.getObject(eid)?.id;
+	if (id === undefined) return;
+
+	if (!ImGui.CollapsingHeader("Part", ImGui.ImGuiTreeNodeFlags.DefaultOpen)) {
+		return;
+	}
+
+	/** Sends an edit and records it, leaving the original for the undo. */
+	const edit = (change: Partial<Part>) => {
+		const before = clonePart(part);
+		const after = clonePart(part);
+		Object.assign(after, change);
+		const command = partPropsCommand(id, before, after);
+		command.do(world);
+		world.history.push(command);
+	};
+
+	ImGui.Text("Material");
+	for (let i = 0; i < PART_MATERIALS.length; i++) {
+		ImGui.PushID(`imat${i}`);
+		ImGui.Selectable(
+			PART_MATERIALS[i].name,
+			part.material === i,
+			0,
+			new ImGui.Vec2(80, 20),
+		);
+		if (ImGui.IsItemClicked()) edit({ material: i });
+		ImGui.PopID();
+		if (i % 3 !== 2 && i + 1 < PART_MATERIALS.length) ImGui.SameLine();
+	}
+
+	ImGui.NewLine();
+	ImGui.Text("Shape");
+	for (let i = 0; i < INSPECTOR_SHAPES.length; i++) {
+		const [label, shape] = INSPECTOR_SHAPES[i];
+		ImGui.PushID(`ishape${i}`);
+		ImGui.Selectable(
+			label,
+			part.shape === shape,
+			0,
+			new ImGui.Vec2(80, 20),
+		);
+		if (ImGui.IsItemClicked()) edit({ shape });
+		ImGui.PopID();
+		if (i % 3 !== 2 && i + 1 < INSPECTOR_SHAPES.length) ImGui.SameLine();
+	}
+
+	ImGui.NewLine();
+	const uv = STATIC<ImGui.ImScalar<number>>(UNIQUE(`uv#${eid}`), [
+		part.uvScale,
+	]);
+	const uvHeld = STATIC<ImGui.ImScalar<boolean>>(UNIQUE(`uvHeld#${eid}`), [
+		false,
+	]);
+	// While the slider is not being dragged it mirrors the authoritative
+	// value, so an edit from another client shows up here too.
+	if (!uvHeld.value[0]) uv.value[0] = part.uvScale;
+
+	ImGui.PushItemWidth(ImGui.CalcItemWidth() / 2);
+	ImGui.SliderFloat(`Texture scale##uv#${eid}`, uv.value, 0.1, 8);
+	ImGui.PopItemWidth();
+
+	// Committed on release, not per frame. A held slider fires every frame,
+	// and one command per frame is not an undo stack -- the same reason a
+	// gizmo drag is bracketed by mouseDown/mouseUp rather than recorded off
+	// its change event. imgui-js does not re-export
+	// IsItemDeactivatedAfterEdit, so the release is spotted by watching
+	// IsItemActive fall.
+	const uvActive = ImGui.IsItemActive();
+	if (uvHeld.value[0] && !uvActive) {
+		if (Math.abs(uv.value[0] - part.uvScale) > 1e-6) {
+			edit({ uvScale: uv.value[0] });
+		}
+	}
+	uvHeld.value[0] = uvActive;
+
+	const collides = STATIC<ImGui.ImScalar<boolean>>(
+		UNIQUE(`collides#${eid}`),
+		[part.collides],
+	);
+	collides.value[0] = part.collides;
+	ImGui.Checkbox(`Solid##collides#${eid}`, collides.value);
+	if (collides.value[0] !== part.collides) {
+		edit({ collides: collides.value[0] });
+	}
+
+	const locked = STATIC<ImGui.ImScalar<boolean>>(UNIQUE(`locked#${eid}`), [
+		part.locked,
+	]);
+	locked.value[0] = part.locked;
+	ImGui.Checkbox(`Locked##locked#${eid}`, locked.value);
+	if (locked.value[0] !== part.locked) {
+		edit({ locked: locked.value[0] });
+	}
+	if (part.locked) {
+		ImGui.TextWrapped("Locked parts are not selectable in the world.");
+	}
+}
+
+/** A shallow copy, so a command's before and after are not the same object. */
+function clonePart(part: Part): Part {
+	return create(PartSchema, {
+		shape: part.shape,
+		material: part.material,
+		color: part.color,
+		uvScale: part.uvScale,
+		collides: part.collides,
+		locked: part.locked,
+		group: part.group,
+	});
+}
+
+const INSPECTOR_SHAPES: [string, Shape][] = [
+	["Box", Shape.Box],
+	["Wedge", Shape.Wedge],
+	["Cylinder", Shape.Cylinder],
+	["Sphere", Shape.Sphere],
+	["Cone", Shape.Cone],
+	["Plane", Shape.Plane],
+	["Corner", Shape.CornerWedge],
+];
 
 function renderToolbar(world: World) {
 	ImGui.Begin("Tools", null, ImGui.WindowFlags.None);

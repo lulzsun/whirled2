@@ -6,7 +6,7 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { PlayerAnim, PlayerAuth, PlayerChat, PlayerJoin, PlayerLeave, PlayerMove, PlayerWear } from "./player_pb";
 import { file_player } from "./player_pb";
-import type { ObjectDenied, ObjectJoin, ObjectLeave, ObjectTransform, RoomCapacity } from "./object_pb";
+import type { ObjectDenied, ObjectJoin, ObjectLeave, ObjectPartUpdate, ObjectTransform, RoomCapacity } from "./object_pb";
 import { file_object } from "./object_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file message.proto.
  */
 export const file_message: GenFile = /*@__PURE__*/
-  fileDesc("Cg1tZXNzYWdlLnByb3RvEgh3aGlybGVkMiK9BAoMV2hpcmxlZEV2ZW50EioKCnBsYXllckF1dGgYASABKAsyFC53aGlybGVkMi5QbGF5ZXJBdXRoSAASKgoKcGxheWVySm9pbhgCIAEoCzIULndoaXJsZWQyLlBsYXllckpvaW5IABIsCgtwbGF5ZXJMZWF2ZRgDIAEoCzIVLndoaXJsZWQyLlBsYXllckxlYXZlSAASKgoKcGxheWVyQ2hhdBgEIAEoCzIULndoaXJsZWQyLlBsYXllckNoYXRIABIqCgpwbGF5ZXJNb3ZlGAUgASgLMhQud2hpcmxlZDIuUGxheWVyTW92ZUgAEioKCnBsYXllckFuaW0YBiABKAsyFC53aGlybGVkMi5QbGF5ZXJBbmltSAASKgoKcGxheWVyV2VhchgHIAEoCzIULndoaXJsZWQyLlBsYXllcldlYXJIABIqCgpvYmplY3RKb2luGAggASgLMhQud2hpcmxlZDIuT2JqZWN0Sm9pbkgAEiwKC29iamVjdExlYXZlGAkgASgLMhUud2hpcmxlZDIuT2JqZWN0TGVhdmVIABI0Cg9vYmplY3RUcmFuc2Zvcm0YCiABKAsyGS53aGlybGVkMi5PYmplY3RUcmFuc2Zvcm1IABIuCgxvYmplY3REZW5pZWQYCyABKAsyFi53aGlybGVkMi5PYmplY3REZW5pZWRIABIuCgxyb29tQ2FwYWNpdHkYDCABKAsyFi53aGlybGVkMi5Sb29tQ2FwYWNpdHlIAEIHCgVldmVudEIWWhR3aGlybGVkMi91dGlscy9wcm90b2IGcHJvdG8z", [file_player, file_object]);
+  fileDesc("Cg1tZXNzYWdlLnByb3RvEgh3aGlybGVkMiL1BAoMV2hpcmxlZEV2ZW50EioKCnBsYXllckF1dGgYASABKAsyFC53aGlybGVkMi5QbGF5ZXJBdXRoSAASKgoKcGxheWVySm9pbhgCIAEoCzIULndoaXJsZWQyLlBsYXllckpvaW5IABIsCgtwbGF5ZXJMZWF2ZRgDIAEoCzIVLndoaXJsZWQyLlBsYXllckxlYXZlSAASKgoKcGxheWVyQ2hhdBgEIAEoCzIULndoaXJsZWQyLlBsYXllckNoYXRIABIqCgpwbGF5ZXJNb3ZlGAUgASgLMhQud2hpcmxlZDIuUGxheWVyTW92ZUgAEioKCnBsYXllckFuaW0YBiABKAsyFC53aGlybGVkMi5QbGF5ZXJBbmltSAASKgoKcGxheWVyV2VhchgHIAEoCzIULndoaXJsZWQyLlBsYXllcldlYXJIABIqCgpvYmplY3RKb2luGAggASgLMhQud2hpcmxlZDIuT2JqZWN0Sm9pbkgAEiwKC29iamVjdExlYXZlGAkgASgLMhUud2hpcmxlZDIuT2JqZWN0TGVhdmVIABI0Cg9vYmplY3RUcmFuc2Zvcm0YCiABKAsyGS53aGlybGVkMi5PYmplY3RUcmFuc2Zvcm1IABIuCgxvYmplY3REZW5pZWQYCyABKAsyFi53aGlybGVkMi5PYmplY3REZW5pZWRIABIuCgxyb29tQ2FwYWNpdHkYDCABKAsyFi53aGlybGVkMi5Sb29tQ2FwYWNpdHlIABI2ChBvYmplY3RQYXJ0VXBkYXRlGA0gASgLMhoud2hpcmxlZDIuT2JqZWN0UGFydFVwZGF0ZUgAQgcKBWV2ZW50QhZaFHdoaXJsZWQyL3V0aWxzL3Byb3RvYgZwcm90bzM", [file_player, file_object]);
 
 /**
  * @generated from message whirled2.WhirledEvent
@@ -95,6 +95,12 @@ export type WhirledEvent = Message<"whirled2.WhirledEvent"> & {
      */
     value: RoomCapacity;
     case: "roomCapacity";
+  } | {
+    /**
+     * @generated from field: whirled2.ObjectPartUpdate objectPartUpdate = 13;
+     */
+    value: ObjectPartUpdate;
+    case: "objectPartUpdate";
   } | { case: undefined; value?: undefined };
 };
 

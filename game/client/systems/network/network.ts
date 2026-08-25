@@ -32,7 +32,13 @@ import {
 } from "../../factory/chatbubble";
 import { MAX_CHAT_LENGTH } from "../../constants";
 import { createObject } from "../../factory/object";
-import { createPrimitive } from "../../factory/primitive";
+import {
+	createPrimitive,
+	refreshPartMesh,
+	syncPartMeshScale,
+} from "../../factory/primitive";
+import * as THREE from "three";
+import { Shape } from "../../proto";
 import * as buf from "../../proto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { emitPlayerJoin } from "./player";
@@ -544,6 +550,22 @@ export function createNetworkSystem(world: World) {
 						TransformComponent.scale.z[eid] = object.scale.z;
 					}
 
+					// A part is built at unit size, because its scale only
+					// arrives with the message that carries it. A textured
+					// part measures its pattern in world units, so its UVs
+					// cannot be computed until now.
+					if (object.type === buf.Type.Primitive && object.part) {
+						syncPartMeshScale(
+							objectEntity,
+							object.part,
+							new THREE.Vector3(
+								TransformComponent.scale.x[eid],
+								TransformComponent.scale.y[eid],
+								TransformComponent.scale.z[eid],
+							),
+						);
+					}
+
 					const networkObject: NetworkObject = {
 						eid: eid,
 						id: object.id,
@@ -561,6 +583,26 @@ export function createNetworkSystem(world: World) {
 					if (object.nonce) {
 						world.build?.resolveGhost(object.nonce, object.id);
 					}
+					break;
+				}
+				case "objectPartUpdate": {
+					const update = whirledEvent.event.value;
+					if (update.part === undefined) break;
+					const eid = world.network.getObject(update.id)?.eid;
+					if (eid === undefined) break;
+					const entity = world.scene.getObjectByProperty("eid", eid);
+					if (entity === undefined) break;
+					world.primitives.set(eid, update.part);
+					entity.name = `${Shape[update.part.shape] ?? "Part"} (Part)`;
+					refreshPartMesh(
+						entity,
+						update.part,
+						new THREE.Vector3(
+							TransformComponent.scale.x[eid],
+							TransformComponent.scale.y[eid],
+							TransformComponent.scale.z[eid],
+						),
+					);
 					break;
 				}
 				case "objectDenied": {
@@ -609,6 +651,18 @@ export function createNetworkSystem(world: World) {
 						TransformComponent.scale.x[eid] = object.scale.x;
 						TransformComponent.scale.y[eid] = object.scale.y;
 						TransformComponent.scale.z[eid] = object.scale.z;
+						// A textured part measures its pattern in world
+						// units, so a resize from another client has to
+						// rebuild its UVs the same way a local one does.
+						syncPartMeshScale(
+							objectEntity,
+							world.primitives.get(eid),
+							new THREE.Vector3(
+								object.scale.x,
+								object.scale.y,
+								object.scale.z,
+							),
+						);
 					}
 					break;
 				}

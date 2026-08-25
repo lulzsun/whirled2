@@ -1,6 +1,6 @@
 # Spec: Room building with primitive parts
 
-Status: **in progress** — M1–M4 landed; M5 next
+Status: **in progress** — M1–M5 landed; M6 next
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -626,9 +626,51 @@ owner + guest — since replication is half the feature).
         but face-anchored resize is a gizmo change, not a snapping one. See
         open questions.
 
--   **M5 — Palette + inspector.** All shapes; material set with
-    world-space UVs; color, uvScale, collides, locked in `renderInspector`;
-    lock behavior in picking.
+-   **M5 — Palette + inspector.** ✅ **Landed.** All shapes; material set
+    with world-space UVs; colour, uvScale, collides and locked in
+    `renderInspector`; lock behaviour in picking.
+
+    **A part could be created and moved but never edited**, so this
+    milestone had to add a message: `ObjectPartUpdate` carries everything
+    about a part that is not its transform. It faces the same validation a
+    placement does — it is the same untrusted bytes arriving by a different
+    door — which is why `validatePart` split into a description half and a
+    transform half.
+
+    **World-space UVs are the visible half.** A texture stretched across
+    whatever a part happens to be means a 4×3×0.2 wall shows its bricks
+    four times on one face, three on another and once across the edge —
+    three brick sizes on one object. `applyWorldUVs` measures the pattern
+    in world units instead, per box face, the way Roblox measures in studs.
+    _Measured_ on a 4×3×0.2 wall: +X spans 0.2×3, +Y spans 4×0.2, +Z spans
+    4×3. Textured parts therefore need their own geometry (UVs live on the
+    geometry), so only they get a clone; untextured parts keep the shared
+    unit shapes.
+
+    Textures are greyscale patterns drawn onto a canvas at runtime rather
+    than shipped as files — the one-executable constraint again — and are
+    tinted by the part's own colour, so one plank pattern serves every
+    colour of wood.
+
+    _Measured:_ material 7→6 with uvScale 1→2 doubled the UV span on a
+    4-unit face from 4 to 8 and undo restored both; a locked part stopped
+    being selectable and the click fell _through_ to the entity behind it,
+    then became selectable again on undo; the server refused a bad
+    material, shape and group, an unknown id, and — the one that matters —
+    an attempt to attach a `Part` to a piece of **furniture's** id, which
+    would otherwise have made furniture render as a part; `uvScale: 99`
+    clamped to 16.
+
+    Two things worth knowing:
+
+    -   **`PART_MATERIAL_COUNT` and the server's `partMaterialCount` must
+        move together.** A material the client offers and the server
+        refuses is a part that silently will not place.
+    -   **imgui-js does not re-export `IsItemDeactivatedAfterEdit`**, so
+        the texture-scale slider spots its release by watching
+        `IsItemActive()` fall. Committing per frame instead would push one
+        undo command per frame, which is not an undo stack.
+
 -   **M6 — Surface snap** on placement, tangent-frame grid included.
 -   **M7 — Capacity economy.** `part_capacity` field + bootstrap
     migration, `TxRoomExpand`, `POST /room/{id}/expand`, toolbar meter +

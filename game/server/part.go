@@ -65,11 +65,14 @@ func clampFloat(v float64, min float64, max float64) float64 {
 	return v
 }
 
-// validatePart reports whether a part's description is structurally sound,
-// clamping its numbers in place. A false return means the placement is
-// refused outright.
-func validatePart(obj *buf.Object) bool {
-	part := obj.Part
+// validatePartDescription reports whether a part's own description is
+// structurally sound, clamping its numbers in place.
+//
+// Split out from validatePart because a part can be re-described without
+// being moved (ObjectPartUpdate), and an edit has to face the same checks a
+// placement does -- it is the same untrusted bytes arriving by a different
+// door.
+func validatePartDescription(part *buf.Part) bool {
 	if part == nil {
 		return false
 	}
@@ -82,13 +85,22 @@ func validatePart(obj *buf.Object) bool {
 	if len(part.Group) > partMaxGroupLen || !partGroupPattern.MatchString(part.Group) {
 		return false
 	}
-	if len(obj.Nonce) > partMaxNonceLen {
-		return false
-	}
 
 	// Colour is a 24-bit value in a 32-bit field; mask rather than refuse.
 	part.Color &= 0xFFFFFF
 	part.UvScale = float32(clampFloat(float64(part.UvScale), partMinUVScale, partMaxUVScale))
+	return true
+}
+
+// validatePart reports whether a whole part placement is sound, clamping its
+// numbers in place. A false return means the placement is refused outright.
+func validatePart(obj *buf.Object) bool {
+	if !validatePartDescription(obj.Part) {
+		return false
+	}
+	if len(obj.Nonce) > partMaxNonceLen {
+		return false
+	}
 
 	// Scale is the part's size (spec §0.3), so an unclamped scale is an
 	// unclamped part -- this is the same guard as a size limit.
@@ -238,4 +250,53 @@ func onPartJoin(peer *gecgosio.Peer, roomId string, obj *buf.Object) {
 	log.Printf("Part '%s' (%s) is joining room '%s'", object.Id, object.Name, roomId)
 	peer.Room().Emit(data)
 	emitRoomCapacity(peer, roomId)
+}
+
+// onPartUpdate handles a client re-describing a part it already placed.
+//
+// Only the description changes here; where the part is stays where it was.
+// The shape is allowed to change too -- swapping a box for a wedge in place
+// is the fastest way to fix a roof -- so this is a full replacement of the
+// Part, not a merge, and it faces the same validation a placement does.
+func onPartUpdate(peer *gecgosio.Peer, update *buf.ObjectPartUpdate) {
+	client := clients[peer.Id]
+	roomId := peer.Rooms()[0]
+
+	if !canEditRoom(client, roomId) {
+		log.Printf("Refusing to edit '%s' in room '%s': '%s' does not own it", update.Id, roomId, client.Username)
+		denyObject(peer, update.Id, buf.DenyReason_NotOwner)
+		return
+	}
+
+	if !validatePartDescription(update.Part) {
+		log.Printf("Refusing to edit '%s' in room '%s': malformed description", update.Id, roomId)
+		denyObject(peer, update.Id, buf.DenyReason_InvalidPart)
+		return
+	}
+
+	objectsMu.Lock()
+	stored, ok := objects[roomId][update.Id]
+	// Guarded on type as well as existence: an id that names furniture must
+	// not be able to grow a Part and start rendering as one.
+	if !ok || stored.Type != buf.Type_Primitive {
+		objectsMu.Unlock()
+		log.Printf("Refusing to edit '%s' in room '%s': no such part", update.Id, roomId)
+		denyObject(peer, update.Id, buf.DenyReason_InvalidPart)
+		return
+	}
+	stored.Part = update.Part
+	stored.Name = buf.Shape_name[int32(update.Part.Shape)]
+	markRoomDirty(roomId)
+	objectsMu.Unlock()
+
+	data, err := proto.Marshal(&buf.WhirledEvent{
+		Event: &buf.WhirledEvent_ObjectPartUpdate{
+			ObjectPartUpdate: update,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to marshal a part update in room '%s': %v", roomId, err)
+		return
+	}
+	peer.Room().Emit(data)
 }

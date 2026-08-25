@@ -4,7 +4,7 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Object$, Position, Rotation, Scale } from "./common_pb";
+import type { Object$, Part, Position, Rotation, Scale } from "./common_pb";
 import { file_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file object.proto.
  */
 export const file_object: GenFile = /*@__PURE__*/
-  fileDesc("CgxvYmplY3QucHJvdG8SCHdoaXJsZWQyIi4KCk9iamVjdEpvaW4SIAoGb2JqZWN0GAEgASgLMhAud2hpcmxlZDIuT2JqZWN0IisKC09iamVjdExlYXZlEgoKAmlkGAEgASgJEhAKCGlzUGxheWVyGAIgASgIIpsBCg9PYmplY3RUcmFuc2Zvcm0SCgoCaWQYASABKAkSEAoIaXNQbGF5ZXIYAiABKAgSJAoIcG9zaXRpb24YAyABKAsyEi53aGlybGVkMi5Qb3NpdGlvbhIkCghyb3RhdGlvbhgEIAEoCzISLndoaXJsZWQyLlJvdGF0aW9uEh4KBXNjYWxlGAUgASgLMg8ud2hpcmxlZDIuU2NhbGUiQAoMT2JqZWN0RGVuaWVkEgoKAmlkGAEgASgJEiQKBnJlYXNvbhgCIAEoDjIULndoaXJsZWQyLkRlbnlSZWFzb24iLgoMUm9vbUNhcGFjaXR5EgwKBHVzZWQYASABKA0SEAoIY2FwYWNpdHkYAiABKA0qWQoKRGVueVJlYXNvbhILCgdVbmtub3duEAASDAoITm90T3duZXIQARIQCgxDYXBhY2l0eUZ1bGwQAhIPCgtJbnZhbGlkUGFydBADEg0KCUR1cGxpY2F0ZRAEQhZaFHdoaXJsZWQyL3V0aWxzL3Byb3RvYgZwcm90bzM", [file_common]);
+  fileDesc("CgxvYmplY3QucHJvdG8SCHdoaXJsZWQyIi4KCk9iamVjdEpvaW4SIAoGb2JqZWN0GAEgASgLMhAud2hpcmxlZDIuT2JqZWN0IisKC09iamVjdExlYXZlEgoKAmlkGAEgASgJEhAKCGlzUGxheWVyGAIgASgIIpsBCg9PYmplY3RUcmFuc2Zvcm0SCgoCaWQYASABKAkSEAoIaXNQbGF5ZXIYAiABKAgSJAoIcG9zaXRpb24YAyABKAsyEi53aGlybGVkMi5Qb3NpdGlvbhIkCghyb3RhdGlvbhgEIAEoCzISLndoaXJsZWQyLlJvdGF0aW9uEh4KBXNjYWxlGAUgASgLMg8ud2hpcmxlZDIuU2NhbGUiPAoQT2JqZWN0UGFydFVwZGF0ZRIKCgJpZBgBIAEoCRIcCgRwYXJ0GAIgASgLMg4ud2hpcmxlZDIuUGFydCJACgxPYmplY3REZW5pZWQSCgoCaWQYASABKAkSJAoGcmVhc29uGAIgASgOMhQud2hpcmxlZDIuRGVueVJlYXNvbiIuCgxSb29tQ2FwYWNpdHkSDAoEdXNlZBgBIAEoDRIQCghjYXBhY2l0eRgCIAEoDSpZCgpEZW55UmVhc29uEgsKB1Vua25vd24QABIMCghOb3RPd25lchABEhAKDENhcGFjaXR5RnVsbBACEg8KC0ludmFsaWRQYXJ0EAMSDQoJRHVwbGljYXRlEARCFloUd2hpcmxlZDIvdXRpbHMvcHJvdG9iBnByb3RvMw", [file_common]);
 
 /**
  * @generated from message whirled2.ObjectJoin
@@ -91,6 +91,33 @@ export const ObjectTransformSchema: GenMessage<ObjectTransform> = /*@__PURE__*/
   messageDesc(file_object, 2);
 
 /**
+ * A part's description changing -- material, tint, flags. Transform changes
+ * go through ObjectTransform; this is everything else about a part, and it
+ * exists because until now a part could be created and moved but never
+ * edited.
+ *
+ * @generated from message whirled2.ObjectPartUpdate
+ */
+export type ObjectPartUpdate = Message<"whirled2.ObjectPartUpdate"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: whirled2.Part part = 2;
+   */
+  part?: Part;
+};
+
+/**
+ * Describes the message whirled2.ObjectPartUpdate.
+ * Use `create(ObjectPartUpdateSchema)` to create a new message.
+ */
+export const ObjectPartUpdateSchema: GenMessage<ObjectPartUpdate> = /*@__PURE__*/
+  messageDesc(file_object, 3);
+
+/**
  * Sent only to the peer whose request was refused. Without it a rejected
  * placement is indistinguishable from a dead click, which is the failure
  * mode the removal button already had to be rescued from.
@@ -116,7 +143,7 @@ export type ObjectDenied = Message<"whirled2.ObjectDenied"> & {
  * Use `create(ObjectDeniedSchema)` to create a new message.
  */
 export const ObjectDeniedSchema: GenMessage<ObjectDenied> = /*@__PURE__*/
-  messageDesc(file_object, 3);
+  messageDesc(file_object, 4);
 
 /**
  * Sent to the room owner on join and after every part add or remove,
@@ -141,7 +168,7 @@ export type RoomCapacity = Message<"whirled2.RoomCapacity"> & {
  * Use `create(RoomCapacitySchema)` to create a new message.
  */
 export const RoomCapacitySchema: GenMessage<RoomCapacity> = /*@__PURE__*/
-  messageDesc(file_object, 4);
+  messageDesc(file_object, 5);
 
 /**
  * @generated from enum whirled2.DenyReason

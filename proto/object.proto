@@ -23,6 +23,15 @@ message ObjectTransform {
     Scale scale = 5;
 }
 
+// A part's description changing -- material, tint, flags. Transform changes
+// go through ObjectTransform; this is everything else about a part, and it
+// exists because until now a part could be created and moved but never
+// edited.
+message ObjectPartUpdate {
+    string id = 1;
+    Part part = 2;
+}
+
 // Sent only to the peer whose request was refused. Without it a rejected
 // placement is indistinguishable from a dead click, which is the failure
 // mode the removal button already had to be rescued from.

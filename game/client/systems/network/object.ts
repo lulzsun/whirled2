@@ -66,6 +66,23 @@ export function emitPartJoin(
 }
 
 /**
+ * Emits to server that a part's description has changed.
+ *
+ * Its transform is not here -- that is ObjectTransform's job. This carries
+ * everything else about a part: shape, material, tint, and the flags.
+ */
+export function emitPartUpdate(world: World, id: string, part: buf.Part) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "objectPartUpdate",
+		value: create(buf.ObjectPartUpdateSchema, { id, part }),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
  * Emits to server that an object is moving (by the player)
  *
  * Ideally this would be a player having ownership of the object to

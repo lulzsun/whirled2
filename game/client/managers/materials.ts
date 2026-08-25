@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { getPartTexture } from "./textures";
 
 /**
  * The built-in material set for builder parts.
@@ -6,11 +7,12 @@ import * as THREE from "three";
  * Indices are persisted in every room's object blob, so this list is
  * append-only: never renumber, never remove.
  *
- * M3 ships flat colours only. Textured entries arrive with the material
- * palette (spec M5), at which point each entry grows a map and parts need
- * world-space UVs -- a 4x3x0.2 box would otherwise show its texture smeared
- * four times along one face and once along another, which is the single most
- * visible "homemade builder" tell.
+ * Textures are greyscale patterns drawn at runtime (managers/textures.ts) and
+ * tinted by the part's own colour, so one wood pattern serves every colour of
+ * wood. Textured materials need world-space UVs to go with them -- see
+ * applyWorldUVs in factory/primitive.ts -- because a 4x3x0.2 box would
+ * otherwise show its pattern smeared four times along one face and once along
+ * another, which is the most visible "homemade builder" tell there is.
  */
 export type MaterialDefinition = {
 	name: string;
@@ -19,6 +21,8 @@ export type MaterialDefinition = {
 	roughness: number;
 	metalness: number;
 	opacity: number;
+	/** Tiling pattern from managers/textures.ts, or null for a flat fill. */
+	texture: string | null;
 };
 
 export const PART_MATERIALS: MaterialDefinition[] = [
@@ -28,6 +32,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.7,
 		metalness: 0,
 		opacity: 1,
+		texture: null,
 	},
 	{
 		name: "Smooth",
@@ -35,6 +40,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.25,
 		metalness: 0,
 		opacity: 1,
+		texture: null,
 	},
 	{
 		name: "Matte",
@@ -42,6 +48,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 1,
 		metalness: 0,
 		opacity: 1,
+		texture: "concrete",
 	},
 	{
 		name: "Metal",
@@ -49,6 +56,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.35,
 		metalness: 0.9,
 		opacity: 1,
+		texture: null,
 	},
 	{
 		name: "Glass",
@@ -56,6 +64,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.05,
 		metalness: 0,
 		opacity: 0.35,
+		texture: null,
 	},
 	{
 		name: "Neon",
@@ -63,6 +72,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 1,
 		metalness: 0,
 		opacity: 1,
+		texture: null,
 	},
 	{
 		name: "Wood",
@@ -70,6 +80,7 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.85,
 		metalness: 0,
 		opacity: 1,
+		texture: "planks",
 	},
 	{
 		name: "Stone",
@@ -77,8 +88,19 @@ export const PART_MATERIALS: MaterialDefinition[] = [
 		roughness: 0.95,
 		metalness: 0,
 		opacity: 1,
+		texture: "bricks",
 	},
 ];
+
+/**
+ * Materials the server will accept, and the number it validates against.
+ *
+ * Persisted in every room, so this list is append-only. The server keeps its
+ * own copy of the count (partMaterialCount in game/server/part.go) and the
+ * two have to move together -- a material the client offers and the server
+ * refuses is a part that silently will not place.
+ */
+export const PART_MATERIAL_COUNT = PART_MATERIALS.length;
 
 /** Index of the material a freshly placed part gets. */
 export const DEFAULT_PART_MATERIAL = 0;
@@ -89,10 +111,17 @@ export const DEFAULT_PART_MATERIAL = 0;
  * Deliberately not `material.clone()`: three's cloneUniforms clones textures
  * too, which pins the GPU copy for the lifetime of the clone. The SWF stream
  * renderer already had to learn this the hard way (swf-avatar-rendering.md
- * §14.6). Nothing here is textured yet, but the palette lands in M5 and the
- * habit has to be in place before it does.
+ * §14.6). Now that materials carry maps, that is not a habit but a hard
+ * requirement: every part in Wood shares one texture, and cloning would give
+ * each of them their own copy of it.
  */
 const cache = new Map<string, THREE.Material>();
+
+/** Whether a material carries a texture, and so needs world-space UVs. */
+export function materialIsTextured(material: number): boolean {
+	const definition = PART_MATERIALS[material];
+	return definition !== undefined && definition.texture !== null;
+}
 
 export function getPartMaterial(
 	material: number,
@@ -105,7 +134,9 @@ export function getPartMaterial(
 	if (cached !== undefined) return cached;
 
 	const definition = PART_MATERIALS[index];
+	const map = definition.texture ? getPartTexture(definition.texture) : null;
 	const created = new THREE.MeshStandardMaterial({
+		map,
 		color: new THREE.Color(color).multiply(
 			new THREE.Color(definition.baseColor),
 		),

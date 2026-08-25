@@ -10,6 +10,7 @@ import {
 	emitObjectJoin,
 	emitObjectLeave,
 	emitObjectTransform,
+	emitPartUpdate,
 } from "./network";
 
 /** How many actions can be walked back. */
@@ -218,6 +219,23 @@ export function addPartCommand(part: Part, at: Snapshot): PartCommand {
 			if (id === null) return;
 			emitObjectLeave(world, id, false);
 			id = null;
+		},
+	};
+}
+
+/** Undo of a part edit: put the old description back. */
+export function partPropsCommand(
+	id: string,
+	before: Part,
+	after: Part,
+): Command {
+	return {
+		label: "Edit part",
+		do: (world) => {
+			emitPartUpdate(world, id, after);
+		},
+		undo: (world) => {
+			emitPartUpdate(world, id, before);
 		},
 	};
 }

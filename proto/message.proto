@@ -22,5 +22,6 @@ message WhirledEvent {
         ObjectTransform objectTransform = 10;
         ObjectDenied objectDenied = 11;
         RoomCapacity roomCapacity = 12;
+        ObjectPartUpdate objectPartUpdate = 13;
     }
 }
