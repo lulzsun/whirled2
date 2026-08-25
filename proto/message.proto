@@ -20,5 +20,7 @@ message WhirledEvent {
         ObjectJoin objectJoin = 8;
         ObjectLeave objectLeave = 9;
         ObjectTransform objectTransform = 10;
+        ObjectDenied objectDenied = 11;
+        RoomCapacity roomCapacity = 12;
     }
 }

@@ -16,6 +16,29 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	// note: this assumes the client is only in a single room
 	roomId := peer.Rooms()[0]
 
+	// Ownership first now that it is a map lookup rather than a query: a
+	// part carries no id to check for duplicates, so there is nothing to do
+	// before this.
+	if !canEditRoom(client, roomId) {
+		// user does not own this room, so do nothing
+		log.Printf("Refusing to add to room '%s': '%s' does not own it", roomId, client.Username)
+		// A part is only knowable to its sender by the nonce it chose; a
+		// furniture placement is knowable by the stuff id it named.
+		deniedId := obj.Id
+		if obj.Type == buf.Type_Primitive {
+			deniedId = obj.Nonce
+		}
+		denyObject(peer, deniedId, buf.DenyReason_NotOwner)
+		return
+	}
+
+	// Builder parts are described on the wire rather than looked up, so they
+	// take a wholly separate path (part.go).
+	if obj.Type == buf.Type_Primitive {
+		onPartJoin(peer, roomId, obj)
+		return
+	}
+
 	// making sure this object is of type 2 (furniture)
 	if obj.Type != buf.Type_Furniture {
 		return
@@ -26,12 +49,7 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	_, exists := objects[roomId][obj.Id]
 	objectsMu.RUnlock()
 	if exists {
-		return
-	}
-
-	// check if client owns the current room they're in
-	if !canEditRoom(client, roomId) {
-		// user does not own this room, so do nothing
+		denyObject(peer, obj.Id, buf.DenyReason_Duplicate)
 		return
 	}
 
@@ -172,10 +190,16 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 		return
 	} else {
 		objectsMu.Lock()
+		wasPart := objects[roomId][id].GetType() == buf.Type_Primitive
 		delete(objects[roomId], id)
 		markRoomDirty(roomId)
 		objectsMu.Unlock()
 		log.Printf("Object '%s' has been deleted from room '%s'", id, roomId)
+		if wasPart {
+			// A freed slot is only useful to the builder if the UI hears
+			// about it.
+			defer emitRoomCapacity(peer, roomId)
+		}
 	}
 	p := &buf.WhirledEvent{
 		Event: &buf.WhirledEvent_ObjectLeave{

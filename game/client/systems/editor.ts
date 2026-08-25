@@ -25,6 +25,7 @@ import { isSwfHitTransparent } from "./control";
 import {
 	Snapshot,
 	removeObjectCommand,
+	removePartCommand,
 	snapshotTransform,
 	transformCommand,
 	transformsDiffer,
@@ -485,12 +486,16 @@ function renderInspector(world: World) {
 			} else {
 				// Snapshot first: once the server acknowledges the removal
 				// the entity is gone, and with it the only record of where
-				// it stood.
-				const command = removeObjectCommand(
-					id,
-					Type.Furniture,
-					snapshotTransform(eid),
-				);
+				// it stood -- and, for a part, of what it even was.
+				const part = world.primitives.get(eid);
+				const command =
+					part !== undefined
+						? removePartCommand(id, part, snapshotTransform(eid))
+						: removeObjectCommand(
+								id,
+								Type.Furniture,
+								snapshotTransform(eid),
+							);
 				command.do(world);
 				world.history.push(command);
 			}

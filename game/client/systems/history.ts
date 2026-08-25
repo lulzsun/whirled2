@@ -5,6 +5,7 @@ import { ImGui } from "imgui-js";
 
 import { World } from "../factory/world";
 import { TransformComponent } from "../components";
+import { Part } from "../proto";
 import {
 	emitObjectJoin,
 	emitObjectLeave,
@@ -175,6 +176,71 @@ export function addObjectCommand(id: string, type: number): Command {
 			const eid = world.network.getObject(id)?.eid;
 			if (eid !== undefined) placed = snapshotTransform(eid);
 			emitObjectLeave(world, id, false);
+		},
+	};
+}
+
+/**
+ * A command whose object only gets an id once the server has minted one.
+ *
+ * Parts differ from furniture here: furniture is placed by naming an
+ * inventory row, so the client knows the id before it asks. A part's id does
+ * not exist until the server makes one, and it is a *different* id every
+ * time the part is placed -- so a command that outlives one round trip has
+ * to be told the new id rather than remember the old.
+ */
+export type PartCommand = Command & { setId(id: string): void };
+
+function toVector(t: Snapshot) {
+	return {
+		position: new THREE.Vector3(...t.position),
+		rotation: new THREE.Euler(...t.rotation),
+		scale: new THREE.Vector3(...t.scale),
+	};
+}
+
+/** Undo of a part placement: take it back out; redo: build it again. */
+export function addPartCommand(part: Part, at: Snapshot): PartCommand {
+	let id: string | null = null;
+	return {
+		label: "Add part",
+		setId: (newId) => {
+			id = newId;
+		},
+		do: (world) => {
+			const { position, rotation, scale } = toVector(at);
+			id = null;
+			world.build.placePart(part, position, rotation, scale, (newId) => {
+				id = newId;
+			});
+		},
+		undo: (world) => {
+			if (id === null) return;
+			emitObjectLeave(world, id, false);
+			id = null;
+		},
+	};
+}
+
+/** Undo of a part removal: build it again, same description, same place. */
+export function removePartCommand(
+	id: string,
+	part: Part,
+	at: Snapshot,
+): Command {
+	let currentId: string | null = id;
+	return {
+		label: "Remove part",
+		do: (world) => {
+			if (currentId === null) return;
+			emitObjectLeave(world, currentId, false);
+			currentId = null;
+		},
+		undo: (world) => {
+			const { position, rotation, scale } = toVector(at);
+			world.build.placePart(part, position, rotation, scale, (newId) => {
+				currentId = newId;
+			});
 		},
 	};
 }

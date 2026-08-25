@@ -2,8 +2,8 @@
 // @generated from file object.proto (package whirled2, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Object$, Position, Rotation, Scale } from "./common_pb";
 import { file_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file object.proto.
  */
 export const file_object: GenFile = /*@__PURE__*/
-  fileDesc("CgxvYmplY3QucHJvdG8SCHdoaXJsZWQyIi4KCk9iamVjdEpvaW4SIAoGb2JqZWN0GAEgASgLMhAud2hpcmxlZDIuT2JqZWN0IisKC09iamVjdExlYXZlEgoKAmlkGAEgASgJEhAKCGlzUGxheWVyGAIgASgIIpsBCg9PYmplY3RUcmFuc2Zvcm0SCgoCaWQYASABKAkSEAoIaXNQbGF5ZXIYAiABKAgSJAoIcG9zaXRpb24YAyABKAsyEi53aGlybGVkMi5Qb3NpdGlvbhIkCghyb3RhdGlvbhgEIAEoCzISLndoaXJsZWQyLlJvdGF0aW9uEh4KBXNjYWxlGAUgASgLMg8ud2hpcmxlZDIuU2NhbGVCFloUd2hpcmxlZDIvdXRpbHMvcHJvdG9iBnByb3RvMw", [file_common]);
+  fileDesc("CgxvYmplY3QucHJvdG8SCHdoaXJsZWQyIi4KCk9iamVjdEpvaW4SIAoGb2JqZWN0GAEgASgLMhAud2hpcmxlZDIuT2JqZWN0IisKC09iamVjdExlYXZlEgoKAmlkGAEgASgJEhAKCGlzUGxheWVyGAIgASgIIpsBCg9PYmplY3RUcmFuc2Zvcm0SCgoCaWQYASABKAkSEAoIaXNQbGF5ZXIYAiABKAgSJAoIcG9zaXRpb24YAyABKAsyEi53aGlybGVkMi5Qb3NpdGlvbhIkCghyb3RhdGlvbhgEIAEoCzISLndoaXJsZWQyLlJvdGF0aW9uEh4KBXNjYWxlGAUgASgLMg8ud2hpcmxlZDIuU2NhbGUiQAoMT2JqZWN0RGVuaWVkEgoKAmlkGAEgASgJEiQKBnJlYXNvbhgCIAEoDjIULndoaXJsZWQyLkRlbnlSZWFzb24iLgoMUm9vbUNhcGFjaXR5EgwKBHVzZWQYASABKA0SEAoIY2FwYWNpdHkYAiABKA0qWQoKRGVueVJlYXNvbhILCgdVbmtub3duEAASDAoITm90T3duZXIQARIQCgxDYXBhY2l0eUZ1bGwQAhIPCgtJbnZhbGlkUGFydBADEg0KCUR1cGxpY2F0ZRAEQhZaFHdoaXJsZWQyL3V0aWxzL3Byb3RvYgZwcm90bzM", [file_common]);
 
 /**
  * @generated from message whirled2.ObjectJoin
@@ -89,4 +89,93 @@ export type ObjectTransform = Message<"whirled2.ObjectTransform"> & {
  */
 export const ObjectTransformSchema: GenMessage<ObjectTransform> = /*@__PURE__*/
   messageDesc(file_object, 2);
+
+/**
+ * Sent only to the peer whose request was refused. Without it a rejected
+ * placement is indistinguishable from a dead click, which is the failure
+ * mode the removal button already had to be rescued from.
+ *
+ * @generated from message whirled2.ObjectDenied
+ */
+export type ObjectDenied = Message<"whirled2.ObjectDenied"> & {
+  /**
+   * stuff id for furniture, nonce for a part
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: whirled2.DenyReason reason = 2;
+   */
+  reason: DenyReason;
+};
+
+/**
+ * Describes the message whirled2.ObjectDenied.
+ * Use `create(ObjectDeniedSchema)` to create a new message.
+ */
+export const ObjectDeniedSchema: GenMessage<ObjectDenied> = /*@__PURE__*/
+  messageDesc(file_object, 3);
+
+/**
+ * Sent to the room owner on join and after every part add or remove,
+ * so the build UI can show what is left without asking.
+ *
+ * @generated from message whirled2.RoomCapacity
+ */
+export type RoomCapacity = Message<"whirled2.RoomCapacity"> & {
+  /**
+   * @generated from field: uint32 used = 1;
+   */
+  used: number;
+
+  /**
+   * @generated from field: uint32 capacity = 2;
+   */
+  capacity: number;
+};
+
+/**
+ * Describes the message whirled2.RoomCapacity.
+ * Use `create(RoomCapacitySchema)` to create a new message.
+ */
+export const RoomCapacitySchema: GenMessage<RoomCapacity> = /*@__PURE__*/
+  messageDesc(file_object, 4);
+
+/**
+ * @generated from enum whirled2.DenyReason
+ */
+export enum DenyReason {
+  /**
+   * @generated from enum value: Unknown = 0;
+   */
+  Unknown = 0,
+
+  /**
+   * @generated from enum value: NotOwner = 1;
+   */
+  NotOwner = 1,
+
+  /**
+   * @generated from enum value: CapacityFull = 2;
+   */
+  CapacityFull = 2,
+
+  /**
+   * @generated from enum value: InvalidPart = 3;
+   */
+  InvalidPart = 3,
+
+  /**
+   * @generated from enum value: Duplicate = 4;
+   */
+  Duplicate = 4,
+}
+
+/**
+ * Describes the enum whirled2.DenyReason.
+ */
+export const DenyReasonSchema: GenEnum<DenyReason> = /*@__PURE__*/
+  enumDesc(file_object, 0);
 

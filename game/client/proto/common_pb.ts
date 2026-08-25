@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file common.proto.
  */
 export const file_common: GenFile = /*@__PURE__*/
-  fileDesc("Cgxjb21tb24ucHJvdG8SCHdoaXJsZWQyItoBCgZQbGF5ZXISEAoIdXNlcm5hbWUYASABKAkSEAoIbmlja25hbWUYAiABKAkSDAoEZmlsZRgDIAEoCRINCgVsb2NhbBgEIAEoCBINCgVvd25lchgFIAEoCBIkCghwb3NpdGlvbhgGIAEoCzISLndoaXJsZWQyLlBvc2l0aW9uEiQKCHJvdGF0aW9uGAcgASgLMhIud2hpcmxlZDIuUm90YXRpb24SHgoFc2NhbGUYCCABKAsyDy53aGlybGVkMi5TY2FsZRIUCgxpbml0aWFsU2NhbGUYCSABKAEi4QEKBk9iamVjdBIKCgJpZBgBIAEoCRIcCgR0eXBlGAIgASgOMg4ud2hpcmxlZDIuVHlwZRIPCgdzdHVmZklkGAMgASgJEgwKBG5hbWUYBCABKAkSDAoEZmlsZRgFIAEoCRIkCghwb3NpdGlvbhgGIAEoCzISLndoaXJsZWQyLlBvc2l0aW9uEiQKCHJvdGF0aW9uGAcgASgLMhIud2hpcmxlZDIuUm90YXRpb24SHgoFc2NhbGUYCCABKAsyDy53aGlybGVkMi5TY2FsZRIUCgxpbml0aWFsU2NhbGUYCSABKAEiKwoIUG9zaXRpb24SCQoBeBgBIAEoARIJCgF5GAIgASgBEgkKAXoYAyABKAEiNgoIUm90YXRpb24SCQoBeBgBIAEoARIJCgF5GAIgASgBEgkKAXoYAyABKAESCQoBdxgEIAEoASIoCgVTY2FsZRIJCgF4GAEgASgBEgkKAXkYAiABKAESCQoBehgDIAEoASorCgRUeXBlEggKBE5vbmUQABIKCgZBdmF0YXIQARINCglGdXJuaXR1cmUQAkIWWhR3aGlybGVkMi91dGlscy9wcm90b2IGcHJvdG8z");
+  fileDesc("Cgxjb21tb24ucHJvdG8SCHdoaXJsZWQyItoBCgZQbGF5ZXISEAoIdXNlcm5hbWUYASABKAkSEAoIbmlja25hbWUYAiABKAkSDAoEZmlsZRgDIAEoCRINCgVsb2NhbBgEIAEoCBINCgVvd25lchgFIAEoCBIkCghwb3NpdGlvbhgGIAEoCzISLndoaXJsZWQyLlBvc2l0aW9uEiQKCHJvdGF0aW9uGAcgASgLMhIud2hpcmxlZDIuUm90YXRpb24SHgoFc2NhbGUYCCABKAsyDy53aGlybGVkMi5TY2FsZRIUCgxpbml0aWFsU2NhbGUYCSABKAEijgIKBk9iamVjdBIKCgJpZBgBIAEoCRIcCgR0eXBlGAIgASgOMg4ud2hpcmxlZDIuVHlwZRIPCgdzdHVmZklkGAMgASgJEgwKBG5hbWUYBCABKAkSDAoEZmlsZRgFIAEoCRIkCghwb3NpdGlvbhgGIAEoCzISLndoaXJsZWQyLlBvc2l0aW9uEiQKCHJvdGF0aW9uGAcgASgLMhIud2hpcmxlZDIuUm90YXRpb24SHgoFc2NhbGUYCCABKAsyDy53aGlybGVkMi5TY2FsZRIUCgxpbml0aWFsU2NhbGUYCSABKAESHAoEcGFydBgKIAEoCzIOLndoaXJsZWQyLlBhcnQSDQoFbm9uY2UYCyABKAkiiQEKBFBhcnQSHgoFc2hhcGUYASABKA4yDy53aGlybGVkMi5TaGFwZRIQCghtYXRlcmlhbBgCIAEoDRINCgVjb2xvchgDIAEoDRIPCgd1dlNjYWxlGAQgASgCEhAKCGNvbGxpZGVzGAUgASgIEg4KBmxvY2tlZBgGIAEoCBINCgVncm91cBgHIAEoCSIrCghQb3NpdGlvbhIJCgF4GAEgASgBEgkKAXkYAiABKAESCQoBehgDIAEoASI2CghSb3RhdGlvbhIJCgF4GAEgASgBEgkKAXkYAiABKAESCQoBehgDIAEoARIJCgF3GAQgASgBIigKBVNjYWxlEgkKAXgYASABKAESCQoBeRgCIAEoARIJCgF6GAMgASgBKjoKBFR5cGUSCAoETm9uZRAAEgoKBkF2YXRhchABEg0KCUZ1cm5pdHVyZRACEg0KCVByaW1pdGl2ZRADKlsKBVNoYXBlEgcKA0JveBAAEgkKBVdlZGdlEAESDAoIQ3lsaW5kZXIQAhIKCgZTcGhlcmUQAxIICgRDb25lEAQSCQoFUGxhbmUQBRIPCgtDb3JuZXJXZWRnZRAGQhZaFHdoaXJsZWQyL3V0aWxzL3Byb3RvYgZwcm90bzM");
 
 /**
  * @generated from message whirled2.Player
@@ -119,6 +119,23 @@ export type Object$ = Message<"whirled2.Object"> & {
    * @generated from field: double initialScale = 9;
    */
   initialScale: number;
+
+  /**
+   * set iff type == Primitive; a part has no file and no stuff row, it is
+   * described entirely by these parameters
+   *
+   * @generated from field: whirled2.Part part = 10;
+   */
+  part?: Part;
+
+  /**
+   * client-chosen echo, primitives only. The server mints the id, so this
+   * is the only way the placing client can match the broadcast (or the
+   * denial) back to the ghost it drew. Other clients ignore it.
+   *
+   * @generated from field: string nonce = 11;
+   */
+  nonce: string;
 };
 
 /**
@@ -127,6 +144,73 @@ export type Object$ = Message<"whirled2.Object"> & {
  */
 export const ObjectSchema: GenMessage<Object$> = /*@__PURE__*/
   messageDesc(file_common, 1);
+
+/**
+ * A builder part. Size is not here: a part's geometry is a unit shape and
+ * its dimensions are the Object's Scale, so the existing scale gizmo is the
+ * resize tool.
+ *
+ * Named Part rather than Primitive because protobuf gives enum values the
+ * scope enclosing the enum, and Type.Primitive already claims that name.
+ *
+ * @generated from message whirled2.Part
+ */
+export type Part = Message<"whirled2.Part"> & {
+  /**
+   * @generated from field: whirled2.Shape shape = 1;
+   */
+  shape: Shape;
+
+  /**
+   * index into the built-in material set; not a URL, on purpose -- a
+   * primitive carries no user bytes and so needs no upload boundary
+   *
+   * @generated from field: uint32 material = 2;
+   */
+  material: number;
+
+  /**
+   * 0xRRGGBB tint
+   *
+   * @generated from field: uint32 color = 3;
+   */
+  color: number;
+
+  /**
+   * texture repeats per world unit
+   *
+   * @generated from field: float uvScale = 4;
+   */
+  uvScale: number;
+
+  /**
+   * blocks movement in play mode
+   *
+   * @generated from field: bool collides = 5;
+   */
+  collides: boolean;
+
+  /**
+   * excluded from the editor raycast, so a floor stops eating every click
+   *
+   * @generated from field: bool locked = 6;
+   */
+  locked: boolean;
+
+  /**
+   * linkset id; empty means ungrouped
+   *
+   * @generated from field: string group = 7;
+   */
+  group: string;
+};
+
+/**
+ * Describes the message whirled2.Part.
+ * Use `create(PartSchema)` to create a new message.
+ */
+export const PartSchema: GenMessage<Part> = /*@__PURE__*/
+  messageDesc(file_common, 2);
 
 /**
  * @generated from message whirled2.Position
@@ -153,7 +237,7 @@ export type Position = Message<"whirled2.Position"> & {
  * Use `create(PositionSchema)` to create a new message.
  */
 export const PositionSchema: GenMessage<Position> = /*@__PURE__*/
-  messageDesc(file_common, 2);
+  messageDesc(file_common, 3);
 
 /**
  * @generated from message whirled2.Rotation
@@ -185,7 +269,7 @@ export type Rotation = Message<"whirled2.Rotation"> & {
  * Use `create(RotationSchema)` to create a new message.
  */
 export const RotationSchema: GenMessage<Rotation> = /*@__PURE__*/
-  messageDesc(file_common, 3);
+  messageDesc(file_common, 4);
 
 /**
  * @generated from message whirled2.Scale
@@ -212,7 +296,7 @@ export type Scale = Message<"whirled2.Scale"> & {
  * Use `create(ScaleSchema)` to create a new message.
  */
 export const ScaleSchema: GenMessage<Scale> = /*@__PURE__*/
-  messageDesc(file_common, 4);
+  messageDesc(file_common, 5);
 
 /**
  * @generated from enum whirled2.Type
@@ -232,6 +316,11 @@ export enum Type {
    * @generated from enum value: Furniture = 2;
    */
   Furniture = 2,
+
+  /**
+   * @generated from enum value: Primitive = 3;
+   */
+  Primitive = 3,
 }
 
 /**
@@ -239,4 +328,50 @@ export enum Type {
  */
 export const TypeSchema: GenEnum<Type> = /*@__PURE__*/
   enumDesc(file_common, 0);
+
+/**
+ * @generated from enum whirled2.Shape
+ */
+export enum Shape {
+  /**
+   * @generated from enum value: Box = 0;
+   */
+  Box = 0,
+
+  /**
+   * @generated from enum value: Wedge = 1;
+   */
+  Wedge = 1,
+
+  /**
+   * @generated from enum value: Cylinder = 2;
+   */
+  Cylinder = 2,
+
+  /**
+   * @generated from enum value: Sphere = 3;
+   */
+  Sphere = 3,
+
+  /**
+   * @generated from enum value: Cone = 4;
+   */
+  Cone = 4,
+
+  /**
+   * @generated from enum value: Plane = 5;
+   */
+  Plane = 5,
+
+  /**
+   * @generated from enum value: CornerWedge = 6;
+   */
+  CornerWedge = 6,
+}
+
+/**
+ * Describes the enum whirled2.Shape.
+ */
+export const ShapeSchema: GenEnum<Shape> = /*@__PURE__*/
+  enumDesc(file_common, 1);
 

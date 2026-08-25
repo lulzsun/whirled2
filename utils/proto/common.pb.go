@@ -26,6 +26,7 @@ const (
 	Type_None      Type = 0
 	Type_Avatar    Type = 1
 	Type_Furniture Type = 2
+	Type_Primitive Type = 3
 )
 
 // Enum value maps for Type.
@@ -34,11 +35,13 @@ var (
 		0: "None",
 		1: "Avatar",
 		2: "Furniture",
+		3: "Primitive",
 	}
 	Type_value = map[string]int32{
 		"None":      0,
 		"Avatar":    1,
 		"Furniture": 2,
+		"Primitive": 3,
 	}
 )
 
@@ -67,6 +70,67 @@ func (x Type) Number() protoreflect.EnumNumber {
 // Deprecated: Use Type.Descriptor instead.
 func (Type) EnumDescriptor() ([]byte, []int) {
 	return file_common_proto_rawDescGZIP(), []int{0}
+}
+
+type Shape int32
+
+const (
+	Shape_Box         Shape = 0
+	Shape_Wedge       Shape = 1
+	Shape_Cylinder    Shape = 2
+	Shape_Sphere      Shape = 3
+	Shape_Cone        Shape = 4
+	Shape_Plane       Shape = 5
+	Shape_CornerWedge Shape = 6
+)
+
+// Enum value maps for Shape.
+var (
+	Shape_name = map[int32]string{
+		0: "Box",
+		1: "Wedge",
+		2: "Cylinder",
+		3: "Sphere",
+		4: "Cone",
+		5: "Plane",
+		6: "CornerWedge",
+	}
+	Shape_value = map[string]int32{
+		"Box":         0,
+		"Wedge":       1,
+		"Cylinder":    2,
+		"Sphere":      3,
+		"Cone":        4,
+		"Plane":       5,
+		"CornerWedge": 6,
+	}
+)
+
+func (x Shape) Enum() *Shape {
+	p := new(Shape)
+	*p = x
+	return p
+}
+
+func (x Shape) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Shape) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_proto_enumTypes[1].Descriptor()
+}
+
+func (Shape) Type() protoreflect.EnumType {
+	return &file_common_proto_enumTypes[1]
+}
+
+func (x Shape) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Shape.Descriptor instead.
+func (Shape) EnumDescriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{1}
 }
 
 type Player struct {
@@ -195,6 +259,13 @@ type Object struct {
 	Rotation     *Rotation `protobuf:"bytes,7,opt,name=rotation,proto3" json:"rotation,omitempty"`
 	Scale        *Scale    `protobuf:"bytes,8,opt,name=scale,proto3" json:"scale,omitempty"`
 	InitialScale float64   `protobuf:"fixed64,9,opt,name=initialScale,proto3" json:"initialScale,omitempty"`
+	// set iff type == Primitive; a part has no file and no stuff row, it is
+	// described entirely by these parameters
+	Part *Part `protobuf:"bytes,10,opt,name=part,proto3" json:"part,omitempty"`
+	// client-chosen echo, primitives only. The server mints the id, so this
+	// is the only way the placing client can match the broadcast (or the
+	// denial) back to the ghost it drew. Other clients ignore it.
+	Nonce string `protobuf:"bytes,11,opt,name=nonce,proto3" json:"nonce,omitempty"`
 }
 
 func (x *Object) Reset() {
@@ -292,6 +363,128 @@ func (x *Object) GetInitialScale() float64 {
 	return 0
 }
 
+func (x *Object) GetPart() *Part {
+	if x != nil {
+		return x.Part
+	}
+	return nil
+}
+
+func (x *Object) GetNonce() string {
+	if x != nil {
+		return x.Nonce
+	}
+	return ""
+}
+
+// A builder part. Size is not here: a part's geometry is a unit shape and
+// its dimensions are the Object's Scale, so the existing scale gizmo is the
+// resize tool.
+//
+// Named Part rather than Primitive because protobuf gives enum values the
+// scope enclosing the enum, and Type.Primitive already claims that name.
+type Part struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Shape Shape `protobuf:"varint,1,opt,name=shape,proto3,enum=whirled2.Shape" json:"shape,omitempty"`
+	// index into the built-in material set; not a URL, on purpose -- a
+	// primitive carries no user bytes and so needs no upload boundary
+	Material uint32 `protobuf:"varint,2,opt,name=material,proto3" json:"material,omitempty"`
+	// 0xRRGGBB tint
+	Color uint32 `protobuf:"varint,3,opt,name=color,proto3" json:"color,omitempty"`
+	// texture repeats per world unit
+	UvScale float32 `protobuf:"fixed32,4,opt,name=uvScale,proto3" json:"uvScale,omitempty"`
+	// blocks movement in play mode
+	Collides bool `protobuf:"varint,5,opt,name=collides,proto3" json:"collides,omitempty"`
+	// excluded from the editor raycast, so a floor stops eating every click
+	Locked bool `protobuf:"varint,6,opt,name=locked,proto3" json:"locked,omitempty"`
+	// linkset id; empty means ungrouped
+	Group string `protobuf:"bytes,7,opt,name=group,proto3" json:"group,omitempty"`
+}
+
+func (x *Part) Reset() {
+	*x = Part{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_common_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Part) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Part) ProtoMessage() {}
+
+func (x *Part) ProtoReflect() protoreflect.Message {
+	mi := &file_common_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Part.ProtoReflect.Descriptor instead.
+func (*Part) Descriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Part) GetShape() Shape {
+	if x != nil {
+		return x.Shape
+	}
+	return Shape_Box
+}
+
+func (x *Part) GetMaterial() uint32 {
+	if x != nil {
+		return x.Material
+	}
+	return 0
+}
+
+func (x *Part) GetColor() uint32 {
+	if x != nil {
+		return x.Color
+	}
+	return 0
+}
+
+func (x *Part) GetUvScale() float32 {
+	if x != nil {
+		return x.UvScale
+	}
+	return 0
+}
+
+func (x *Part) GetCollides() bool {
+	if x != nil {
+		return x.Collides
+	}
+	return false
+}
+
+func (x *Part) GetLocked() bool {
+	if x != nil {
+		return x.Locked
+	}
+	return false
+}
+
+func (x *Part) GetGroup() string {
+	if x != nil {
+		return x.Group
+	}
+	return ""
+}
+
 type Position struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -305,7 +498,7 @@ type Position struct {
 func (x *Position) Reset() {
 	*x = Position{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_common_proto_msgTypes[2]
+		mi := &file_common_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -318,7 +511,7 @@ func (x *Position) String() string {
 func (*Position) ProtoMessage() {}
 
 func (x *Position) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_msgTypes[2]
+	mi := &file_common_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -331,7 +524,7 @@ func (x *Position) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Position.ProtoReflect.Descriptor instead.
 func (*Position) Descriptor() ([]byte, []int) {
-	return file_common_proto_rawDescGZIP(), []int{2}
+	return file_common_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Position) GetX() float64 {
@@ -369,7 +562,7 @@ type Rotation struct {
 func (x *Rotation) Reset() {
 	*x = Rotation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_common_proto_msgTypes[3]
+		mi := &file_common_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -382,7 +575,7 @@ func (x *Rotation) String() string {
 func (*Rotation) ProtoMessage() {}
 
 func (x *Rotation) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_msgTypes[3]
+	mi := &file_common_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,7 +588,7 @@ func (x *Rotation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rotation.ProtoReflect.Descriptor instead.
 func (*Rotation) Descriptor() ([]byte, []int) {
-	return file_common_proto_rawDescGZIP(), []int{3}
+	return file_common_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Rotation) GetX() float64 {
@@ -439,7 +632,7 @@ type Scale struct {
 func (x *Scale) Reset() {
 	*x = Scale{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_common_proto_msgTypes[4]
+		mi := &file_common_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -452,7 +645,7 @@ func (x *Scale) String() string {
 func (*Scale) ProtoMessage() {}
 
 func (x *Scale) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_msgTypes[4]
+	mi := &file_common_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +658,7 @@ func (x *Scale) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Scale.ProtoReflect.Descriptor instead.
 func (*Scale) Descriptor() ([]byte, []int) {
-	return file_common_proto_rawDescGZIP(), []int{4}
+	return file_common_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Scale) GetX() float64 {
@@ -512,7 +705,7 @@ var file_common_proto_rawDesc = []byte{
 	0x72, 0x6c, 0x65, 0x64, 0x32, 0x2e, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x52, 0x05, 0x73, 0x63, 0x61,
 	0x6c, 0x65, 0x12, 0x22, 0x0a, 0x0c, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x53, 0x63, 0x61,
 	0x6c, 0x65, 0x18, 0x09, 0x20, 0x01, 0x28, 0x01, 0x52, 0x0c, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61,
-	0x6c, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x22, 0xa9, 0x02, 0x0a, 0x06, 0x4f, 0x62, 0x6a, 0x65, 0x63,
+	0x6c, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x22, 0xe3, 0x02, 0x0a, 0x06, 0x4f, 0x62, 0x6a, 0x65, 0x63,
 	0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69,
 	0x64, 0x12, 0x22, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32,
 	0x0e, 0x2e, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52,
@@ -531,7 +724,23 @@ var file_common_proto_rawDesc = []byte{
 	0x32, 0x2e, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x52, 0x05, 0x73, 0x63, 0x61, 0x6c, 0x65, 0x12, 0x22,
 	0x0a, 0x0c, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x18, 0x09,
 	0x20, 0x01, 0x28, 0x01, 0x52, 0x0c, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x53, 0x63, 0x61,
-	0x6c, 0x65, 0x22, 0x34, 0x0a, 0x08, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0c,
+	0x6c, 0x65, 0x12, 0x22, 0x0a, 0x04, 0x70, 0x61, 0x72, 0x74, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0e, 0x2e, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2e, 0x50, 0x61, 0x72, 0x74,
+	0x52, 0x04, 0x70, 0x61, 0x72, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18,
+	0x0b, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x22, 0xc3, 0x01, 0x0a,
+	0x04, 0x50, 0x61, 0x72, 0x74, 0x12, 0x25, 0x0a, 0x05, 0x73, 0x68, 0x61, 0x70, 0x65, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0e, 0x32, 0x0f, 0x2e, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2e,
+	0x53, 0x68, 0x61, 0x70, 0x65, 0x52, 0x05, 0x73, 0x68, 0x61, 0x70, 0x65, 0x12, 0x1a, 0x0a, 0x08,
+	0x6d, 0x61, 0x74, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08,
+	0x6d, 0x61, 0x74, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x6f, 0x6c, 0x6f,
+	0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x63, 0x6f, 0x6c, 0x6f, 0x72, 0x12, 0x18,
+	0x0a, 0x07, 0x75, 0x76, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x52,
+	0x07, 0x75, 0x76, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x6f, 0x6c, 0x6c,
+	0x69, 0x64, 0x65, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x63, 0x6f, 0x6c, 0x6c,
+	0x69, 0x64, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x18, 0x06,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x12, 0x14, 0x0a, 0x05,
+	0x67, 0x72, 0x6f, 0x75, 0x70, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x67, 0x72, 0x6f,
+	0x75, 0x70, 0x22, 0x34, 0x0a, 0x08, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0c,
 	0x0a, 0x01, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28, 0x01, 0x52, 0x01, 0x78, 0x12, 0x0c, 0x0a, 0x01,
 	0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52, 0x01, 0x79, 0x12, 0x0c, 0x0a, 0x01, 0x7a, 0x18,
 	0x03, 0x20, 0x01, 0x28, 0x01, 0x52, 0x01, 0x7a, 0x22, 0x42, 0x0a, 0x08, 0x52, 0x6f, 0x74, 0x61,
@@ -542,11 +751,18 @@ var file_common_proto_rawDesc = []byte{
 	0x53, 0x63, 0x61, 0x6c, 0x65, 0x12, 0x0c, 0x0a, 0x01, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28, 0x01,
 	0x52, 0x01, 0x78, 0x12, 0x0c, 0x0a, 0x01, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52, 0x01,
 	0x79, 0x12, 0x0c, 0x0a, 0x01, 0x7a, 0x18, 0x03, 0x20, 0x01, 0x28, 0x01, 0x52, 0x01, 0x7a, 0x2a,
-	0x2b, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x6f, 0x6e, 0x65, 0x10,
+	0x3a, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x6f, 0x6e, 0x65, 0x10,
 	0x00, 0x12, 0x0a, 0x0a, 0x06, 0x41, 0x76, 0x61, 0x74, 0x61, 0x72, 0x10, 0x01, 0x12, 0x0d, 0x0a,
-	0x09, 0x46, 0x75, 0x72, 0x6e, 0x69, 0x74, 0x75, 0x72, 0x65, 0x10, 0x02, 0x42, 0x16, 0x5a, 0x14,
-	0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69, 0x6c, 0x73, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x09, 0x46, 0x75, 0x72, 0x6e, 0x69, 0x74, 0x75, 0x72, 0x65, 0x10, 0x02, 0x12, 0x0d, 0x0a, 0x09,
+	0x50, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65, 0x10, 0x03, 0x2a, 0x5b, 0x0a, 0x05, 0x53,
+	0x68, 0x61, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x42, 0x6f, 0x78, 0x10, 0x00, 0x12, 0x09, 0x0a,
+	0x05, 0x57, 0x65, 0x64, 0x67, 0x65, 0x10, 0x01, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x79, 0x6c, 0x69,
+	0x6e, 0x64, 0x65, 0x72, 0x10, 0x02, 0x12, 0x0a, 0x0a, 0x06, 0x53, 0x70, 0x68, 0x65, 0x72, 0x65,
+	0x10, 0x03, 0x12, 0x08, 0x0a, 0x04, 0x43, 0x6f, 0x6e, 0x65, 0x10, 0x04, 0x12, 0x09, 0x0a, 0x05,
+	0x50, 0x6c, 0x61, 0x6e, 0x65, 0x10, 0x05, 0x12, 0x0f, 0x0a, 0x0b, 0x43, 0x6f, 0x72, 0x6e, 0x65,
+	0x72, 0x57, 0x65, 0x64, 0x67, 0x65, 0x10, 0x06, 0x42, 0x16, 0x5a, 0x14, 0x77, 0x68, 0x69, 0x72,
+	0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69, 0x6c, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -561,29 +777,33 @@ func file_common_proto_rawDescGZIP() []byte {
 	return file_common_proto_rawDescData
 }
 
-var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_common_proto_goTypes = []interface{}{
 	(Type)(0),        // 0: whirled2.Type
-	(*Player)(nil),   // 1: whirled2.Player
-	(*Object)(nil),   // 2: whirled2.Object
-	(*Position)(nil), // 3: whirled2.Position
-	(*Rotation)(nil), // 4: whirled2.Rotation
-	(*Scale)(nil),    // 5: whirled2.Scale
+	(Shape)(0),       // 1: whirled2.Shape
+	(*Player)(nil),   // 2: whirled2.Player
+	(*Object)(nil),   // 3: whirled2.Object
+	(*Part)(nil),     // 4: whirled2.Part
+	(*Position)(nil), // 5: whirled2.Position
+	(*Rotation)(nil), // 6: whirled2.Rotation
+	(*Scale)(nil),    // 7: whirled2.Scale
 }
 var file_common_proto_depIdxs = []int32{
-	3, // 0: whirled2.Player.position:type_name -> whirled2.Position
-	4, // 1: whirled2.Player.rotation:type_name -> whirled2.Rotation
-	5, // 2: whirled2.Player.scale:type_name -> whirled2.Scale
+	5, // 0: whirled2.Player.position:type_name -> whirled2.Position
+	6, // 1: whirled2.Player.rotation:type_name -> whirled2.Rotation
+	7, // 2: whirled2.Player.scale:type_name -> whirled2.Scale
 	0, // 3: whirled2.Object.type:type_name -> whirled2.Type
-	3, // 4: whirled2.Object.position:type_name -> whirled2.Position
-	4, // 5: whirled2.Object.rotation:type_name -> whirled2.Rotation
-	5, // 6: whirled2.Object.scale:type_name -> whirled2.Scale
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	5, // 4: whirled2.Object.position:type_name -> whirled2.Position
+	6, // 5: whirled2.Object.rotation:type_name -> whirled2.Rotation
+	7, // 6: whirled2.Object.scale:type_name -> whirled2.Scale
+	4, // 7: whirled2.Object.part:type_name -> whirled2.Part
+	1, // 8: whirled2.Part.shape:type_name -> whirled2.Shape
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_common_proto_init() }
@@ -617,7 +837,7 @@ func file_common_proto_init() {
 			}
 		}
 		file_common_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Position); i {
+			switch v := v.(*Part); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -629,7 +849,7 @@ func file_common_proto_init() {
 			}
 		}
 		file_common_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Rotation); i {
+			switch v := v.(*Position); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -641,6 +861,18 @@ func file_common_proto_init() {
 			}
 		}
 		file_common_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Rotation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_common_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Scale); i {
 			case 0:
 				return &v.state
@@ -658,8 +890,8 @@ func file_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_common_proto_rawDesc,
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

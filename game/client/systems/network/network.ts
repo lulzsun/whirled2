@@ -32,6 +32,7 @@ import {
 } from "../../factory/chatbubble";
 import { MAX_CHAT_LENGTH } from "../../constants";
 import { createObject } from "../../factory/object";
+import { createPrimitive } from "../../factory/primitive";
 import * as buf from "../../proto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { emitPlayerJoin } from "./player";
@@ -503,12 +504,24 @@ export function createNetworkSystem(world: World) {
 
 					if (object === undefined) break;
 
-					const objectEntity = createObject(
-						world,
-						object.name ?? "Unnamed",
-						object.file ?? "",
-						object.initialScale ?? 1,
-					);
+					// A builder part is described by its message rather than
+					// loaded from a file, so it takes a different factory --
+					// but everything downstream (transform, registry, scene)
+					// is identical, which is the whole reason parts ride the
+					// Object path.
+					const objectEntity =
+						object.type === buf.Type.Primitive && object.part
+							? createPrimitive(
+									world,
+									object.name ?? "Part",
+									object.part,
+								)
+							: createObject(
+									world,
+									object.name ?? "Unnamed",
+									object.file ?? "",
+									object.initialScale ?? 1,
+								);
 					const eid = objectEntity.eid;
 
 					if (object.position) {
@@ -542,6 +555,25 @@ export function createNetworkSystem(world: World) {
 
 					world.objects.set(eid, objectEntity);
 					world.scene.add(objectEntity);
+					// If this is our own placement coming back, the ghost
+					// standing in for it has done its job. Other clients
+					// never had one and ignore the nonce.
+					if (object.nonce) {
+						world.build?.resolveGhost(object.nonce, object.id);
+					}
+					break;
+				}
+				case "objectDenied": {
+					const denied = whirledEvent.event.value;
+					// Only ever sent to the peer that asked, so this is our
+					// own request coming back refused. The build system owns
+					// the ghost that has to be taken back down.
+					world.build?.onDenied(denied.id, denied.reason);
+					break;
+				}
+				case "roomCapacity": {
+					const capacity = whirledEvent.event.value;
+					world.build?.onCapacity(capacity.used, capacity.capacity);
 					break;
 				}
 				case "objectTransform": {
@@ -598,6 +630,11 @@ export function createNetworkSystem(world: World) {
 						if (eid === -1) break;
 						objectsById.delete(object.id);
 						objectsByEid.delete(eid);
+						// A part's description lives only here, so it goes
+						// when the part does -- otherwise the map grows for
+						// the life of the session and, worse, a recycled eid
+						// would inherit a stale shape.
+						world.primitives.delete(eid);
 					}
 					removeEntity(world, eid);
 					break;

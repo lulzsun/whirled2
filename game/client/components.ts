@@ -38,6 +38,9 @@ export const GltfComponent = defineComponent();
 
 export const SwfComponent = defineComponent();
 
+/** Marks an entity as a builder part rather than uploaded furniture. */
+export const PrimitiveComponent = defineComponent();
+
 export const AnimationComponent = defineComponent({
 	prevAnimState: i8,
 	animState: i8,

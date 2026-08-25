@@ -49,6 +49,26 @@ const (
 	GroupCreationCoins = 15000
 )
 
+// Room build capacity (room-building spec §4.1)
+//
+// Building is priced as capacity rather than per part on purpose: charging
+// per placement taxes the place/nudge/delete loop the builder lives on, and
+// pricing by volume would push players toward many small parts over one
+// large one, which is backwards from what actually costs us (draw calls,
+// raycasts, blob size all track part count).
+const (
+	// Free with every room, so a new player can build something immediately
+	// without the tool reading as a paywall on first contact.
+	RoomBaseCapacity = 100
+	// Parts added per expansion purchase.
+	RoomExpandStep = 100
+	// Coins burned per expansion. Flat, not escalating: a curve punishes
+	// exactly the invested builders the feature exists for.
+	RoomExpandPrice = 500
+	// A rendering ceiling, not an economic one.
+	RoomCapacityMax = 2000
+)
+
 var ErrInsufficientCoins = errors.New("insufficient coins")
 
 // ListingFee is the non-refundable fee burned at initial listing (spec §7)

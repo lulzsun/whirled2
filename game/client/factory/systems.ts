@@ -9,6 +9,7 @@ import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
 import { createEditorSystem } from "../systems/editor";
 import { createHistorySystem } from "../systems/history";
+import { createBuildSystem } from "../systems/build";
 import { createPreviewSystem } from "../systems/preview";
 import { createBenchmarkSystem } from "../systems/benchmark";
 
@@ -25,6 +26,9 @@ const systems = [
 	// so it has to exist by the time one fires.
 	createHistorySystem,
 	createEditorSystem,
+	// After the editor: both draw imgui panels, and the editor's panels are
+	// positioned relative to the canvas edges the build panel sits inside of.
+	createBuildSystem,
 	createRenderSystem, // Render system should run last
 ];
 

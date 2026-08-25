@@ -7,7 +7,9 @@ import { Nameplate } from "./nameplate";
 import { ChatBubbleStack } from "./chatbubble";
 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { Build } from "../systems/build";
 import { History } from "../systems/history";
+import { Part } from "../proto";
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
@@ -27,6 +29,8 @@ export type World = {
 		}
 	>;
 	objects: Map<number, Object>;
+	/** Part descriptions, by entity id, for the inspector and re-emission. */
+	primitives: Map<number, Part>;
 	controls: OrbitControls;
 	camera: THREE.Camera;
 	scene: THREE.Scene;
@@ -43,6 +47,7 @@ export type World = {
 	/** Live SWF command-stream renderers, composed once per frame. */
 	swfStreams: Set<SwfStreamRenderer>;
 	editor: Editor;
+	build: Build;
 	history: History;
 	benchmark: Benchmark;
 	isPreview: boolean;
@@ -57,6 +62,7 @@ export const createWorld = (isPreview: boolean = false): World => {
 
 	world.players = new Map();
 	world.objects = new Map();
+	world.primitives = new Map();
 
 	world.isPreview = isPreview;
 

@@ -271,6 +271,12 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 		}
 		objectsMu.RUnlock()
 
+		// The build UI needs to know how full the room is before the player
+		// tries to place anything, not after the first refusal.
+		if client.IsRoomOwner {
+			defer emitRoomCapacity(peer, roomId)
+		}
+
 		for _, object := range existing {
 			p := &buf.WhirledEvent{
 				Event: &buf.WhirledEvent_ObjectJoin{

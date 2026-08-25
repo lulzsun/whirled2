@@ -1,6 +1,6 @@
 # Spec: Room building with primitive parts
 
-Status: **in progress** — M1 and M2 landed; M3 next
+Status: **in progress** — M1, M2 and M3 landed; M4 next
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -544,13 +544,43 @@ owner + guest — since replication is half the feature).
         Primitive placement in M3 wants the same shape — which is what the
         `nonce` field in §5.1 is for.
 
--   **M3 — Primitive end-to-end.** Proto changes, `Type_Primitive` join
-    path with validation + minted ids + nonce echo, `ObjectDenied` +
-    `RoomCapacity` events, `createPrimitive` (Box, flat color), placement
+-   **M3 — Primitive end-to-end.** ✅ **Landed.** Proto changes,
+    `Type_Primitive` join path with validation + minted ids + nonce echo,
+    `ObjectDenied` + `RoomCapacity` events, `createPrimitive`, placement
     ghost, persistence round-trip, capacity enforced at the default 100.
-    _Verify:_ place/move/delete boxes as owner; guest sees all of it and
-    is denied placing; restart server, room reloads; 101st box shows the
-    denial toast.
+    _Measured:_ a part placed through the real pointer path arrived at
+    y=0.5 (resting on the floor, not through it) and moved capacity 0→1;
+    undo removed it and pruned the primitives map, redo rebuilt it at the
+    identical position; the validation table refused a bogus shape,
+    material and group with `InvalidPart` while clamping position ±99999 to
+    ±256 and scale 1000/0.0001 to 64/0.05; filling to 100 and attempting
+    two more returned `CapacityFull` for both; and after disconnecting to
+    unload the room and rejoining to reload it from the database, all 100
+    parts returned with colours, shapes and positions intact.
+
+    Four things worth recording:
+
+    -   **The data message is `Part`, not `Primitive`.** protobuf gives
+        enum values the scope _enclosing_ the enum, so `Type.Primitive`
+        already claims that name and `message Primitive` is a redefinition
+        error. `Type.Primitive` (the kind) plus `Part` (the description)
+        also reads better at the call site, and matches Roblox's term.
+    -   **All seven shapes ship, not just Box.** Wedge and CornerWedge are
+        hand-built `BufferGeometry` — three has neither — written as
+        explicit triangles rather than a deformed box so the face normals
+        come out right; a ramp lit as though it were still a cube reads as
+        wrong immediately.
+    -   **`bindTransformToEcs` is now shared.** The ~90 lines of
+        `defineProperty` aliasing that `createObject` used to hold inline
+        are extracted, so parts get the same ECS-backed transform without a
+        second copy that could drift.
+    -   **Parts need their own history commands.** `removeObjectCommand`
+        re-adds by naming an inventory row, which a part does not have, so
+        undoing a part removal that way would have quietly failed against
+        the furniture path. `addPartCommand`/`removePartCommand` re-place
+        through `world.build.placePart` instead and learn the new id each
+        time, since every placement mints a fresh one.
+
 -   **M4 — Snapping.** Grid cycle, absolute rounding, rotation snap, Alt
     free, scale snap. The make-or-break feel milestone.
 -   **M5 — Palette + inspector.** All shapes; material set with

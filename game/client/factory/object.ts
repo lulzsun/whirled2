@@ -13,25 +13,25 @@ import { API_URL } from "../constants";
 
 export type Object = THREE.Group & { eid: number };
 
-export const createObject = (
-	world: World,
-	name: string = "Unnamed",
-	fileUrl: string | undefined = undefined,
-	initialScale: number = 1,
-	group: THREE.Group = new THREE.Group(),
-): Object => {
-	const eid = addEntity(world);
-
-	addComponent(world, ObjectComponent, eid);
-	addComponent(world, TransformComponent, eid);
-
-	TransformComponent.scale.x[eid] = 1;
-	TransformComponent.scale.y[eid] = 1;
-	TransformComponent.scale.z[eid] = 1;
-
-	let entity = Object.assign(group, { eid });
-	entity.name = `${name} (Object)`;
-
+/**
+ * Points a three.js object's transform at ECS storage.
+ *
+ * position/rotation/scale stop being plain numbers and become views onto
+ * TransformComponent's typed arrays, so `entity.position.x = 1` writes the
+ * component and every system reading the component sees the object move.
+ * three's own code -- TransformControls, Object3D.attach, matrix
+ * decomposition -- goes through the same setters, which is what lets the
+ * gizmo drive ECS state without knowing ECS exists.
+ *
+ * Rotation binds the Euler's private `_x`/`_y`/`_z` rather than `x`/`y`/`z`,
+ * because three's public Euler setters exist to fire the change callback
+ * that refreshes the cached quaternion. Anything writing the component
+ * directly must poke `_onChangeCallback()` itself; see systems/history.ts.
+ */
+export const bindTransformToEcs = (
+	entity: THREE.Object3D,
+	eid: number,
+): void => {
 	// position
 	Object.defineProperty(entity.position, "eid", { get: () => eid });
 	Object.defineProperty(entity.position, "store", {
@@ -124,6 +124,28 @@ export const createObject = (
 			this.store.z[this.eid] = n;
 		},
 	});
+};
+
+export const createObject = (
+	world: World,
+	name: string = "Unnamed",
+	fileUrl: string | undefined = undefined,
+	initialScale: number = 1,
+	group: THREE.Group = new THREE.Group(),
+): Object => {
+	const eid = addEntity(world);
+
+	addComponent(world, ObjectComponent, eid);
+	addComponent(world, TransformComponent, eid);
+
+	TransformComponent.scale.x[eid] = 1;
+	TransformComponent.scale.y[eid] = 1;
+	TransformComponent.scale.z[eid] = 1;
+
+	let entity = Object.assign(group, { eid });
+	entity.name = `${name} (Object)`;
+
+	bindTransformToEcs(entity, eid);
 
 	if (fileUrl === undefined) {
 		return entity;

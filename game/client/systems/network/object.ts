@@ -25,6 +25,47 @@ export function emitObjectJoin(world: World, id: string, type: number) {
 }
 
 /**
+ * Emits to server that a builder part is being placed.
+ *
+ * Unlike furniture, which names an inventory row and lets the server fill in
+ * everything else, a part is described entirely here -- there is no row to
+ * read it back out of. The id is deliberately absent: the server mints it,
+ * so `nonce` is what lets the reply be matched to the ghost this client drew
+ * (see systems/build.ts).
+ */
+export function emitPartJoin(
+	world: World,
+	nonce: string,
+	part: buf.Part,
+	position: THREE.Vector3,
+	rotation: THREE.Euler,
+	scale: THREE.Vector3,
+) {
+	const whirledEvent = create(buf.WhirledEventSchema);
+	whirledEvent.event = {
+		case: "objectJoin",
+		value: create(buf.ObjectJoinSchema, {
+			object: create(buf.ObjectSchema, {
+				type: buf.Type.Primitive,
+				nonce,
+				part,
+				position,
+				rotation: create(buf.RotationSchema, {
+					x: rotation.x,
+					y: rotation.y,
+					z: rotation.z,
+					w: 0,
+				}),
+				scale,
+			}),
+		}),
+	};
+
+	const bytes = toBinary(buf.WhirledEventSchema, whirledEvent);
+	world.network.rawEmit(bytes);
+}
+
+/**
  * Emits to server that an object is moving (by the player)
  *
  * Ideally this would be a player having ownership of the object to

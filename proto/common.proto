@@ -27,12 +27,53 @@ message Object {
     Rotation rotation = 7;
     Scale scale = 8;
     double initialScale = 9;
+    // set iff type == Primitive; a part has no file and no stuff row, it is
+    // described entirely by these parameters
+    Part part = 10;
+    // client-chosen echo, primitives only. The server mints the id, so this
+    // is the only way the placing client can match the broadcast (or the
+    // denial) back to the ghost it drew. Other clients ignore it.
+    string nonce = 11;
 }
 
 enum Type {
     None = 0;
     Avatar = 1;
     Furniture = 2;
+    Primitive = 3;
+}
+
+// A builder part. Size is not here: a part's geometry is a unit shape and
+// its dimensions are the Object's Scale, so the existing scale gizmo is the
+// resize tool.
+//
+// Named Part rather than Primitive because protobuf gives enum values the
+// scope enclosing the enum, and Type.Primitive already claims that name.
+message Part {
+    Shape shape = 1;
+    // index into the built-in material set; not a URL, on purpose -- a
+    // primitive carries no user bytes and so needs no upload boundary
+    uint32 material = 2;
+    // 0xRRGGBB tint
+    uint32 color = 3;
+    // texture repeats per world unit
+    float uvScale = 4;
+    // blocks movement in play mode
+    bool collides = 5;
+    // excluded from the editor raycast, so a floor stops eating every click
+    bool locked = 6;
+    // linkset id; empty means ungrouped
+    string group = 7;
+}
+
+enum Shape {
+    Box = 0;
+    Wedge = 1;
+    Cylinder = 2;
+    Sphere = 3;
+    Cone = 4;
+    Plane = 5;
+    CornerWedge = 6;
 }
 
 message Position {

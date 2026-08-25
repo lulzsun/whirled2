@@ -22,3 +22,27 @@ message ObjectTransform {
     Rotation rotation = 4;
     Scale scale = 5;
 }
+
+// Sent only to the peer whose request was refused. Without it a rejected
+// placement is indistinguishable from a dead click, which is the failure
+// mode the removal button already had to be rescued from.
+message ObjectDenied {
+    // stuff id for furniture, nonce for a part
+    string id = 1;
+    DenyReason reason = 2;
+}
+
+enum DenyReason {
+    Unknown = 0;
+    NotOwner = 1;
+    CapacityFull = 2;
+    InvalidPart = 3;
+    Duplicate = 4;
+}
+
+// Sent to the room owner on join and after every part add or remove,
+// so the build UI can show what is left without asking.
+message RoomCapacity {
+    uint32 used = 1;
+    uint32 capacity = 2;
+}

@@ -20,6 +20,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type DenyReason int32
+
+const (
+	DenyReason_Unknown      DenyReason = 0
+	DenyReason_NotOwner     DenyReason = 1
+	DenyReason_CapacityFull DenyReason = 2
+	DenyReason_InvalidPart  DenyReason = 3
+	DenyReason_Duplicate    DenyReason = 4
+)
+
+// Enum value maps for DenyReason.
+var (
+	DenyReason_name = map[int32]string{
+		0: "Unknown",
+		1: "NotOwner",
+		2: "CapacityFull",
+		3: "InvalidPart",
+		4: "Duplicate",
+	}
+	DenyReason_value = map[string]int32{
+		"Unknown":      0,
+		"NotOwner":     1,
+		"CapacityFull": 2,
+		"InvalidPart":  3,
+		"Duplicate":    4,
+	}
+)
+
+func (x DenyReason) Enum() *DenyReason {
+	p := new(DenyReason)
+	*p = x
+	return p
+}
+
+func (x DenyReason) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DenyReason) Descriptor() protoreflect.EnumDescriptor {
+	return file_object_proto_enumTypes[0].Descriptor()
+}
+
+func (DenyReason) Type() protoreflect.EnumType {
+	return &file_object_proto_enumTypes[0]
+}
+
+func (x DenyReason) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DenyReason.Descriptor instead.
+func (DenyReason) EnumDescriptor() ([]byte, []int) {
+	return file_object_proto_rawDescGZIP(), []int{0}
+}
+
 type ObjectJoin struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -201,6 +256,122 @@ func (x *ObjectTransform) GetScale() *Scale {
 	return nil
 }
 
+// Sent only to the peer whose request was refused. Without it a rejected
+// placement is indistinguishable from a dead click, which is the failure
+// mode the removal button already had to be rescued from.
+type ObjectDenied struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// stuff id for furniture, nonce for a part
+	Id     string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason DenyReason `protobuf:"varint,2,opt,name=reason,proto3,enum=whirled2.DenyReason" json:"reason,omitempty"`
+}
+
+func (x *ObjectDenied) Reset() {
+	*x = ObjectDenied{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_object_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ObjectDenied) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObjectDenied) ProtoMessage() {}
+
+func (x *ObjectDenied) ProtoReflect() protoreflect.Message {
+	mi := &file_object_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObjectDenied.ProtoReflect.Descriptor instead.
+func (*ObjectDenied) Descriptor() ([]byte, []int) {
+	return file_object_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ObjectDenied) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ObjectDenied) GetReason() DenyReason {
+	if x != nil {
+		return x.Reason
+	}
+	return DenyReason_Unknown
+}
+
+// Sent to the room owner on join and after every part add or remove,
+// so the build UI can show what is left without asking.
+type RoomCapacity struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Used     uint32 `protobuf:"varint,1,opt,name=used,proto3" json:"used,omitempty"`
+	Capacity uint32 `protobuf:"varint,2,opt,name=capacity,proto3" json:"capacity,omitempty"`
+}
+
+func (x *RoomCapacity) Reset() {
+	*x = RoomCapacity{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_object_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RoomCapacity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoomCapacity) ProtoMessage() {}
+
+func (x *RoomCapacity) ProtoReflect() protoreflect.Message {
+	mi := &file_object_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoomCapacity.ProtoReflect.Descriptor instead.
+func (*RoomCapacity) Descriptor() ([]byte, []int) {
+	return file_object_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RoomCapacity) GetUsed() uint32 {
+	if x != nil {
+		return x.Used
+	}
+	return 0
+}
+
+func (x *RoomCapacity) GetCapacity() uint32 {
+	if x != nil {
+		return x.Capacity
+	}
+	return 0
+}
+
 var File_object_proto protoreflect.FileDescriptor
 
 var file_object_proto_rawDesc = []byte{
@@ -226,8 +397,23 @@ var file_object_proto_rawDesc = []byte{
 	0x08, 0x72, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x25, 0x0a, 0x05, 0x73, 0x63, 0x61,
 	0x6c, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x77, 0x68, 0x69, 0x72, 0x6c,
 	0x65, 0x64, 0x32, 0x2e, 0x53, 0x63, 0x61, 0x6c, 0x65, 0x52, 0x05, 0x73, 0x63, 0x61, 0x6c, 0x65,
-	0x42, 0x16, 0x5a, 0x14, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69,
-	0x6c, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x22, 0x4c, 0x0a, 0x0c, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x44, 0x65, 0x6e, 0x69, 0x65, 0x64,
+	0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64,
+	0x12, 0x2c, 0x0a, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e,
+	0x32, 0x14, 0x2e, 0x77, 0x68, 0x69, 0x72, 0x6c, 0x65, 0x64, 0x32, 0x2e, 0x44, 0x65, 0x6e, 0x79,
+	0x52, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x52, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x22, 0x3e,
+	0x0a, 0x0c, 0x52, 0x6f, 0x6f, 0x6d, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79, 0x12, 0x12,
+	0x0a, 0x04, 0x75, 0x73, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x75, 0x73,
+	0x65, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x63, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79, 0x2a, 0x59,
+	0x0a, 0x0a, 0x44, 0x65, 0x6e, 0x79, 0x52, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x12, 0x0b, 0x0a, 0x07,
+	0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x4e, 0x6f, 0x74,
+	0x4f, 0x77, 0x6e, 0x65, 0x72, 0x10, 0x01, 0x12, 0x10, 0x0a, 0x0c, 0x43, 0x61, 0x70, 0x61, 0x63,
+	0x69, 0x74, 0x79, 0x46, 0x75, 0x6c, 0x6c, 0x10, 0x02, 0x12, 0x0f, 0x0a, 0x0b, 0x49, 0x6e, 0x76,
+	0x61, 0x6c, 0x69, 0x64, 0x50, 0x61, 0x72, 0x74, 0x10, 0x03, 0x12, 0x0d, 0x0a, 0x09, 0x44, 0x75,
+	0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x65, 0x10, 0x04, 0x42, 0x16, 0x5a, 0x14, 0x77, 0x68, 0x69,
+	0x72, 0x6c, 0x65, 0x64, 0x32, 0x2f, 0x75, 0x74, 0x69, 0x6c, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -242,26 +428,31 @@ func file_object_proto_rawDescGZIP() []byte {
 	return file_object_proto_rawDescData
 }
 
-var file_object_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_object_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_object_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_object_proto_goTypes = []interface{}{
-	(*ObjectJoin)(nil),      // 0: whirled2.ObjectJoin
-	(*ObjectLeave)(nil),     // 1: whirled2.ObjectLeave
-	(*ObjectTransform)(nil), // 2: whirled2.ObjectTransform
-	(*Object)(nil),          // 3: whirled2.Object
-	(*Position)(nil),        // 4: whirled2.Position
-	(*Rotation)(nil),        // 5: whirled2.Rotation
-	(*Scale)(nil),           // 6: whirled2.Scale
+	(DenyReason)(0),         // 0: whirled2.DenyReason
+	(*ObjectJoin)(nil),      // 1: whirled2.ObjectJoin
+	(*ObjectLeave)(nil),     // 2: whirled2.ObjectLeave
+	(*ObjectTransform)(nil), // 3: whirled2.ObjectTransform
+	(*ObjectDenied)(nil),    // 4: whirled2.ObjectDenied
+	(*RoomCapacity)(nil),    // 5: whirled2.RoomCapacity
+	(*Object)(nil),          // 6: whirled2.Object
+	(*Position)(nil),        // 7: whirled2.Position
+	(*Rotation)(nil),        // 8: whirled2.Rotation
+	(*Scale)(nil),           // 9: whirled2.Scale
 }
 var file_object_proto_depIdxs = []int32{
-	3, // 0: whirled2.ObjectJoin.object:type_name -> whirled2.Object
-	4, // 1: whirled2.ObjectTransform.position:type_name -> whirled2.Position
-	5, // 2: whirled2.ObjectTransform.rotation:type_name -> whirled2.Rotation
-	6, // 3: whirled2.ObjectTransform.scale:type_name -> whirled2.Scale
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	6, // 0: whirled2.ObjectJoin.object:type_name -> whirled2.Object
+	7, // 1: whirled2.ObjectTransform.position:type_name -> whirled2.Position
+	8, // 2: whirled2.ObjectTransform.rotation:type_name -> whirled2.Rotation
+	9, // 3: whirled2.ObjectTransform.scale:type_name -> whirled2.Scale
+	0, // 4: whirled2.ObjectDenied.reason:type_name -> whirled2.DenyReason
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_object_proto_init() }
@@ -307,19 +498,44 @@ func file_object_proto_init() {
 				return nil
 			}
 		}
+		file_object_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ObjectDenied); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_object_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RoomCapacity); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_object_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   3,
+			NumEnums:      1,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_object_proto_goTypes,
 		DependencyIndexes: file_object_proto_depIdxs,
+		EnumInfos:         file_object_proto_enumTypes,
 		MessageInfos:      file_object_proto_msgTypes,
 	}.Build()
 	File_object_proto = out.File
