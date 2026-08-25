@@ -17,11 +17,21 @@ import {
 	ObjectComponent,
 	ObjectOutlineComponent,
 	PlayerComponent,
+	PrimitiveComponent,
 	TransformComponent,
 } from "../components";
 import { STATIC, UNIQUE } from "./imgui";
 import { emitObjectLeave, emitObjectTransform } from "./network";
 import { isSwfHitTransparent } from "./control";
+import {
+	GRID_INCREMENTS,
+	ROTATION_SNAP_DEGREES,
+	isFreeMoveHeld,
+	snapAngle,
+	snapCentreByEdge,
+	snapScale,
+	watchFreeMoveKey,
+} from "./snap";
 import {
 	Snapshot,
 	removeObjectCommand,
@@ -39,6 +49,8 @@ export type Editor = {
 	enabled: boolean;
 	selectedObject: number | null;
 	selectedTool: EditorTool;
+	/** Current grid size; 0 means snapping is off. */
+	grid: number;
 };
 
 type EditorTool = null | "translate" | "rotate" | "scale";
@@ -51,7 +63,9 @@ export function createEditorSystem(world: World) {
 		enabled: false,
 		selectedObject: null,
 		selectedTool: null,
+		grid: GRID_INCREMENTS[0],
 	};
+	watchFreeMoveKey();
 
 	const canvas = world.renderer.domElement;
 
@@ -64,9 +78,6 @@ export function createEditorSystem(world: World) {
 	const TRANSFORM_EMIT_HZ = 15;
 	const TRANSFORM_EMIT_INTERVAL = 1000 / TRANSFORM_EMIT_HZ;
 	let lastTransformEmit = 0;
-	/** Whether a transform has changed since the last emit -- i.e. whether
-	 * the final mouseUp emit has anything to say. */
-	let pendingTransformEmit = false;
 
 	/** What the dragged object looked like before the drag started, captured
 	 * on mouseDown so mouseUp can record the pair as one undoable move. A
@@ -213,6 +224,11 @@ export function createEditorSystem(world: World) {
 	const emitSelectedTransform = () => {
 		const eid = world.editor.selectedObject ?? -1;
 		if (eid === -1) return;
+		// Rounded before it is read, so the value that goes on the wire and
+		// the value on screen are the same one. Snapping after the emit
+		// would show the player a snapped part while telling everyone else
+		// about an unsnapped one.
+		snapSelectedPart(eid);
 		let id: string | null = null;
 		let isPlayer = hasComponent(world, PlayerComponent, eid);
 		if (isPlayer) {
@@ -239,13 +255,84 @@ export function createEditorSystem(world: World) {
 		);
 
 		lastTransformEmit = performance.now();
-		pendingTransformEmit = false;
 		emitObjectTransform(world, id, isPlayer, position, rotation, scale);
 	};
+
+	/**
+	 * Puts the gizmo's own stepping in step with the grid.
+	 *
+	 * This is what makes a drag *feel* snapped -- the handle moves in
+	 * discrete jumps rather than continuously. It is not what makes the
+	 * result land on the grid; see snapSelectedPart for that.
+	 */
+	const applyGizmoSnap = () => {
+		const grid = world.editor.grid;
+		const free = grid <= 0 || isFreeMoveHeld();
+		transformControls.setTranslationSnap(free ? null : grid);
+		transformControls.setScaleSnap(free ? null : grid);
+		transformControls.setRotationSnap(
+			free ? null : THREE.MathUtils.degToRad(ROTATION_SNAP_DEGREES),
+		);
+	};
+	applyGizmoSnap();
 
 	transformControls.addEventListener("dragging-changed", (event) => {
 		transformControlsCaptureMouse = !event.value;
 	});
+	/**
+	 * Rounds a part's transform onto the grid.
+	 *
+	 * Only parts, not furniture. A part is ours: unit geometry, born on the
+	 * grid, and meant to line up with its neighbours -- that is what makes a
+	 * wall out of three boxes. A piece of furniture is authored content with
+	 * an origin someone else chose, so forcing it onto our grid would shove
+	 * it the first time it was nudged, to no benefit. Furniture still gets
+	 * the gizmo's own stepped dragging; it just is not re-rounded after.
+	 *
+	 * Returns whether anything moved, so a snap that changes nothing does
+	 * not have to be sent.
+	 */
+	const snapSelectedPart = (eid: number): boolean => {
+		const grid = world.editor.grid;
+		if (grid <= 0 || isFreeMoveHeld()) return false;
+		if (!hasComponent(world, PrimitiveComponent, eid)) return false;
+
+		let changed = false;
+		const round = (
+			store: { [axis: string]: Float32Array },
+			axis: string,
+			fn: (v: number) => number,
+		) => {
+			const before = store[axis][eid];
+			const after = fn(before);
+			if (before !== after) {
+				store[axis][eid] = after;
+				changed = true;
+			}
+		};
+
+		// Scale first: a part's scale is its size, and the position snap
+		// below needs the size the part is going to end up with, not the one
+		// it happened to have mid-drag.
+		for (const axis of ["x", "y", "z"]) {
+			round(TransformComponent.scale, axis, (v) => snapScale(v, grid));
+			round(TransformComponent.rotation, axis, snapAngle);
+		}
+		for (const axis of ["x", "y", "z"] as const) {
+			const size = TransformComponent.scale[axis][eid];
+			round(TransformComponent.position, axis, (v) =>
+				snapCentreByEdge(v, size, grid),
+			);
+		}
+
+		if (changed) {
+			const entity = world.scene.getObjectByProperty("eid", eid);
+			//@ts-ignore: refresh the quaternion three caches off the Euler
+			entity?.rotation._onChangeCallback?.();
+		}
+		return changed;
+	};
+
 	transformControls.addEventListener("change", () => {
 		if (transformControlsCaptureMouse) return;
 		// A drag fires "change" once per mouse move -- every frame, in
@@ -255,10 +342,7 @@ export function createEditorSystem(world: World) {
 		// rate to TRANSFORM_EMIT_HZ and let mouseUp below send the state
 		// that actually matters.
 		const now = performance.now();
-		if (now - lastTransformEmit < TRANSFORM_EMIT_INTERVAL) {
-			pendingTransformEmit = true;
-			return;
-		}
+		if (now - lastTransformEmit < TRANSFORM_EMIT_INTERVAL) return;
 		emitSelectedTransform();
 	});
 	transformControls.addEventListener("mouseDown", () => {
@@ -280,7 +364,10 @@ export function createEditorSystem(world: World) {
 		//
 		// Fires before TransformControls clears `dragging`, so the guard in
 		// the "change" handler above still reads as mid-drag here.
-		if (pendingTransformEmit) emitSelectedTransform();
+		// Always emit on release, not just when something is pending: the
+		// snap itself can move the part after the last throttled emit, and
+		// that final rounded position is the one everyone has to agree on.
+		emitSelectedTransform();
 
 		// Recorded independently of the emit above: a drag whose last frame
 		// happened to land on the throttle boundary has nothing left to

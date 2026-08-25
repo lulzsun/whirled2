@@ -331,8 +331,14 @@ export function createHistory(): History {
 	};
 }
 
-/** Whether a keystroke belongs to something other than the world. */
-function isTypingTarget(): boolean {
+/**
+ * Whether a keystroke belongs to something other than the world.
+ *
+ * Shared with the build system: any shortcut the editor adds has to yield to
+ * a chat box or an imgui field the same way, and one wrong answer here means
+ * a player types "g" into chat and the grid changes under them.
+ */
+export function isTypingTarget(): boolean {
 	if (ImGui.bind !== undefined && ImGui.GetCurrentContext() !== null) {
 		if (ImGui.GetIO().WantCaptureKeyboard) return true;
 	}

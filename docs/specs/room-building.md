@@ -1,6 +1,6 @@
 # Spec: Room building with primitive parts
 
-Status: **in progress** — M1, M2 and M3 landed; M4 next
+Status: **in progress** — M1–M4 landed; M5 next
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -581,8 +581,51 @@ owner + guest — since replication is half the feature).
         through `world.build.placePart` instead and learn the new id each
         time, since every placement mints a fresh one.
 
--   **M4 — Snapping.** Grid cycle, absolute rounding, rotation snap, Alt
-    free, scale snap. The make-or-break feel milestone.
+-   **M4 — Snapping.** ✅ **Landed.** Grid cycle (1 / 0.5 / 0.25 / off, by
+    button or `G`), absolute rounding, 15° rotation snap, Alt to move
+    freely, scale snap. The make-or-break feel milestone.
+
+    **Snapping is by edge, not centre — this is the whole milestone.**
+    Rounding a part's _centre_ onto the grid is the obvious implementation
+    and it is wrong twice over. A unit box centred on a grid line has its
+    faces at half-units, so it meets other unit boxes and nothing else: put
+    a 1-wide part beside a 2-wide part and centre-snapping overlaps them by
+    half a unit. And a box resting on the floor has its centre at y=0.5, so
+    rounding the centre to a 1-unit grid either buries it or floats it half
+    a unit — measured, before the fix: a box dragged near the floor settled
+    at y=1, hanging in the air. Snapping the _near edge_ instead makes
+    every part, whatever its size, begin and end on a grid line.
+    `snapCentreByEdge` is that rule, and both the gizmo and the placement
+    ghost go through it so a part dropped and a part dragged land in the
+    same place.
+
+    _Measured:_ a part at an off-grid (3.7, −2.3) nudged by 0.4 landed on
+    (4, −2) — including the axis that was never dragged, which delta
+    snapping can never do; scaling to 2.15/2.8/1.1 gave 2/3/1 with every
+    edge on an integer; a 0.02 scale clamped to 0.05 rather than collapsing
+    to nothing; 34.95° snapped to 30°; Alt held moved a part to an exact
+    7.37 and releasing it resumed snapping; window blur cleared a held Alt,
+    which matters because Alt is the key that reaches for the window menu
+    and its keyup never arrives.
+
+    The gizmo's own `setTranslationSnap`/`setScaleSnap`/`setRotationSnap`
+    are still set, but only for feel — they make the handle move in steps.
+    They cannot do the job alone: three snaps the _delta_, then adds it to
+    wherever the part already was.
+
+    Two consequences worth knowing:
+
+    -   `mouseUp` now always emits, rather than only when a throttled frame
+        was pending. The snap itself can move a part after the last
+        throttled emit, and that final rounded position is the one everyone
+        has to agree on.
+    -   **Scaling still grows a part about its centre**, so making a box
+        taller pushes its bottom below the floor (measured: a height-3 box
+        on the ground reached y=−1). The snap keeps that on-grid and the
+        server allows it — sunken thresholds are deliberately buildable —
+        but face-anchored resize is a gizmo change, not a snapping one. See
+        open questions.
+
 -   **M5 — Palette + inspector.** All shapes; material set with
     world-space UVs; color, uvScale, collides, locked in `renderInspector`;
     lock behavior in picking.
@@ -626,6 +669,10 @@ per-face materials, edge/vertex snap, room templates.
 2. **Guest building** — should owners be able to grant build rights to
    friends? The ownership cache (§6.3) would grow into a per-room rights
    set; deferred until asked for.
-3. **`rooms.objects` blob versioning** — primitives change the persisted
+3. **Face-anchored resize.** Scaling grows a part about its centre, so a
+   part on the ground sinks as it gets taller (§M4). Roblox resizes from
+   the opposite face by default. Worth doing, but it changes what the
+   gizmo means rather than what snapping means — its own change.
+4. **`rooms.objects` blob versioning** — primitives change the persisted
    `Object` JSON shape. Old blobs load fine (unknown fields absent), but
    consider a `version` key in the blob when the format next changes.

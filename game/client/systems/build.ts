@@ -8,7 +8,8 @@ import { createPartMesh } from "../factory/primitive";
 import { DEFAULT_PART_MATERIAL, PART_MATERIALS } from "../managers/materials";
 import { createGhostMaterial } from "../managers/materials";
 import { emitPartJoin } from "./network";
-import { addPartCommand } from "./history";
+import { addPartCommand, isTypingTarget } from "./history";
+import { GRID_INCREMENTS, isFreeMoveHeld, snapCentreByEdge } from "./snap";
 import { DenyReason, Part, PartSchema, Shape } from "../proto";
 import { create } from "@bufbuild/protobuf";
 
@@ -197,7 +198,22 @@ export function createBuildSystem(world: World) {
 		if (raycaster.ray.intersectPlane(groundPlane, hit) === null) {
 			return null;
 		}
+
+		// Lifted by half its height so it rests on the ground rather than
+		// halfway through it. Parts are unit geometry and placed unscaled,
+		// so this is a half unit today; it becomes a real half-extent once
+		// placement can inherit a scale.
 		hit.y += 0.5;
+
+		// Snapped by edge, not centre, and by the same rule the gizmo uses
+		// -- so a part dropped here and a part dragged here end up in the
+		// same place. See snapCentreByEdge.
+		const grid = world.editor.grid;
+		if (grid > 0 && !isFreeMoveHeld()) {
+			hit.x = snapCentreByEdge(hit.x, 1, grid);
+			hit.y = snapCentreByEdge(hit.y, 1, grid);
+			hit.z = snapCentreByEdge(hit.z, 1, grid);
+		}
 		return hit;
 	};
 
@@ -245,8 +261,20 @@ export function createBuildSystem(world: World) {
 
 	window.addEventListener("keydown", (event) => {
 		if (!world.editor.enabled) return;
+		if (event.ctrlKey || event.metaKey || event.altKey) return;
+		if (isTypingTarget()) return;
+
 		if (event.key === "Escape" && world.build.placing) {
 			world.build.placing = false;
+			return;
+		}
+		// Cycles coarse -> fine -> off and back. A hotkey rather than only a
+		// button because changing grid is something you do mid-build, with
+		// the cursor already where you want the part.
+		if (event.key === "g" || event.key === "G") {
+			const order = [...GRID_INCREMENTS, 0];
+			const at = order.indexOf(world.editor.grid);
+			world.editor.grid = order[(at + 1) % order.length];
 		}
 	});
 
@@ -340,6 +368,29 @@ function renderBuildPanel(world: World) {
 	if (ImGui.Button(placeLabel)) {
 		world.build.placing = !world.build.placing;
 	}
+	ImGui.Separator();
+
+	ImGui.Text("Grid");
+	for (let i = 0; i < GRID_INCREMENTS.length; i++) {
+		const increment = GRID_INCREMENTS[i];
+		ImGui.PushID(`grid${i}`);
+		ImGui.Selectable(
+			`${increment}`,
+			world.editor.grid === increment,
+			0,
+			new ImGui.Vec2(44, 22),
+		);
+		if (ImGui.IsItemClicked()) world.editor.grid = increment;
+		ImGui.PopID();
+		ImGui.SameLine();
+	}
+	ImGui.PushID("gridOff");
+	ImGui.Selectable("Off", world.editor.grid <= 0, 0, new ImGui.Vec2(44, 22));
+	if (ImGui.IsItemClicked()) world.editor.grid = 0;
+	ImGui.PopID();
+	ImGui.TextWrapped(
+		isFreeMoveHeld() ? "Alt held: snapping off" : "Hold Alt for free move",
+	);
 	ImGui.Separator();
 
 	ImGui.Text("Shape");
