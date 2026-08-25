@@ -138,7 +138,6 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 			if err != nil {
 				roomId = "@underwhirled"
 			} else {
-				player.Owner = true
 				roomId = room.Id
 			}
 			// client provided a room id, check if room exists on server
@@ -166,12 +165,20 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 			} else if roomId != room.Id {
 				log.Printf("Room '%s' does not exist or '%s' does not have privileges", roomId, client.Username)
 				roomId = "@underwhirled"
-			} else {
-				if room.Owner == client.Username {
-					player.Owner = true
-				}
 			}
 		}
+
+		// Resolve ownership once, against whichever room we actually landed
+		// in, and cache it on the client for every later mutation to read
+		// (canEditRoom). Doing it here rather than per branch also fixes the
+		// middle case above: a room already live in memory took the branch
+		// that checks nothing, so its own owner joined with Owner false and
+		// the client never showed them the editor button. The room's
+		// contents were still editable -- the old per-event query said yes
+		// -- but there was no way to ask for it.
+		client.RoomId = roomId
+		client.IsRoomOwner = resolveRoomOwner(roomId, client.Username)
+		player.Owner = client.IsRoomOwner
 
 		// prepare client (player) data
 		p := &buf.WhirledEvent{
@@ -253,7 +260,18 @@ func onPlayerAuth(peer *gecgosio.Peer, code string, roomId string) {
 		}
 
 		// let our client know about existing objects in the room
+		//
+		// Snapshotted under the lock rather than ranged over directly: the
+		// body below marshals and emits, which is far too long to hold the
+		// map against every other peer in the room.
+		objectsMu.RLock()
+		existing := make([]*buf.Object, 0, len(objects[roomId]))
 		for _, object := range objects[roomId] {
+			existing = append(existing, object)
+		}
+		objectsMu.RUnlock()
+
+		for _, object := range existing {
 			p := &buf.WhirledEvent{
 				Event: &buf.WhirledEvent_ObjectJoin{
 					ObjectJoin: &buf.ObjectJoin{

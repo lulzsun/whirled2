@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"whirled2/utils"
 
@@ -28,7 +29,22 @@ import (
 var server *gecgosio.Server
 
 var clients = make(map[string]*Client)
+
+// objects holds every room's furniture and, later, its primitive parts,
+// keyed room id -> object id.
+//
+// pion delivers each peer's datachannel messages on its own goroutine, so
+// two peers in one room mutate this concurrently; the autosave ticker
+// (startRoomAutosave) reads it from a third. Concurrent map access is a
+// runtime panic, not a subtle wrong answer, so every read and write of this
+// map -- and of the *buf.Object values in it, which onObjectTransform
+// rewrites in place -- goes through objectsMu.
+var objectsMu sync.RWMutex
 var objects = make(map[string]map[string]*buf.Object)
+
+// dirtyRooms is the set of rooms mutated since their last save. Guarded by
+// objectsMu, since it changes in lockstep with objects.
+var dirtyRooms = make(map[string]bool)
 
 var numOfGuests = 0
 var usernameToPeerId = make(map[string]string)
@@ -109,6 +125,7 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 				// save objects in room to store in db
 				saveRoomToDb(roomId)
 				// check if objects exist in room
+				objectsMu.Lock()
 				if _, ok := objects[roomId]; ok {
 					// clear out objects in rooms
 					for objectId := range objects[roomId] {
@@ -117,11 +134,17 @@ func Start(port int, app *pocketbase.PocketBase, debug bool) {
 					}
 					delete(objects, roomId)
 				}
+				// The room is unloaded; anything still queued for it was
+				// just written by saveRoomToDb above.
+				delete(dirtyRooms, roomId)
+				objectsMu.Unlock()
 			}
 			delete(usernameToPeerId, client.Username)
 			delete(clients, peer.Id)
 		}
 	})
+
+	startRoomAutosave()
 
 	if err := server.Listen(port); err != nil {
 		log.Fatal(err)
@@ -239,23 +262,70 @@ func GetActiveRooms(limit int, offset int) []ActiveRoom {
 	return activeRooms[offset:int(math.Min(float64(offset+limit), float64(len(activeRooms))))]
 }
 
+// How often startRoomAutosave flushes rooms that have changed.
+//
+// A room used to reach the database only when its last occupant left, so a
+// crash or a redeploy mid-session threw away everything built since the
+// first player arrived. Thirty seconds bounds that loss to about one
+// misplaced wall.
+const roomAutosaveInterval = 30 * time.Second
+
+// markRoomDirty records that a room's contents have changed since its last
+// save. Callers must already hold objectsMu for writing.
+func markRoomDirty(roomId string) {
+	dirtyRooms[roomId] = true
+}
+
+// startRoomAutosave flushes every room that has changed, forever, on
+// roomAutosaveInterval. Rooms that nobody has touched cost nothing.
+func startRoomAutosave() {
+	go func() {
+		for range time.Tick(roomAutosaveInterval) {
+			objectsMu.RLock()
+			pending := make([]string, 0, len(dirtyRooms))
+			for roomId := range dirtyRooms {
+				pending = append(pending, roomId)
+			}
+			objectsMu.RUnlock()
+
+			for _, roomId := range pending {
+				saveRoomToDb(roomId)
+			}
+		}
+	}()
+}
+
 // Saves room objects to db
 func saveRoomToDb(roomId string) {
-	record, err := pb.FindRecordById("rooms", roomId)
-	if err != nil {
-		log.Printf("%s", err)
+	// Rooms the server owns ("@underwhirled") have no rooms row and nothing
+	// worth persisting. Checked before the lookup so the disconnect path
+	// stops logging a not-found error every time the default room empties.
+	if roomId == "" || strings.HasPrefix(roomId, "@") {
 		return
 	}
 
+	// Marshal under the read lock rather than copying the slice out first:
+	// the values are pointers, and onObjectTransform rewrites their
+	// Position/Rotation/Scale in place, so a copied slice would still be
+	// read while it was being written. Serializing a full room is well under
+	// a millisecond; the database write below is the slow part, and that
+	// happens after the lock is released.
+	objectsMu.RLock()
 	objsToSave := []*buf.Object{}
-
 	for _, object := range objects[roomId] {
 		objsToSave = append(objsToSave, object)
 	}
-
 	objsJson, err := json.Marshal(objsToSave)
+	objectsMu.RUnlock()
+
 	if err != nil {
 		log.Println("Error marshaling JSON:", err)
+		return
+	}
+
+	record, err := pb.FindRecordById("rooms", roomId)
+	if err != nil {
+		log.Printf("%s", err)
 		return
 	}
 
@@ -265,15 +335,33 @@ func saveRoomToDb(roomId string) {
 		log.Printf("%s", err)
 		return
 	}
+
+	// Cleared only after the write lands, so a failed save stays queued for
+	// the next tick instead of being silently forgotten. A mutation racing
+	// the save above re-dirties the room and is picked up next tick.
+	objectsMu.Lock()
+	delete(dirtyRooms, roomId)
+	objectsMu.Unlock()
 }
 
 // Loads room objects from db
 func loadRoomFromDb(roomId string) {
-	// check if this room is empty of objects
+	// Server-owned rooms have no rooms row to load from -- see saveRoomToDb.
+	// Without this, every guest joining the default room logged a bare
+	// "sql: no rows in result set", which is exactly the noise you are
+	// reading the log to see past.
+	if roomId == "" || strings.HasPrefix(roomId, "@") {
+		return
+	}
+
+	// check if this room is already loaded
+	objectsMu.Lock()
 	if _, ok := objects[roomId]; ok {
+		objectsMu.Unlock()
 		return
 	}
 	objects[roomId] = make(map[string]*buf.Object)
+	objectsMu.Unlock()
 
 	record, err := pb.FindRecordById("rooms", roomId)
 	if err != nil {
@@ -290,9 +378,11 @@ func loadRoomFromDb(roomId string) {
 		return
 	}
 
+	objectsMu.Lock()
 	for _, object := range objsToLoad {
 		objects[roomId][object.Id] = object
 	}
+	objectsMu.Unlock()
 }
 
 // TODO: not secure, tie logic with secret key or something

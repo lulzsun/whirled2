@@ -48,6 +48,17 @@ export function createEditorSystem(world: World) {
 
 	let transformControlsCaptureMouse = true;
 
+	/** Ceiling on how often a drag pushes intermediate transforms onto the
+	 * wire. The server budgets 20/s per connection (spendTransformToken), so
+	 * this leaves room for the unthrottled mouseUp emit and for a second
+	 * object being dragged in the same second. */
+	const TRANSFORM_EMIT_HZ = 15;
+	const TRANSFORM_EMIT_INTERVAL = 1000 / TRANSFORM_EMIT_HZ;
+	let lastTransformEmit = 0;
+	/** Whether a transform has changed since the last emit -- i.e. whether
+	 * the final mouseUp emit has anything to say. */
+	let pendingTransformEmit = false;
+
 	const unselectObject = (force: boolean = false) => {
 		if (
 			ImGui.bind !== undefined &&
@@ -177,40 +188,75 @@ export function createEditorSystem(world: World) {
 	});
 
 	const transformControls = new TransformControls(world.camera, canvas);
+
+	/**
+	 * Sends the selected entity's current transform to the server.
+	 *
+	 * Reads straight out of ECS storage rather than off the three.js object,
+	 * because TransformControls has already written through the accessors
+	 * createPlayer/createObject redefined -- the typed arrays are the truth.
+	 */
+	const emitSelectedTransform = () => {
+		const eid = world.editor.selectedObject ?? -1;
+		if (eid === -1) return;
+		let id: string | null = null;
+		let isPlayer = hasComponent(world, PlayerComponent, eid);
+		if (isPlayer) {
+			id = world.network.getPlayer(eid)?.username ?? null;
+		} else {
+			id = world.network.getObject(eid)?.id ?? null;
+		}
+		if (id === null) return;
+
+		const position = new THREE.Vector3(
+			TransformComponent.position.x[eid],
+			TransformComponent.position.y[eid],
+			TransformComponent.position.z[eid],
+		);
+		const rotation = new THREE.Euler(
+			TransformComponent.rotation.x[eid],
+			TransformComponent.rotation.y[eid],
+			TransformComponent.rotation.z[eid],
+		);
+		const scale = new THREE.Vector3(
+			TransformComponent.scale.x[eid],
+			TransformComponent.scale.y[eid],
+			TransformComponent.scale.z[eid],
+		);
+
+		lastTransformEmit = performance.now();
+		pendingTransformEmit = false;
+		emitObjectTransform(world, id, isPlayer, position, rotation, scale);
+	};
+
 	transformControls.addEventListener("dragging-changed", (event) => {
 		transformControlsCaptureMouse = !event.value;
 	});
 	transformControls.addEventListener("change", () => {
-		if (!transformControlsCaptureMouse) {
-			const eid = world.editor.selectedObject ?? -1;
-			if (eid === -1) return;
-			let id: string | null = null;
-			let isPlayer = hasComponent(world, PlayerComponent, eid);
-			if (isPlayer) {
-				id = world.network.getPlayer(eid)?.username ?? null;
-			} else {
-				id = world.network.getObject(eid)?.id ?? null;
-			}
-			if (id === null) return;
-
-			const position = new THREE.Vector3(
-				TransformComponent.position.x[eid],
-				TransformComponent.position.y[eid],
-				TransformComponent.position.z[eid],
-			);
-			const rotation = new THREE.Euler(
-				TransformComponent.rotation.x[eid],
-				TransformComponent.rotation.y[eid],
-				TransformComponent.rotation.z[eid],
-			);
-			const scale = new THREE.Vector3(
-				TransformComponent.scale.x[eid],
-				TransformComponent.scale.y[eid],
-				TransformComponent.scale.z[eid],
-			);
-
-			emitObjectTransform(world, id, isPlayer, position, rotation, scale);
+		if (transformControlsCaptureMouse) return;
+		// A drag fires "change" once per mouse move -- every frame, in
+		// practice. Each one is a broadcast to the room and, before the
+		// ownership cache landed, a SQL query on the server too. Observers
+		// cannot see more than the display refresh anyway, so hold the wire
+		// rate to TRANSFORM_EMIT_HZ and let mouseUp below send the state
+		// that actually matters.
+		const now = performance.now();
+		if (now - lastTransformEmit < TRANSFORM_EMIT_INTERVAL) {
+			pendingTransformEmit = true;
+			return;
 		}
+		emitSelectedTransform();
+	});
+	transformControls.addEventListener("mouseUp", () => {
+		// The authoritative end-of-drag emit. Unthrottled on purpose: this
+		// is the only frame whose exact values have to survive, and dropping
+		// it would leave everyone else -- and the database -- holding
+		// whatever intermediate position happened to make it through last.
+		//
+		// Fires before TransformControls clears `dragging`, so the guard in
+		// the "change" handler above still reads as mid-drag here.
+		if (!pendingTransformEmit) return;
+		emitSelectedTransform();
 	});
 	world.scene.add(transformControls);
 

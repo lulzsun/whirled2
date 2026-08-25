@@ -22,24 +22,15 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	}
 
 	// making sure this object does not already exist
-	if _, ok := objects[roomId][obj.Id]; ok {
+	objectsMu.RLock()
+	_, exists := objects[roomId][obj.Id]
+	objectsMu.RUnlock()
+	if exists {
 		return
 	}
 
 	// check if client owns the current room they're in
-	err := pb.DB().
-		NewQuery(`
-			SELECT r.id
-			FROM rooms r
-			INNER JOIN users u ON r.owner_id = u.id
-			WHERE r.id = {:roomId} AND u.username = {:username}
-		`).
-		Bind(dbx.Params{
-			"roomId":   roomId,
-			"username": client.Username,
-		}).One(&struct{}{})
-
-	if err != nil {
+	if !canEditRoom(client, roomId) {
 		// user does not own this room, so do nothing
 		return
 	}
@@ -54,7 +45,7 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 		File  string  `db:"file" json:"file"`
 		Scale float64 `db:"scale" json:"scale"`
 	}{}
-	err = pb.DB().
+	err := pb.DB().
 		NewQuery(`
 			SELECT
 				s.id, 
@@ -119,10 +110,13 @@ func onObjectJoin(peer *gecgosio.Peer, obj *buf.Object) {
 	}
 
 	// prepare to store as server object
+	objectsMu.Lock()
 	if _, ok := objects[roomId]; !ok {
 		objects[roomId] = make(map[string]*buf.Object)
 	}
 	objects[roomId][obj.Id] = object
+	markRoomDirty(roomId)
+	objectsMu.Unlock()
 	log.Printf("Object '%s' is joining room '%s'", obj.Id, roomId)
 
 	peer.Room().Emit(newData)
@@ -146,26 +140,17 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 			return
 		}
 	} else {
-		if _, ok := objects[roomId][id]; !ok {
+		objectsMu.RLock()
+		_, exists := objects[roomId][id]
+		objectsMu.RUnlock()
+		if !exists {
 			log.Printf("Refusing to remove object '%s' from room '%s': the server has no object under that id", id, roomId)
 			return
 		}
 	}
 
 	// check if client owns the current room they're in
-	err := pb.DB().
-		NewQuery(`
-			SELECT r.id
-			FROM rooms r
-			INNER JOIN users u ON r.owner_id = u.id
-			WHERE r.id = {:roomId} AND u.username = {:username}
-		`).
-		Bind(dbx.Params{
-			"roomId":   roomId,
-			"username": client.Username,
-		}).One(&struct{}{})
-
-	if err != nil {
+	if !canEditRoom(client, roomId) {
 		// user does not own this room, so do nothing
 		log.Printf("Refusing to remove '%s' from room '%s': '%s' does not own it", id, roomId, client.Username)
 		return
@@ -186,7 +171,10 @@ func onObjectLeave(peer *gecgosio.Peer, id string, isPlayer bool) {
 		clients[usernameToPeerId[id]].Peer.Leave(roomId)
 		return
 	} else {
+		objectsMu.Lock()
 		delete(objects[roomId], id)
+		markRoomDirty(roomId)
+		objectsMu.Unlock()
 		log.Printf("Object '%s' has been deleted from room '%s'", id, roomId)
 	}
 	p := &buf.WhirledEvent{
@@ -212,26 +200,25 @@ func onObjectTransform(peer *gecgosio.Peer, obj *buf.ObjectTransform) {
 			return
 		}
 	} else {
-		if _, ok := objects[roomId][obj.Id]; !ok {
+		objectsMu.RLock()
+		_, exists := objects[roomId][obj.Id]
+		objectsMu.RUnlock()
+		if !exists {
 			return
 		}
 	}
 
 	// check if client owns the current room they're in
-	err := pb.DB().
-		NewQuery(`
-			SELECT r.id
-			FROM rooms r
-			INNER JOIN users u ON r.owner_id = u.id
-			WHERE r.id = {:roomId} AND u.username = {:username}
-		`).
-		Bind(dbx.Params{
-			"roomId":   roomId,
-			"username": client.Username,
-		}).One(&struct{}{})
-
-	if err != nil {
+	if !canEditRoom(client, roomId) {
 		// user does not own this room, so do nothing
+		return
+	}
+
+	// A drag emits continuously, so this is the one handler a client can
+	// drive as fast as it can send. Everything above this point is cheap
+	// map work; everything below broadcasts to the room. Spend the token
+	// last, so a refused event costs a rejected client nothing but a drop.
+	if !spendTransformToken(client) {
 		return
 	}
 
@@ -240,9 +227,16 @@ func onObjectTransform(peer *gecgosio.Peer, obj *buf.ObjectTransform) {
 		clients[usernameToPeerId[obj.Id]].Rotation = obj.Rotation
 		clients[usernameToPeerId[obj.Id]].Scale = obj.Scale
 	} else {
-		objects[roomId][obj.Id].Position = obj.Position
-		objects[roomId][obj.Id].Rotation = obj.Rotation
-		objects[roomId][obj.Id].Scale = obj.Scale
+		objectsMu.Lock()
+		// Re-checked under the write lock: the existence test above released
+		// it, and a concurrent removal in between would leave a nil here.
+		if stored, ok := objects[roomId][obj.Id]; ok {
+			stored.Position = obj.Position
+			stored.Rotation = obj.Rotation
+			stored.Scale = obj.Scale
+			markRoomDirty(roomId)
+		}
+		objectsMu.Unlock()
 	}
 
 	p := &buf.WhirledEvent{
