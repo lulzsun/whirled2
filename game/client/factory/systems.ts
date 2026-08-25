@@ -8,6 +8,7 @@ import { createAnimationSystem } from "../systems/animation";
 import { createControlSystem } from "../systems/control";
 import { createImguiSystem } from "../systems/imgui";
 import { createEditorSystem } from "../systems/editor";
+import { createHistorySystem } from "../systems/history";
 import { createPreviewSystem } from "../systems/preview";
 import { createBenchmarkSystem } from "../systems/benchmark";
 
@@ -20,6 +21,9 @@ const systems = [
 	createUISystem,
 	createAnimationSystem,
 	createControlSystem,
+	// Before the editor: the editor's gizmo handlers push onto world.history,
+	// so it has to exist by the time one fires.
+	createHistorySystem,
 	createEditorSystem,
 	createRenderSystem, // Render system should run last
 ];

@@ -1,7 +1,8 @@
 import { pipe } from "bitecs";
 import { World, createWorld } from "./factory/world";
 import { createSystems } from "./factory/systems";
-import { emitObjectJoin, emitPlayerWear } from "./systems/network";
+import { emitPlayerWear } from "./systems/network";
+import { addObjectCommand } from "./systems/history";
 import { initializeHtmx, htmx } from "./htmx";
 import { BenchmarkApi } from "./systems/benchmark";
 
@@ -34,7 +35,13 @@ if (window.htmx === undefined) {
 window.world = world;
 window.game = {
 	addStuff: (id, type) => {
-		emitObjectJoin(world, id, parseInt(type));
+		// Routed through a command rather than emitting directly, so a
+		// misclick in the inventory is one Ctrl+Z like everything else.
+		// Placement is only undoable while the editor is open, which is the
+		// only place the shortcut is live anyway.
+		const command = addObjectCommand(id, parseInt(type));
+		command.do(world);
+		world.history.push(command);
 	},
 	wearAvatar: (id) => {
 		emitPlayerWear(world, id);

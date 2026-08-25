@@ -1,6 +1,6 @@
 # Spec: Room building with primitive parts
 
-Status: **in progress** — M1 landed; M2 next
+Status: **in progress** — M1 and M2 landed; M3 next
 Owner: @lulzsun
 Last updated: 2026-08-24
 
@@ -521,7 +521,29 @@ owner + guest — since replication is half the feature).
     — nothing can emit one until multi-select exists.
 
 -   **M2 — Undo/redo** for existing furniture actions (move, remove,
-    place). _Verify:_ move → undo → guest browser shows the revert.
+    place). ✅ **Landed.** `systems/history.ts` holds the command stack;
+    the gizmo's `mouseDown`/`mouseUp` bracket a drag into one command, the
+    inspector's remove and `window.game.addStuff` push the other two.
+    _Measured:_ drag → one command pushed; undo/redo walk the position back
+    and forward with correct stack transitions; Ctrl+Z / Ctrl+Shift+Z work
+    through the real window listener and are correctly ignored while typing
+    in an input, while the editor is closed, and without a modifier.
+
+    Two things worth carrying into M3:
+
+    -   **Commands key on network id, not entity id.** Undoing a removal
+        re-adds the object, and it comes back as a _different_ entity —
+        measured: a Chair at eid 2 returned as eid 5. A command holding an
+        eid would write into whatever entity inherited the number.
+    -   **Undoing a removal is necessarily two steps.** `emitObjectJoin`
+        makes the server rebuild the object from the database at the
+        origin; the placement being undone back to is not something it
+        stores. So the command re-adds, and a per-frame pump repositions
+        the object once it arrives (measured: within 100 ms), giving up
+        after 5 s rather than firing later at whatever has taken that id.
+        Primitive placement in M3 wants the same shape — which is what the
+        `nonce` field in §5.1 is for.
+
 -   **M3 — Primitive end-to-end.** Proto changes, `Type_Primitive` join
     path with validation + minted ids + nonce echo, `ObjectDenied` +
     `RoomCapacity` events, `createPrimitive` (Box, flat color), placement

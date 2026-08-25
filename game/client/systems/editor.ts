@@ -22,6 +22,14 @@ import {
 import { STATIC, UNIQUE } from "./imgui";
 import { emitObjectLeave, emitObjectTransform } from "./network";
 import { isSwfHitTransparent } from "./control";
+import {
+	Snapshot,
+	removeObjectCommand,
+	snapshotTransform,
+	transformCommand,
+	transformsDiffer,
+} from "./history";
+import { Type } from "../proto";
 
 const objectLeaveQuery = exitQuery(defineQuery([ObjectComponent]));
 const playerLeaveQuery = exitQuery(defineQuery([PlayerComponent]));
@@ -58,6 +66,11 @@ export function createEditorSystem(world: World) {
 	/** Whether a transform has changed since the last emit -- i.e. whether
 	 * the final mouseUp emit has anything to say. */
 	let pendingTransformEmit = false;
+
+	/** What the dragged object looked like before the drag started, captured
+	 * on mouseDown so mouseUp can record the pair as one undoable move. A
+	 * drag is the unit of undo here, not a frame of one. */
+	let dragSnapshot: { id: string; before: Snapshot } | null = null;
 
 	const unselectObject = (force: boolean = false) => {
 		if (
@@ -247,6 +260,17 @@ export function createEditorSystem(world: World) {
 		}
 		emitSelectedTransform();
 	});
+	transformControls.addEventListener("mouseDown", () => {
+		dragSnapshot = null;
+		const eid = world.editor.selectedObject ?? -1;
+		if (eid === -1) return;
+		// Players are left out of history on purpose: a player moves itself
+		// continuously, so an undo would be fighting whoever it teleported.
+		if (hasComponent(world, PlayerComponent, eid)) return;
+		const id = world.network.getObject(eid)?.id ?? null;
+		if (id === null) return;
+		dragSnapshot = { id, before: snapshotTransform(eid) };
+	});
 	transformControls.addEventListener("mouseUp", () => {
 		// The authoritative end-of-drag emit. Unthrottled on purpose: this
 		// is the only frame whose exact values have to survive, and dropping
@@ -255,8 +279,27 @@ export function createEditorSystem(world: World) {
 		//
 		// Fires before TransformControls clears `dragging`, so the guard in
 		// the "change" handler above still reads as mid-drag here.
-		if (!pendingTransformEmit) return;
-		emitSelectedTransform();
+		if (pendingTransformEmit) emitSelectedTransform();
+
+		// Recorded independently of the emit above: a drag whose last frame
+		// happened to land on the throttle boundary has nothing left to
+		// send, but it still moved something.
+		if (dragSnapshot !== null) {
+			const eid = world.network.getObject(dragSnapshot.id)?.eid;
+			if (eid !== undefined) {
+				const after = snapshotTransform(eid);
+				if (transformsDiffer(dragSnapshot.before, after)) {
+					world.history.push(
+						transformCommand(
+							dragSnapshot.id,
+							dragSnapshot.before,
+							after,
+						),
+					);
+				}
+			}
+			dragSnapshot = null;
+		}
 	});
 	world.scene.add(transformControls);
 
@@ -279,6 +322,11 @@ export function createEditorSystem(world: World) {
 				lastEditorEnabled = false;
 				transformControlsCaptureMouse = true;
 				world.controls.enabled = true;
+				// The stack is only meaningful against the world it was
+				// recorded in. Leaving the editor -- or the room -- can put
+				// objects somewhere else entirely, and replaying stale
+				// commands into that would move the wrong things.
+				world.history.clear();
 			}
 			return world;
 		}
@@ -430,7 +478,22 @@ function renderInspector(world: World) {
 				return;
 			}
 			console.debug("Removing from room", { eid, id, isPlayer });
-			emitObjectLeave(world, id, isPlayer);
+			if (isPlayer) {
+				// Kicking a player is not an edit to the room, and there is
+				// nothing to put back.
+				emitObjectLeave(world, id, true);
+			} else {
+				// Snapshot first: once the server acknowledges the removal
+				// the entity is gone, and with it the only record of where
+				// it stood.
+				const command = removeObjectCommand(
+					id,
+					Type.Furniture,
+					snapshotTransform(eid),
+				);
+				command.do(world);
+				world.history.push(command);
+			}
 		}
 		ImGui.NewLine();
 		if (

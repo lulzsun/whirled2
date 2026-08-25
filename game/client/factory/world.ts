@@ -7,6 +7,7 @@ import { Nameplate } from "./nameplate";
 import { ChatBubbleStack } from "./chatbubble";
 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { History } from "../systems/history";
 import { Network } from "../systems/network";
 import { API_URL } from "../constants";
 import { Object, createObject } from "./object";
@@ -42,6 +43,7 @@ export type World = {
 	/** Live SWF command-stream renderers, composed once per frame. */
 	swfStreams: Set<SwfStreamRenderer>;
 	editor: Editor;
+	history: History;
 	benchmark: Benchmark;
 	isPreview: boolean;
 };
