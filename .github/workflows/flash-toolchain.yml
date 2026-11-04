@@ -103,10 +103,10 @@ jobs:
     fork:
         name: Ruffle fork (wasm)
         # Long build, so never on PRs — manual and monthly only. Requires the
-        # fork branch to exist at lulzsun/ruffle#feat/three-command-stream;
-        # until it is pushed there this job fails at checkout, which is
-        # accurate: an unpushed fork is a bus-factor problem CI cannot paper
-        # over.
+        # fork branch to exist at
+        # lulzsun/ruffle#feat/three-command-stream-v0.7.1; until it is pushed
+        # there this job fails at checkout, which is accurate: an unpushed fork
+        # is a bus-factor problem CI cannot paper over.
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         runs-on: ubuntu-latest
         timeout-minutes: 90
@@ -116,7 +116,7 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   repository: lulzsun/ruffle
-                  ref: feat/three-command-stream
+                  ref: feat/three-command-stream-v0.7.1
                   path: ruffle
 
             - uses: dtolnay/rust-toolchain@stable
@@ -126,6 +126,10 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   workspaces: ruffle
+
+            # Must match the exact wasm-bindgen pin in the fork's Cargo.toml.
+            - name: Install wasm-bindgen
+              run: cargo install --locked wasm-bindgen-cli --version 0.2.127
 
             - uses: actions/setup-node@v4
               with:

@@ -2414,3 +2414,46 @@ becomes standing line minus artwork top. For the guest that is 0.9 — its
 artwork genuinely reaches the frame top, so the honest answer barely
 differs from the frame — but an avatar authored with jump headroom gets its
 name at its head instead of at the canvas edge, with no declaration needed.
+
+### 16.15 Rebased onto Ruffle 0.7.1
+
+The fork moved from an untagged 2025-11-03 master (`8d9fddc68`) to the
+`v0.7.1` release tag, 2,145 commits on, as branch
+`feat/three-command-stream-v0.7.1`. The patch stayed one commit with the same
+shape. It needed three things: a trivial conflict at `create_renderer`,
+`create_empty_texture` taking `NonZeroU32`, and the one that changes behaviour.
+
+**Shapes are now tessellated per scale.** Upstream added
+`register_shape_with_scale`: a `Graphic` picks a tessellation at render time,
+re-registering when its transform is more than 2x from any of up to four cached
+scales. The stream backend passes the scale through, as the WebGL backend does.
+Each retessellation is a new shape event, and `SwfStreamRenderer` frees nothing
+until the avatar is disposed, so one graphic can now hold several meshes on the
+page. Resizing guest.swf through 160/640/1280/80 took it from 47 shapes to 67,
+and returning to a size already seen added none.
+
+**Sweep, old bundle against new**, same session and machine,
+`bench.run([1,5,10,20], {settleMs:5000, sampleMs:5000})`:
+
+| avatars | old fps / p95 / p99 | new fps / p95 / p99 (two runs)            |
+| ------- | ------------------- | ----------------------------------------- |
+| 1       | 60.0 / 16.8 / 16.8  | 60.0 / 16.8 / 18.8, 60.0 / 16.8 / 16.8    |
+| 5       | 60.0 / 18.9 / 22.5  | 59.2 / 18.7 / 33.9, 60.0 / 19.4 / 20.2    |
+| 10      | 59.8 / 18.8 / 21.4  | 60.0 / 18.3 / 20.4, 59.6 / 18.5 / 27.0    |
+| 20      | 59.7 / 19.6 / 27.0  | 56.4 / 26.7 / 31.2, 58.0 / 22.3 / 33.2    |
+
+Twenty avatars hold about 20% more geometries (2,350 and 2,406 against 2,006)
+and cost a few milliseconds at p95 and p99. Smaller counts are within noise.
+These ran in the desktop app's browser pane, which was not reliably in view,
+so read them as old against new only. Attributing the cost to retessellation
+is a likely explanation, not a measured one.
+
+**Toolchain.** 0.7.1 needs a newer rustc than 1.91 (`gc-arena` uses
+`ptr_as_ref_unchecked`; built with 1.99.1) and `wasm-bindgen-cli` 0.2.127,
+matching the crate's exact pin.
+
+**Verified locally:** the §16.11 signal battery's handshake, routing and kill
+through `FrameSwfHost`, and the sweep above. **Not verified:** the opaque-origin
+mode and the eval-probe, which only run on a deployed build, and hidden-tab
+behaviour, where 0.7 adds a `backgroundExecutionMode` option that defaults to
+`mainThread` (§16.13 is the context).
